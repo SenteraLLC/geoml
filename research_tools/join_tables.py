@@ -31,18 +31,6 @@ class join_tables(object):
             base_dir (``str``): The base directory containing all the tables
                 available to be joined.
         '''
-        self.base_dir = base_dir
-
-        self.fnames = {
-            # 'cropscan': os.path.join(base_dir, 'cropscan.csv'),
-            'dates': os.path.join(base_dir, 'metadata_dates.csv'),
-            'experiments': os.path.join(base_dir, 'metadata_exp.csv'),
-            'treatments': os.path.join(base_dir, 'metadata_trt.csv'),
-            'n_apps': os.path.join(base_dir, 'metadata_trt_n.csv'),
-            'n_crf': os.path.join(base_dir, 'metadata_trt_n_crf.csv')}
-            # 'petiole_no3': os.path.join(base_dir, 'tissue_petiole_NO3_ppm.csv'),
-            # 'total_n': os.path.join(base_dir, 'tissue_wp_N_pct.csv')}
-
         self.cols_require = {
             'df_dates': ['study', 'year', 'date_plant', 'date_emerge'],
             'df_exp': ['study', 'year', 'plot_id', 'rep', 'trt_id'],
@@ -55,7 +43,6 @@ class join_tables(object):
             'dap': ['study', 'year', 'plot_id', 'date'],
             'rate_ntd': ['study', 'year', 'plot_id', 'date']
             }
-
         self.msg_require = {
             'df_dates': (
                 'The following columns are required in ``df_dates``: {0}. '
@@ -95,7 +82,7 @@ class join_tables(object):
                 'names are in "df.columns".'
                 ''.format(self.cols_require['rate_ntd']))
             }
-        self._read_dfs()
+        self.load_tables(base_dir)
 
     def _cr_rate_ntd(self, df):
         '''
@@ -209,6 +196,32 @@ class join_tables(object):
         df_n_crf = pd.read_csv(self.fnames['n_crf'])
         df_n_crf = self._check_requirements(df_n_crf, f='df_n_crf', date_format=date_format)
         self.df_n_crf = df_n_crf
+
+    def load_tables(self, base_dir=None):
+        '''
+        Loads all of the tables required to take full advantage of the rest of
+        the functions in this class
+
+        Parameters:
+            base_dir (``str``): The base directory containing all the tables
+                available to be joined.
+        '''
+        if base_dir is not None:
+            self.fnames = {
+                # 'cropscan': os.path.join(base_dir, 'cropscan.csv'),
+                'dates': os.path.join(base_dir, 'metadata_dates.csv'),
+                'experiments': os.path.join(base_dir, 'metadata_exp.csv'),
+                'treatments': os.path.join(base_dir, 'metadata_trt.csv'),
+                'n_apps': os.path.join(base_dir, 'metadata_trt_n.csv'),
+                'n_crf': os.path.join(base_dir, 'metadata_trt_n_crf.csv')}
+                # 'petiole_no3': os.path.join(base_dir, 'tissue_petiole_NO3_ppm.csv'),
+                # 'total_n': os.path.join(base_dir, 'tissue_wp_N_pct.csv')}
+            self._read_dfs()
+
+        else:
+            print('WARNING: ``base_dir`` was not passed. Functions may not '
+                  'perform as expected.\n')
+        self.base_dir = base_dir
 
     def join_closest_date(
             self, df_left, df_right, left_on='date', right_on='date',
