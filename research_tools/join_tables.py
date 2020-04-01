@@ -10,6 +10,7 @@ Insight Sensing Corporation. All rights reserved.
 @contributors: [Tyler J. Nigon]
 """
 
+import numpy as np
 import os
 import pandas as pd
 
@@ -151,6 +152,38 @@ class join_tables(object):
 
         return df
 
+    def _check_requirements_custom(
+            self, df, date_cols=['date'], by=['study', 'year', 'plot_id'],
+            date_format='%Y-%m-%d'):
+        '''
+        Checks that ``df`` has all of the correct columns and that they contain
+        the correct data types
+
+        Parameters:
+            df (``pandas.DataFrame``): the input DataFrame
+            f (``str``): the function calling the _check_requirements()
+                function. This is used to access join_tables.msg_require, which
+                contains all the messages to be raised if the correct columns
+                are not in ``df``. If ``None``, just assumes ``df`` should
+                contain ["study", "year", and "plot_id"]
+        '''
+        if not isinstance(date_cols, list):
+            date_cols = [date_cols]
+        cols_require = by.copy()
+        cols_require.extend(date_cols)
+
+        msg = ('The following columns are required in ``df``: {0}. Please '
+               'check that each of these column names are in "df.columns".'
+               ''.format(cols_require))
+        if not all(i in df.columns for i in cols_require):
+            raise AttributeError(msg)
+
+        n_dt = len(df.select_dtypes(include=[np.datetime64]).columns)
+        if n_dt < len(date_cols):
+            for d in date_cols:
+                df[d] = pd.to_datetime(df[d], format=date_format)
+        return df
+
         # TODO: check each of the column data types if they must be particular (e.g., datetime)
 
     def _read_dfs(self, date_format='%Y-%m-%d'):
@@ -176,6 +209,52 @@ class join_tables(object):
         df_n_crf = pd.read_csv(self.fnames['n_crf'])
         df_n_crf = self._check_requirements(df_n_crf, f='df_n_crf', date_format=date_format)
         self.df_n_crf = df_n_crf
+
+    def join_closest_date(
+            self, df_left, df_right, left_on='date', right_on='date',
+            tolerance=3, by=['study', 'year', 'plot_id'], direction='nearest'):
+        '''
+        Joins ``df_left`` to ``df_right`` by the closest date (after first
+        joining by the ``by`` columns).
+
+        Parameters:
+            df_left (``pd.DataFrame``):
+            df_right (``pd.DataFrame``):
+            left_on (``str``):
+            right_on (``str``):
+            tolerance (``int``): Number of days away to still allow join (if dates
+                are greater than ``tolerance``, the join will not occur).
+            by (``str`` or ``list``): Match on these columns before performing
+                merge operation.
+            direction (``str``): Whether to search for prior, subsequent, or
+                closest matches.
+
+        Note:
+            Parameter names closely follow the pandas.merge_asof function:
+            https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.merge_asof.html
+        '''
+        df_left = self._check_requirements_custom(
+            df_left, date_cols=[left_on], by=by, date_format='%Y-%m-%d')
+        df_right = self._check_requirements_custom(
+            df_right, date_cols=[right_on], by=by, date_format='%Y-%m-%d')
+
+        df_left.sort_values(left_on, inplace=True)
+        df_right.sort_values(right_on, inplace=True)
+        left_on2 = left_on + '_l'
+        right_on2 = right_on + '_r'
+        df_join = pd.merge_asof(
+            df_left.rename(columns={left_on:left_on2}),
+            df_right.rename(columns={right_on:right_on2}),
+            left_on=left_on2, right_on=right_on2, by=by,
+            tolerance=pd.Timedelta(tolerance, unit='D'), direction=direction)
+
+        idx_delta = df_join.columns.get_loc(left_on2)
+        df_join.insert(idx_delta+1, 'date_delta', None)
+        df_join['date_delta'] = (df_join[left_on2]-df_join[right_on2]).astype('timedelta64[D]')
+        df_join = df_join[pd.notnull(df_join['date_delta'])]
+        df_join = df_join.rename(columns={left_on2:left_on})
+        df_join = df_join.drop(right_on2, 1)
+        return df_join
 
     def dae(self, df):
         '''
