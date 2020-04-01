@@ -2,10 +2,12 @@
 """
 Created on Tue Mar 31 19:43:09 2020
 
-@author: Tyler J. Nigon
+TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
+Insight Sensing Corporation. All rights reserved.
 
-Not functionality, but outline the specific requirements in the docstrings for
-each function (e.g., what are the required join columns)
+@copyright: © Insight Sensing Corporation, 2020
+@author: Tyler J. Nigon
+@contributors: [Tyler J. Nigon]
 """
 
 import os
