@@ -153,7 +153,7 @@ def get_X_and_y(df, x_labels, y_label, random_seed=None, key_or_val='keys',
     Parameters:
         df: The input dataframe to pull from
         x_labels: The column headings from ``df`` to include in the X matrix
-        y_label: The column heading from ``df`` to include in teh y vector
+        y_label: The column heading from ``df`` to include in the y vector
         random_seed: If data are missing in the X matrix, missing data will be
             imputed, which requires a ``random_seed``.
         key_or_val: If ``x_labels`` is a ``dict``, this denotes whether column
@@ -168,6 +168,7 @@ def get_X_and_y(df, x_labels, y_label, random_seed=None, key_or_val='keys',
         if key_or_val == 'keys':
             x_labels = sorted(list(x_labels.keys()))
         elif key_or_val == 'values':
+            print(x_labels)
             x_labels = sorted(list(x_labels.values()))
     if extra is None:
         extra = [None]
@@ -177,7 +178,7 @@ def get_X_and_y(df, x_labels, y_label, random_seed=None, key_or_val='keys',
         for col in extra:
             x_labels.append(col)
     X = df[x_labels].values
-    X.shape
     y = df[y_label].values
     X = impute_missing_data(X, random_seed, method='iterative')
-    return X, y
+    return X, y, x_labels
+
