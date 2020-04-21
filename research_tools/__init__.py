@@ -24,11 +24,14 @@ __license__ = ('TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.')
 __email__ = 'tyler@insight-sensing.com'
 
 from .join_tables import join_tables
-from .rtio import rtio
+from .feature_data import feature_data
 from .test_data import test_data
+from .tuning import tuning
 
 name = 'research_tools'
 __version__ = '0.0.1'
 
 __all__ = ['join_tables',
-           'test_data']
+           'feature_data',
+           'test_data',
+           'tuning']
