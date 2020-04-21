@@ -46,6 +46,20 @@ def test_feature_data_get_feat_group_X_y_fixture():
         test_size=0.4, stratify=['study', 'date'], impute_method='iterative')
     return feat_data_cs
 
+@pytest.fixture
+def test_feature_data_get_feat_group_X_y_dir_results_fixture(tmp_path):
+    random_seed = 0
+    base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
+    dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
+    feat_data_cs = feature_data(base_dir_data, random_seed=random_seed,
+                                dir_results=dir_results)
+    group_feats = feature_groups.cs_test2
+
+    feat_data_cs.get_feat_group_X_y(
+        group_feats, ground_truth='vine_n_pct', date_tolerance=3,
+        test_size=0.4, stratify=['study', 'date'], impute_method='iterative')
+    return feat_data_cs
+
 
 class Test_feature_data_exist_df:
     def test_df_pet_no3(self, test_feature_data_init_fixture):
@@ -166,7 +180,8 @@ class Test_feature_data_df_X_and_df_y:
         n_test = df[df['train_test'] == 'test']['train_test'].count()
         assert pytest.approx(n_train / (n_train + n_test), 0.01) == 0.6
 
-    def test_train_test_df_y_proportion(self, test_feature_data_get_feat_group_X_y_fixture):
+    def test_train_test_df_y_proportion(
+            self, test_feature_data_get_feat_group_X_y_fixture):
         feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
         df = feat_data_cs.df_y
         n_train = df[df['train_test'] == 'train']['train_test'].count()
@@ -178,10 +193,26 @@ class Test_feature_data_dir_results:
         feat_data_cs = test_feature_data_dir_results_fixture
         assert os.path.isdir(feat_data_cs.dir_results)
 
-    def test_dir_results_readme_exists(self, test_feature_data_dir_results_fixture):
+    def test_dir_results_readme_exists(
+            self, test_feature_data_dir_results_fixture):
         feat_data_cs = test_feature_data_dir_results_fixture
         fname_readme = os.path.join(feat_data_cs.dir_results, 'README.txt')
         assert os.path.isfile(fname_readme)
+
+    def test_dir_results_df_X_exists(
+            self, test_feature_data_get_feat_group_X_y_dir_results_fixture):
+        feat_data_cs = test_feature_data_get_feat_group_X_y_dir_results_fixture
+        dir_out = os.path.join(feat_data_cs.dir_results, feat_data_cs.label_y)
+        fname_out_X = os.path.join(dir_out, 'data_X_' + feat_data_cs.label_y + '.csv')
+        assert os.path.isfile(fname_out_X)
+
+    def test_dir_results_df_y_exists(
+            self, test_feature_data_get_feat_group_X_y_dir_results_fixture):
+        feat_data_cs = test_feature_data_get_feat_group_X_y_dir_results_fixture
+        dir_out = os.path.join(feat_data_cs.dir_results, feat_data_cs.label_y)
+        fname_out_y = os.path.join(dir_out, 'data_y_' + feat_data_cs.label_y + '.csv')
+        assert os.path.isfile(fname_out_y)
+
 
 if __name__ == '__main__':
     '''Test from Python console'''

@@ -393,6 +393,27 @@ class feature_data(object):
         self.y_test = y_test
         return X_train, X_test, y_train, y_test
 
+    def _save_df_X_y(self):
+        '''
+        Saves the joined dataframe to a new folder in ``dir_results`` with another
+        README.txt file that provides some basic details about the processing that
+        was performed in case the grid_idx gets messed up..
+
+        grid_idx is the index of df_grid (this will change if df_grid changes,
+            so that is why ``msi_run_id`` is also included in the folder name)
+        '''
+        if self.group_feats is None or self.label_y is None:
+            print('<group_feats> and <label_y> must be set to save data to '
+                  '<dir_results>. Have you ran `get_feat_group_X_y()` yet?')
+            return
+        dir_out = os.path.join(self.dir_results, self.label_y)
+        os.makedirs(dir_out, exist_ok=True)
+
+        fname_out_X = os.path.join(dir_out, 'data_X_' + self.label_y + '.csv')
+        fname_out_y = os.path.join(dir_out, 'data_y_' + self.label_y + '.csv')
+        self.df_X.to_csv(fname_out_X, index=False)
+        self.df_y.to_csv(fname_out_y, index=False)
+
     def get_feat_group_X_y(
             self, group_feats, ground_truth='vine_n_pct', date_tolerance=3,
             random_seed=None, test_size=0.4, stratify=['study', 'date'],
@@ -449,6 +470,9 @@ class feature_data(object):
         self.df_X = df[labels_id + self.labels_x]
         self.df_y = df[labels_id + labels_y_id + [label_y]]
         self.labels_id = labels_id
+
+        if self.dir_results is not None:
+            self._save_df_X_y()
 
     def split_by_cs_band_config(df, tissue='Petiole', measure='NO3_ppm', band='1480'):
         df_full = df[(df['tissue']==tissue) & (df['measure']==measure)].dropna(axis=1)
