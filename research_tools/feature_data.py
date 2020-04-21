@@ -79,6 +79,7 @@ class feature_data(object):
 
         if self.dir_results is not None:
             os.makedirs(self.dir_results, exist_ok=True)
+
         self._get_random_seed()
         self._load_tables()
         self.join_info = join_tables(self.base_dir_data)
