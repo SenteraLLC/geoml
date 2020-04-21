@@ -24,6 +24,7 @@ __license__ = ('TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.')
 __email__ = 'tyler@insight-sensing.com'
 
 from .join_tables import join_tables
+from .rtio import rtio
 from .test_data import test_data
 
 name = 'research_tools'

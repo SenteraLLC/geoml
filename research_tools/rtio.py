@@ -9,9 +9,14 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
-
+import numpy as np
 import os
 import pandas as pd
+
+from sklearn.model_selection import train_test_split
+from sklearn.impute import KNNImputer
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
 
 from research_tools import feature_groups
 from research_tools import train_prep
@@ -25,31 +30,57 @@ class rtio(object):
     This class assists in the loading, filtering, and preparation of research
     data for its use in a supervised regression model.
     '''
+    __allowed_kwargs = (
+        'date_tolerance', 'ground_truth',  'group_feats', 'random_seed',
+        'stratify', 'test_size')
+
     def __init__(self, base_dir_data,
                  fname_petiole='tissue_petiole_NO3_ppm.csv',
                  fname_total_n='tissue_wp_N_pct.csv',
-                 fname_cropscan='cropscan.csv'):
+                 fname_cropscan='cropscan.csv', random_seed=None):
         '''
         '''
         self.base_dir_data = base_dir_data
         self.fname_petiole = fname_petiole
         self.fname_total_n = fname_total_n
         self.fname_cropscan = fname_cropscan
+        self.random_seed = random_seed
 
         self.df_pet_no3 = None
         self.df_vine_n_pct = None
         self.df_tuber_n_pct = None
         self.df_cs = None
 
+        self.df_X = None
+        self.df_y = None
+
+        # "labels" vars indicate the df columns in the X matrix and y vector
+        self.labels_id = None
+        self.labels_x = None
+        self.labels_y_id = None
+        self.label_y = None
+
+        self.X_train = None
+        self.X_test = None
+        self.y_train = None
+        self.y_test = None
+
         self._load_tables()
         self.join_info = join_tables(self.base_dir_data)
 
-    def _get_x_labels(self, group_feats, cols=None):
+        # extra kwargs that are set when parameters are passed via user functs
+        self.date_tolerance = None
+        self.ground_truth = None
+        self.group_feats = None
+        self.stratify = None
+        self.test_size = None
+
+    def _get_labels_x(self, group_feats, cols=None):
         '''
         Parses ``group_feats`` and returns a list of column headings so that
         a df can be subset to build the X matrix
         '''
-        x_labels = []
+        labels_x = []
         for key in group_feats:
             if 'cropscan_wl_range' in key:
                 wl_range = group_feats[key]
@@ -58,14 +89,15 @@ class rtio(object):
                 for c in cols:
                     if (c.isnumeric() and int(c) > wl_range[0] and
                         int(c) < wl_range[1]):
-                        x_labels.append(c)
+                        labels_x.append(c)
             elif 'cropscan_bands' in key:
-                x_labels.extend(group_feats[key])
+                labels_x.extend(group_feats[key])
             elif 'rate_ntd' in key:
-                x_labels.append(group_feats[key]['col_out'])
+                labels_x.append(group_feats[key]['col_out'])
             else:
-                x_labels.append(group_feats[key])
-        return x_labels
+                labels_x.append(group_feats[key])
+        self.labels_x = labels_x
+        return self.labels_x
 
     def _filter_df_bands(self, df, bands=None, wl_range=None):
         '''
@@ -153,26 +185,184 @@ class rtio(object):
         assert ground_truth in avail_list, msg
 
         if ground_truth == 'vine_n_pct':
-            y_label = 'value'
-            return self.df_vine_n_pct.copy(), y_label
+            self.labels_y_id = ['tissue', 'measure']
+            self.label_y = 'value'
+            return self.df_vine_n_pct.copy(), self.labels_y_id, self.label_y
         if ground_truth == 'pet_no3_ppm':
-            y_label = 'value'
-            return self.df_pet_no3.copy(), y_label
+            self.labels_y_id = ['tissue', 'measure']
+            self.label_y = 'value'
+            return self.df_pet_no3.copy(), self.labels_y_id, self.label_y
         if ground_truth == 'tuber_n_pct':
-            y_label = 'value'
-            return self.df_tuber_n_pct.copy(), y_label
+            self.labels_y_id = ['tissue', 'measure']
+            self.label_y = 'value'
+            return self.df_tuber_n_pct.copy(), self.labels_y_id, self.label_y
 
-
-    def get_feat_group_X(self, group_feats=feature_groups.cs_test2,
-                         ground_truth='vine_n_pct',
-                         date_tolerance=3, random_seed=None):
+    def _add_stratify_id(self, df):
         '''
-        Retrieves all the necessary columns in ``group_feats``, then filters and
-        manipulates the dataframe and splits into ``X`` and ``y``
+        Creates stratification column to be able to proplery stratify train
+        and test sets
+        '''
+        if isinstance(self.stratify, list):
+            if 'stratify_id' not in df.columns:
+                df.insert(0, 'stratify_id', None)
+            df['stratify_id'] = df.groupby(self.stratify).ngroup()
+            self.stratify = 'stratify_id'
+        return df
+
+    def _train_test_split_df(self, df):
+        '''
+        Splits ``df`` into train and test sets based on proportion indicated by
+        ``test_size``
 
         Parameters:
-            group_feats (``list`` or ``dict``): The column headings to include in
-                the X matrix.
+            df:
+            test_size:
+            random_seed:
+            stratify:
+        '''
+        # df = self._add_stratify_id(df)
+        df_stratify = df[self.stratify]
+        df_train, df_test = train_test_split(
+            df, test_size=self.test_size, random_state=self.random_seed,
+            stratify=df_stratify)
+        df_train.insert(0, 'train_test', 'train')
+        df_test.insert(0, 'train_test', 'test')
+        df = df_train.copy()
+        df = df.append(df_test).reset_index(drop=True)
+        return df
+
+    def _get_repeated_stratified_kfold(self, df, n_splits=3, n_repeats=2,
+                                       random_state=None):
+        '''
+        Stratifies ``df`` by "dataset_id", and creates a repeated, stratified
+        k-fold cross-validation object that can be used for any sk-learn model
+
+        Parameters:
+            df:
+            n_splits:
+            n_repeats:
+            random_state:
+        '''
+        X_null = np.zeros(len(df))  # not necessary for StratifiedKFold
+        y_train_strat = df['dataset_id'].values
+        rskf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats,
+                                       random_state=random_state)
+        cv_rep_strat = rskf.split(X_null, y_train_strat)
+        return cv_rep_strat
+
+    def _check_stratified_proportions(self, df, cv_rep_strat):
+        '''
+        Checks the proportions of the stratifications in the dataset and prints
+        the number of observations in each stratified group
+
+        Parameters:
+            df:
+            cv_rep_strat:
+        '''
+        cols_meta = ['dataset_id', 'study', 'date', 'plot_id', 'trt', 'growth_stage']
+        # X_meta_train = df_train[cols_meta].values
+        # X_meta_test = df_test[cols_meta].values
+        X_meta = df[cols_meta].values
+        print('Number of observations in each cross-validation dataset (key=ID; value=n):')
+        train_list = []
+        val_list = []
+        for train_index, val_index in cv_rep_strat:
+            X_meta_train_fold = X_meta[train_index]
+            X_meta_val_fold = X_meta[val_index]
+            X_train_dataset_id = X_meta_train_fold[:,0]
+            train = {}
+            val = {}
+            for uid in np.unique(X_train_dataset_id):
+                n1 = len(np.where(X_meta_train_fold[:,0] == uid)[0])
+                n2 = len(np.where(X_meta_val_fold[:,0] == uid)[0])
+                train[uid] = n1
+                val[uid] = n2
+            train_list.append(train)
+            val_list.append(val)
+        print('Train set:')
+        for item in train_list:
+            print(item)
+        print('Test set:')
+        for item in val_list:
+            print(item)
+
+    def _set_params(self, **kwargs):
+        '''
+        Simply sets any of the passed paramers to self as long as they
+        '''
+        if kwargs is not None:
+            for k, v in kwargs.items():
+                if k in self.__class__.__allowed_kwargs and v is not None:
+                    setattr(self, k, v)
+
+    def _impute_missing_data(self, X, method='iterative'):
+        '''
+        Imputes missing data in X - sk-learn models will not work with null data
+
+        Parameters:
+            method (``str``): should be one of "iterative" (takes more time)
+                or "knn" (default: "iterative").
+        '''
+        if np.isnan(X).any() is False:
+            return X
+
+        if method == 'iterative':
+            imp = IterativeImputer(max_iter=10, random_state=self.random_seed)
+        elif method == 'knn':
+            imp = KNNImputer(n_neighbors=2, weights='uniform')
+        X_out = imp.fit_transform(X)
+        return X_out
+
+    def _get_X_and_y(self, df, impute_method='iterative'):
+        '''
+        Gets the X and y from df; y is determined by the ``y_label`` column.
+        This function depends on the having the following variables already
+        set:
+            1. self.label_y
+            2. self.group_feats
+
+        Parameters:
+            df (``pd.DataFrame``): The input dataframe to retrieve data from.
+        '''
+        msg = ('``impute_method`` must be one of: ["iterative", "knn"]')
+        assert impute_method in ['iterative', 'knn'], msg
+
+        df = df[pd.notnull(df[self.label_y])]
+        labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+
+        df_train = df[df['train_test'] == 'train']
+        df_test = df[df['train_test'] == 'test']
+
+        X_train = df_train[labels_x].values
+        X_test = df_test[labels_x].values
+        y_train = df_train[self.label_y].values
+        y_test = df_test[self.label_y].values
+
+        X_train = self._impute_missing_data(X_train, method=impute_method)
+        X_test = self._impute_missing_data(X_test, method=impute_method)
+
+        self.X_train = X_train
+        self.X_test = X_test
+        self.y_train = y_train
+        self.y_test = y_test
+        return X_train, X_test, y_train, y_test
+
+    def get_feat_group_X_y(
+            self, group_feats, ground_truth='vine_n_pct', date_tolerance=3,
+            random_seed=None, test_size=0.4, stratify=['study', 'date'],
+            impute_method='iterative'):
+        '''
+        Retrieves all the necessary columns in ``group_feats``, then filters
+        the dataframe so that it is left with only the identifying columns
+        (i.e., study, year, and plot_id), a column indicating if each
+        observation belongs to the train or test set (i.e., train_test), and
+        the feature columns indicated by ``group_feats``.
+
+        Parameters:
+            group_feats (``list`` or ``dict``): The column headings to include
+                in the X matrix. ``group_feats`` must follow the naming
+                conventions outlined in featuer_groups.py to ensure that the
+                intended features are joined to ``df_feat_group``.
             ground_truth (``str``): Must be one of "vine_n_pct", "pet_no3_ppm",
                 or "tuber_n_pct"; dictates which table to access to retrieve
                 the relevant training data.
@@ -181,22 +371,38 @@ class rtio(object):
                 greater than ``date_tolerance``, the join will not occur and
                 data will be neglected). Only relevant if predictor features
                 were collected on a different day than response features.
+            test_size (``float``):
+            stratify (``str``):
+            impute_method (``str``):
 
         Example:
             >>> from research_tools import rtio
+            >>> from research_tools import feature_groups
 
             >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
             >>> my_rt = rtio(base_dir_data)
-            >>> my_rt.get_feat_group_X(group_feats=feature_groups.cs_test2, ground_truth='vine_n_pct')
+            >>> group_feats = feature_groups.cs_test2
+            >>> my_rt.get_feat_group_X_y(group_feats)
+            >>> print('Shape of training matrix "X": {0}'.format(my_rt.X_train.shape))
+            >>> print('Shape of training vector "y": {0}'.format(my_rt.y_train.shape))
+            >>> print('Shape of testing matrix "X":  {0}'.format(my_rt.X_test.shape))
+            >>> print('Shape of testing vector "y":  {0}'.format(my_rt.y_test.shape))
         '''
-        df, y_label = self._get_response_df(ground_truth)
+        self._set_params(
+            group_feats=group_feats, ground_truth=ground_truth,
+            date_tolerance=date_tolerance, random_seed=random_seed,
+            test_size=test_size, stratify=stratify)
+        df, labels_y_id, label_y = self._get_response_df(ground_truth)
         df = self._join_group_feats(df, group_feats, date_tolerance)
-        x_labels = self._get_x_labels(group_feats, cols=df.columns)
+        df = self._train_test_split_df(df)
 
-        # df, x_labels = self._filter_df_bands(df, group_feats)
-        X, y, x_labels = train_prep.get_X_and_y(
-            df, x_labels, y_label, random_seed=random_seed)
-        return X, y, df, x_labels
+        X_train, X_test, y_train, y_test = self._get_X_and_y(
+            df, impute_method=impute_method)
+
+        labels_id = ['study', 'year', 'plot_id', 'train_test']
+        self.df_X = df[labels_id + self.labels_x]
+        self.df_y = df[labels_id + labels_y_id + [label_y]]
+        self.labels_id = labels_id
 
     def split_by_cs_band_config(df, tissue='Petiole', measure='NO3_ppm', band='1480'):
         df_full = df[(df['tissue']==tissue) & (df['measure']==measure)].dropna(axis=1)

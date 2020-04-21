@@ -36,87 +36,124 @@ def test_data_fixture_pseudo():
     return df_left, df_right, my_join
 
 
-def test_dap_column(test_data_fixture):
-    df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
-    assert 'dap' in my_join.dap(df_pet_no3).columns
+class Test_join_tables_exist:
+    def test_dates(self, test_data_fixture):
+        _, _, _, my_join = test_data_fixture
+        cols_require = ['study','year', 'date_plant', 'date_emerge']
+        assert set(cols_require).issubset(my_join.df_dates.columns)
+        assert len(my_join.df_dates) > 3
 
-def test_dae_column(test_data_fixture):
-    df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
-    assert 'dae' in my_join.dae(df_pet_no3).columns
+    def test_exp(self, test_data_fixture):
+        _, _, _, my_join = test_data_fixture
+        cols_require = ['study','year', 'plot_id', 'rep', 'trt_id']
+        assert set(cols_require).issubset(my_join.df_exp.columns)
+        assert len(my_join.df_exp) > 3
 
-def test_join_closest_date_column(test_data_fixture):
-    df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
-    assert 'date_delta' in  my_join.join_closest_date(
-        df_pet_no3, df_cs, left_on='date', right_on='date', tolerance=3).columns
+    def test_trt(self, test_data_fixture):
+        _, _, _, my_join = test_data_fixture
+        cols_require = ['study','year', 'trt_id', 'trt_n', 'trt_var', 'trt_irr']
+        assert set(cols_require).issubset(my_join.df_trt.columns)
+        assert len(my_join.df_trt) > 3
 
-def test_dap_calc_correct(test_data_fixture):
-    df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
-    df = pd.DataFrame.from_dict({'study': ['NNI'],
-                                'year': [2019],
-                                'plot_id': [101],
-                                'date': ['2019-06-25']})
-    assert my_join.dap(df)['dap'][0] == 54
+    def test_n_apps(self, test_data_fixture):
+        _, _, _, my_join = test_data_fixture
+        cols_require = ['study','year', 'trt_n', 'date_applied', 'source_n',
+                        'rate_n_kgha']
+        assert set(cols_require).issubset(my_join.df_n_apps.columns)
+        assert len(my_join.df_n_apps) > 3
 
-def test_dae_calc_correct(test_data_fixture):
-    df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
-    df = pd.DataFrame.from_dict({'study': ['NNI'],
-                                'year': [2019],
-                                'plot_id': [101],
-                                'date': ['2019-06-25']})
-    assert my_join.dae(df)['dae'][0] == 33
+    def test_n_crf(self, test_data_fixture):
+        _, _, _, my_join = test_data_fixture
+        cols_require = ['study','year', 'date_applied', 'source_n', 'b0', 'b1',
+                        'b2']
+        assert set(cols_require).issubset(my_join.df_n_crf.columns)
+        assert len(my_join.df_n_crf) > 3
 
-def test_join_closest_date_same(test_data_fixture_pseudo):
-    df_left, df_right, my_join = test_data_fixture_pseudo
-    df_left['date'] = ['2019-07-01']
-    df_right['date'] = ['2019-07-01']
-    df_join = my_join.join_closest_date(
-        df_left, df_right, left_on='date', right_on='date', tolerance=3)
-    assert df_join.loc[0, 'date_delta'] == 0
 
-def test_join_closest_date_up1(test_data_fixture_pseudo):
-    '''Ground truth (left) collected one day before predictor'''
-    df_left, df_right, my_join = test_data_fixture_pseudo
-    df_left['date'] = ['2019-07-01']
-    df_right['date'] = ['2019-06-30']
-    df_join = my_join.join_closest_date(
-        df_left, df_right, left_on='date', right_on='date', tolerance=3)
-    assert df_join.loc[0, 'date_delta'] == 1
+class Test_join_tables_dap_dae:
+    def test_dap_column(self, test_data_fixture):
+        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
+        assert 'dap' in my_join.dap(df_pet_no3).columns
 
-def test_join_closest_date_up2(test_data_fixture_pseudo):
-    '''Ground truth (left) collected two days before predictor'''
-    df_left, df_right, my_join = test_data_fixture_pseudo
-    df_left['date'] = ['2019-07-01']
-    df_right['date'] = ['2019-06-29']
-    df_join = my_join.join_closest_date(
-        df_left, df_right, left_on='date', right_on='date', tolerance=3)
-    assert df_join.loc[0, 'date_delta'] == 2
+    def test_dae_column(self, test_data_fixture):
+        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
+        assert 'dae' in my_join.dae(df_pet_no3).columns
 
-def test_join_closest_date_up3(test_data_fixture_pseudo):
-    '''Ground truth (left) collected three days before predictor'''
-    df_left, df_right, my_join = test_data_fixture_pseudo
-    df_left['date'] = ['2019-07-01']
-    df_right['date'] = ['2019-06-28']
-    df_join = my_join.join_closest_date(
-        df_left, df_right, left_on='date', right_on='date', tolerance=3)
-    assert df_join.loc[0, 'date_delta'] == 3
+    def test_join_closest_date_column(self, test_data_fixture):
+        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
+        assert 'date_delta' in  my_join.join_closest_date(
+            df_pet_no3, df_cs, left_on='date', right_on='date', tolerance=3).columns
 
-def test_join_closest_date_down2(test_data_fixture_pseudo):
-    '''Ground truth (left) collected two days after predictor'''
-    df_left, df_right, my_join = test_data_fixture_pseudo
-    df_left['date'] = ['2019-07-01']
-    df_right['date'] = ['2019-07-03']
-    df_join = my_join.join_closest_date(
-        df_left, df_right, left_on='date', right_on='date', tolerance=3)
-    assert df_join.loc[0, 'date_delta'] == -2
+    def test_dap_calc_correct(self, test_data_fixture):
+        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
+        df = pd.DataFrame.from_dict({'study': ['NNI'],
+                                    'year': [2019],
+                                    'plot_id': [101],
+                                    'date': ['2019-06-25']})
+        assert my_join.dap(df)['dap'][0] == 54
 
-def test_join_closest_date_tol0(test_data_fixture_pseudo):
-    '''Ground truth collected one day after predictor, with zero tolerance'''
-    df_left, df_right, my_join = test_data_fixture_pseudo
-    df_left['date'] = ['2019-07-01']
-    df_right['date'] = ['2019-07-02']
-    df_join = my_join.join_closest_date(
-        df_left, df_right, left_on='date', right_on='date', tolerance=0)
-    assert len(df_join) == 0
+    def test_dae_calc_correct(self, test_data_fixture):
+        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
+        df = pd.DataFrame.from_dict({'study': ['NNI'],
+                                    'year': [2019],
+                                    'plot_id': [101],
+                                    'date': ['2019-06-25']})
+        assert my_join.dae(df)['dae'][0] == 33
+
+
+class Test_join_tables_join_closest:
+    def test_join_closest_date_same(self, test_data_fixture_pseudo):
+        df_left, df_right, my_join = test_data_fixture_pseudo
+        df_left['date'] = ['2019-07-01']
+        df_right['date'] = ['2019-07-01']
+        df_join = my_join.join_closest_date(
+            df_left, df_right, left_on='date', right_on='date', tolerance=3)
+        assert df_join.loc[0, 'date_delta'] == 0
+
+    def test_join_closest_date_up1(self, test_data_fixture_pseudo):
+        '''Ground truth (left) collected one day before predictor'''
+        df_left, df_right, my_join = test_data_fixture_pseudo
+        df_left['date'] = ['2019-07-01']
+        df_right['date'] = ['2019-06-30']
+        df_join = my_join.join_closest_date(
+            df_left, df_right, left_on='date', right_on='date', tolerance=3)
+        assert df_join.loc[0, 'date_delta'] == 1
+
+    def test_join_closest_date_up2(self, test_data_fixture_pseudo):
+        '''Ground truth (left) collected two days before predictor'''
+        df_left, df_right, my_join = test_data_fixture_pseudo
+        df_left['date'] = ['2019-07-01']
+        df_right['date'] = ['2019-06-29']
+        df_join = my_join.join_closest_date(
+            df_left, df_right, left_on='date', right_on='date', tolerance=3)
+        assert df_join.loc[0, 'date_delta'] == 2
+
+    def test_join_closest_date_up3(self, test_data_fixture_pseudo):
+        '''Ground truth (left) collected three days before predictor'''
+        df_left, df_right, my_join = test_data_fixture_pseudo
+        df_left['date'] = ['2019-07-01']
+        df_right['date'] = ['2019-06-28']
+        df_join = my_join.join_closest_date(
+            df_left, df_right, left_on='date', right_on='date', tolerance=3)
+        assert df_join.loc[0, 'date_delta'] == 3
+
+    def test_join_closest_date_down2(self, test_data_fixture_pseudo):
+        '''Ground truth (left) collected two days after predictor'''
+        df_left, df_right, my_join = test_data_fixture_pseudo
+        df_left['date'] = ['2019-07-01']
+        df_right['date'] = ['2019-07-03']
+        df_join = my_join.join_closest_date(
+            df_left, df_right, left_on='date', right_on='date', tolerance=3)
+        assert df_join.loc[0, 'date_delta'] == -2
+
+    def test_join_closest_date_tol0(self, test_data_fixture_pseudo):
+        '''Ground truth collected one day after predictor, with zero tolerance'''
+        df_left, df_right, my_join = test_data_fixture_pseudo
+        df_left['date'] = ['2019-07-01']
+        df_right['date'] = ['2019-07-02']
+        df_join = my_join.join_closest_date(
+            df_left, df_right, left_on='date', right_on='date', tolerance=0)
+        assert len(df_join) == 0
 
 if __name__ == '__main__':
     '''Test from Python console'''
