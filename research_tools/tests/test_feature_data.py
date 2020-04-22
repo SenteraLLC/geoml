@@ -10,6 +10,7 @@ Insight Sensing Corporation. All rights reserved.
 @contributors: [Tyler J. Nigon]
 """
 
+import numpy as np
 import os
 import pandas as pd
 import pytest
@@ -136,7 +137,7 @@ class Test_feature_data_X_and_y:
 class Test_feature_data_labels:
     def test_labels_id(self, test_feature_data_get_feat_group_X_y_fixture):
         feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
-        labels_id = ['study', 'year', 'plot_id', 'train_test']
+        labels_id = ['study', 'year', 'plot_id', 'date', 'train_test']
         assert feat_data_cs.labels_id == labels_id
 
     def test_labels_x(self, test_feature_data_get_feat_group_X_y_fixture):
@@ -187,6 +188,72 @@ class Test_feature_data_df_X_and_df_y:
         n_train = df[df['train_test'] == 'train']['train_test'].count()
         n_test = df[df['train_test'] == 'test']['train_test'].count()
         assert pytest.approx(n_train / (n_train + n_test), 0.01) == 0.6
+
+class Test_feature_data_cv_rep_strat:
+    def test_cv_rep_strat_prop_75(
+            self, test_feature_data_get_feat_group_X_y_fixture):
+        feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
+        cv_rep_strat = feat_data_cs.kfold_repeated_stratified(
+            n_splits=4, n_repeats=3, train_test='train')
+        for train_index, val_index in cv_rep_strat:
+            train_fold = feat_data_cs.stratify_train[train_index]
+            val_fold = feat_data_cs.stratify_train[val_index]
+            break
+        n = len(train_fold) + len(val_fold)
+        assert pytest.approx(len(train_fold) / n, 0.01) == 0.75
+
+    def test_cv_rep_strat_prop_67(
+            self, test_feature_data_get_feat_group_X_y_fixture):
+        feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
+        cv_rep_strat = feat_data_cs.kfold_repeated_stratified(
+            n_splits=3, n_repeats=3, train_test='train')
+        for train_index, val_index in cv_rep_strat:
+            train_fold = feat_data_cs.stratify_train[train_index]
+            val_fold = feat_data_cs.stratify_train[val_index]
+            break
+        n = len(train_fold) + len(val_fold)
+        assert pytest.approx(len(train_fold) / n, 0.01) == 0.667
+
+    def test_cv_rep_strat_prop_50(
+            self, test_feature_data_get_feat_group_X_y_fixture):
+        feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
+        cv_rep_strat = feat_data_cs.kfold_repeated_stratified(
+            n_splits=2, n_repeats=3, train_test='train')
+        for train_index, val_index in cv_rep_strat:
+            train_fold = feat_data_cs.stratify_train[train_index]
+            val_fold = feat_data_cs.stratify_train[val_index]
+            break
+        n = len(train_fold) + len(val_fold)
+        assert pytest.approx(len(train_fold) / n, 0.01) == 0.50
+
+    def test_cv_rep_strat_n_unique_strats_train(
+            self, test_feature_data_get_feat_group_X_y_fixture):
+        feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
+        cv_rep_strat = feat_data_cs.kfold_repeated_stratified(
+            n_splits=2, n_repeats=3, train_test='train')
+        for train_index, val_index in cv_rep_strat:
+            train_fold = feat_data_cs.stratify_train[train_index]
+            val_fold = feat_data_cs.stratify_train[val_index]
+            break
+        n_strats1 = sorted(np.unique(train_fold))
+        n_strats2 = sorted(feat_data_cs.df_X.groupby(feat_data_cs.stratify
+                                                     ).ngroup().unique())
+        assert n_strats1 == n_strats2
+
+    def test_cv_rep_strat_n_unique_strats_val(
+            self, test_feature_data_get_feat_group_X_y_fixture):
+        feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
+        cv_rep_strat = feat_data_cs.kfold_repeated_stratified(
+            n_splits=2, n_repeats=3, train_test='train')
+        for train_index, val_index in cv_rep_strat:
+            train_fold = feat_data_cs.stratify_train[train_index]
+            val_fold = feat_data_cs.stratify_train[val_index]
+            break
+        n_strats1 = sorted(np.unique(val_fold))
+        n_strats2 = sorted(feat_data_cs.df_X.groupby(feat_data_cs.stratify
+                                                     ).ngroup().unique())
+        assert n_strats1 == n_strats2
+
 
 class Test_feature_data_dir_results:
     def test_dir_results_new_dir(self, test_feature_data_dir_results_fixture):

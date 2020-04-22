@@ -13,6 +13,7 @@ import numpy as np
 import os
 import pandas as pd
 
+from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.model_selection import train_test_split
 from sklearn.impute import KNNImputer
 from sklearn.experimental import enable_iterative_imputer
@@ -34,10 +35,10 @@ class feature_data(object):
         'date_tolerance', 'ground_truth',  'group_feats', 'random_seed',
         'stratify', 'test_size')
 
-    def __init__(self, base_dir_data,
+    def __init__(self, base_dir_data, random_seed=None,
                  fname_petiole='tissue_petiole_NO3_ppm.csv',
                  fname_total_n='tissue_wp_N_pct.csv',
-                 fname_cropscan='cropscan.csv', random_seed=None,
+                 fname_cropscan='cropscan.csv',
                  dir_results=None):
         '''
 
@@ -63,6 +64,7 @@ class feature_data(object):
         self.df_tuber_n_pct = None
         self.df_cs = None
 
+        self.df_full = None
         self.df_X = None
         self.df_y = None
 
@@ -76,6 +78,8 @@ class feature_data(object):
         self.X_test = None
         self.y_train = None
         self.y_test = None
+        self.stratify_train = None
+        self.stratify_test = None
 
         if self.dir_results is not None:
             os.makedirs(self.dir_results, exist_ok=True)
@@ -243,28 +247,30 @@ class feature_data(object):
             self.label_y = 'value'
             return self.df_tuber_n_pct.copy(), self.labels_y_id, self.label_y
 
-    def _add_stratify_id(self, df):
+    def _stratify_set(self):
         '''
-        Creates stratification column to be able to properly stratify train
-        and test sets
+        Creates a 1-D array of the stratification IDs (to be used by k-fold)
+        for both the train and test sets: <stratify_train> and <stratify_test>
         '''
-        if isinstance(self.stratify, list):
-            if 'stratify_id' not in df.columns:
-                df.insert(0, 'stratify_id', None)
-            df['stratify_id'] = df.groupby(self.stratify).ngroup()
-            self.stratify = 'stratify_id'
-        return df
+        msg1 = ('All <stratify> strings must be columns in <df_y>')
+        for c in self.stratify:
+            assert c in self.df_y.columns, msg1
+
+        self.stratify_train = self.df_y[
+            self.df_y['train_test'] == 'train'].groupby(self.stratify
+                                                        ).ngroup().values
+        self.stratify_test = self.df_y[
+            self.df_y['train_test'] == 'test'].groupby(self.stratify
+                                                        ).ngroup().values
 
     def _train_test_split_df(self, df):
         '''
-        Splits ``df`` into train and test sets based on proportion indicated by
-        ``test_size``
+        Splits ``df`` into train and test sets; all parameters used by
+        ``sklearn.train_test_split`` must have been set before invoking this
+        function.
 
         Parameters:
             df:
-            test_size:
-            random_seed:
-            stratify:
         '''
         # df = self._add_stratify_id(df)
         df_stratify = df[self.stratify]
@@ -276,61 +282,6 @@ class feature_data(object):
         df = df_train.copy()
         df = df.append(df_test).reset_index(drop=True)
         return df
-
-    def _get_repeated_stratified_kfold(self, df, n_splits=3, n_repeats=2,
-                                       random_state=None):
-        '''
-        Stratifies ``df`` by "dataset_id", and creates a repeated, stratified
-        k-fold cross-validation object that can be used for any sk-learn model
-
-        Parameters:
-            df:
-            n_splits:
-            n_repeats:
-            random_state:
-        '''
-        X_null = np.zeros(len(df))  # not necessary for StratifiedKFold
-        y_train_strat = df['dataset_id'].values
-        rskf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats,
-                                       random_state=random_state)
-        cv_rep_strat = rskf.split(X_null, y_train_strat)
-        return cv_rep_strat
-
-    def _check_stratified_proportions(self, df, cv_rep_strat):
-        '''
-        Checks the proportions of the stratifications in the dataset and prints
-        the number of observations in each stratified group
-
-        Parameters:
-            df:
-            cv_rep_strat:
-        '''
-        cols_meta = ['dataset_id', 'study', 'date', 'plot_id', 'trt', 'growth_stage']
-        # X_meta_train = df_train[cols_meta].values
-        # X_meta_test = df_test[cols_meta].values
-        X_meta = df[cols_meta].values
-        print('Number of observations in each cross-validation dataset (key=ID; value=n):')
-        train_list = []
-        val_list = []
-        for train_index, val_index in cv_rep_strat:
-            X_meta_train_fold = X_meta[train_index]
-            X_meta_val_fold = X_meta[val_index]
-            X_train_dataset_id = X_meta_train_fold[:,0]
-            train = {}
-            val = {}
-            for uid in np.unique(X_train_dataset_id):
-                n1 = len(np.where(X_meta_train_fold[:,0] == uid)[0])
-                n2 = len(np.where(X_meta_val_fold[:,0] == uid)[0])
-                train[uid] = n1
-                val[uid] = n2
-            train_list.append(train)
-            val_list.append(val)
-        print('Train set:')
-        for item in train_list:
-            print(item)
-        print('Test set:')
-        for item in val_list:
-            print(item)
 
     def _set_params(self, **kwargs):
         '''
@@ -395,12 +346,8 @@ class feature_data(object):
 
     def _save_df_X_y(self):
         '''
-        Saves the joined dataframe to a new folder in ``dir_results`` with another
-        README.txt file that provides some basic details about the processing that
-        was performed in case the grid_idx gets messed up..
-
-        grid_idx is the index of df_grid (this will change if df_grid changes,
-            so that is why ``msi_run_id`` is also included in the folder name)
+        Saves both ``feature_data.df_X`` and ``feature_data.df_y`` to
+        ``feature_data.dir_results``.
         '''
         if self.group_feats is None or self.label_y is None:
             print('<group_feats> and <label_y> must be set to save data to '
@@ -413,6 +360,44 @@ class feature_data(object):
         fname_out_y = os.path.join(dir_out, 'data_y_' + self.label_y + '.csv')
         self.df_X.to_csv(fname_out_X, index=False)
         self.df_y.to_csv(fname_out_y, index=False)
+
+    def _kfold_repeated_stratified_print(self, cv_rep_strat, train_test='train'):
+        '''
+        Checks the proportions of the stratifications in the dataset and prints
+        the number of observations in each stratified group. The keys are based
+        on the stratified IDs in <stratify_train> or <stratify_test>
+        '''
+        df_X = self.df_X[self.df_X['train_test'] == train_test]
+        if train_test == 'train':
+            stratify_vector = self.stratify_train
+        elif train_test == 'test':
+            stratify_vector = self.stratify_test
+        print('The number of observations in each cross-validation dataset '
+              'are listed below.\nThe key represents the <stratify_{0}> ID, '
+              'and the value represents the number of observations used from '
+              'that stratify ID'.format(train_test))
+        print('Total number of observations: {0}'.format(len(stratify_vector)))
+        train_list = []
+        val_list = []
+        for train_index, val_index in cv_rep_strat:
+            X_meta_train_fold = stratify_vector[train_index]
+            X_meta_val_fold = stratify_vector[val_index]
+            X_train_dataset_id = X_meta_train_fold[:]
+            train = {}
+            val = {}
+            for uid in np.unique(X_train_dataset_id):
+                n1 = len(np.where(X_meta_train_fold[:] == uid)[0])
+                n2 = len(np.where(X_meta_val_fold[:] == uid)[0])
+                train[uid] = n1
+                val[uid] = n2
+            train_list.append(train)
+            val_list.append(val)
+        print('\nK-fold train set:')
+        print('Number of observations: {0}'.format(len(train_index)))
+        print(*train_list, sep='\n')
+        print('\nK-fold validation set:')
+        print('Number of observations: {0}'.format(len(val_index)))
+        print(*val_list, sep='\n')
 
     def get_feat_group_X_y(
             self, group_feats, ground_truth='vine_n_pct', date_tolerance=3,
@@ -466,16 +451,68 @@ class feature_data(object):
         X_train, X_test, y_train, y_test = self._get_X_and_y(
             df, impute_method=impute_method)
 
-        labels_id = ['study', 'year', 'plot_id', 'train_test']
+        labels_id = ['study', 'year', 'plot_id', 'date', 'train_test']
         self.df_X = df[labels_id + self.labels_x]
         self.df_y = df[labels_id + labels_y_id + [label_y]]
         self.labels_id = labels_id
 
+        self._stratify_set()
+
         if self.dir_results is not None:
             self._save_df_X_y()
 
-    def split_by_cs_band_config(df, tissue='Petiole', measure='NO3_ppm', band='1480'):
-        df_full = df[(df['tissue']==tissue) & (df['measure']==measure)].dropna(axis=1)
-        df_visnir = self.filter_df_bands(df, wl_range=[400, 900])
-        df_swir = df[(df['tissue']==tissue) & (df['measure']==measure) & (pd.notnull(df[band]))].dropna(axis=1, how='all')
-        df_re = df[(df['tissue']==tissue) & (df['measure']==measure) & (pd.isnull(df[band]))].dropna(axis=1, how='all')
+    def kfold_repeated_stratified(
+            self, n_splits=4, n_repeats=3, train_test='train', print_out=False):
+        '''
+        Builds a repeated, stratified k-fold cross-validation ``sklearn``
+        object for both the X matrix and y vector based on
+        ``feature_data.df_X`` and ``feature_data.df_y``. The returned
+        cross-validation object can be used for any ``sklearn`` model.
+
+        Parameters:
+            n_splits (``int``): Number of folds. Must be at least 2.
+            n_repeats (``int``): Number of times cross-validator needs to be repeated.
+            train_test (``str``): Because ``df_X`` and ``df_y`` have a column
+                denoting whether any given observation belongs to the training
+                set or the test set, we have
+            print_out (``bool``): If ``print_out`` is set to ``True``, the
+                number of observations in each k-fold stratification will be
+                printed to the console (default: ``False``).
+
+        Returns:
+            cv_rep_strat: A repeated, stratified cross-validation object
+                suitable to be used with sklearn models.
+
+        Example:
+            >>> from research_tools import feature_data
+            >>> from research_tools import feature_groups
+
+            >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
+            >>> feat_data_cs = feature_data(base_dir_data)
+            >>> group_feats = feature_groups.cs_test2
+            >>> feat_data_cs.get_feat_group_X_y(group_feats)
+            >>> cv_rep_strat = feat_data_cs.kfold_repeated_stratified(print_out=True)
+        '''
+        if train_test == 'train':
+            X = self.X_train
+            y = self.y_train
+            stratify_vector = self.stratify_train
+        elif train_test == 'test':
+            X = self.X_test
+            y = self.y_test
+            stratify_vector = self.stratify_test
+        msg1 = ('<X> and <y> must have the same length')
+        msg2 = ('<stratify_vector> must have the same length as <X> and <y>')
+        assert len(X) == len(y), msg1
+        assert len(stratify_vector) == len(y), msg2
+
+        rskf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats,
+                                       random_state=self.random_seed)
+        if print_out is True:
+            print('\nNumber of splits: {0}\nNumber of repetitions: {1}'
+                  ''.format(n_splits, n_repeats))
+            cv_rep_strat = rskf.split(X, stratify_vector)
+            self._kfold_repeated_stratified_print(cv_rep_strat)
+        cv_rep_strat = rskf.split(X, stratify_vector)
+        return cv_rep_strat
+
