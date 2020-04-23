@@ -23,3 +23,25 @@ cs_test2 = {
                  'col_out': 'rate_ntd_kgha'},
     'cropscan_wl_range1': [400, 900]}
 
+param_dict = {
+    'FeatureData': {
+        'base_dir_data': 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data',
+        'random_seed': 999,
+        'fname_petiole': 'tissue_petiole_NO3_ppm.csv',
+        'fname_total_n': 'tissue_wp_N_pct.csv',
+        'fname_cropscan': 'cropscan.csv',
+        'dir_results': None,
+        'group_feats': cs_test2,
+        'ground_truth': 'vine_n_pct',
+        'date_tolerance': 3,
+        'test_size': 0.4,
+        'stratify': ['study', 'date'],
+        'impute_method': 'iterative',
+        'n_splits': 4,
+        'n_repeats': 3,
+        'train_test': 'train',
+        'print_out': True},
+    'FeatureSelection': {
+        'item1': 1,
+        'item2': 3}
+    }

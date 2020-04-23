@@ -20,7 +20,6 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
 from research_tools import feature_groups
-from research_tools import train_prep
 from research_tools import join_tables
 
 
@@ -31,34 +30,78 @@ class feature_data(object):
     This class assists in the loading, filtering, and preparation of research
     data for its use in a supervised regression model.
     '''
-    __allowed_kwargs = (
-        'date_tolerance', 'ground_truth',  'group_feats', 'random_seed',
-        'stratify', 'test_size')
+    __allowed_params = (
+        'base_dir_data', 'fname_petiole', 'fname_total_n', 'fname_cropscan',
+        'random_seed', 'dir_results', 'group_feats', 'ground_truth',
+        'date_tolerance', 'test_size', 'stratify', 'impute_method', 'n_splits',
+        'n_repeats', 'train_test', 'print_out')
 
-    def __init__(self, base_dir_data, random_seed=None,
-                 fname_petiole='tissue_petiole_NO3_ppm.csv',
-                 fname_total_n='tissue_wp_N_pct.csv',
-                 fname_cropscan='cropscan.csv',
-                 dir_results=None):
+    def __init__(self, **kwargs):
+        # FeatureData defaults
+        self.base_dir_data = None
+        self.random_seed = None
+        self.fname_petiole = 'tissue_petiole_NO3_ppm.csv'
+        self.fname_total_n = 'tissue_wp_N_pct.csv'
+        self.fname_cropscan = 'cropscan.csv'
+        self.dir_results = None
+        self.group_feats = feature_groups.cs_test2
+        self.ground_truth = 'vine_n_pct'
+        self.date_tolerance = 3
+        self.test_size = 0.4
+        self.stratify = ['study', 'date']
+        self.impute_method = 'iterative'
+        self.n_splits = 2
+        self.n_repeats = 3
+        self.train_test = 'train'
+        self.print_out = False
+
+        self._set_params_from_kwargs(**kwargs)
+        self._set_attributes()
+
+        if self.base_dir_data is None:
+            raise ValueError('<base_dir_data> must be set to access data '
+                             'tables, either with <param_dict> or via '
+                             '<**kwargs>')
+        if self.dir_results is not None:
+            os.makedirs(self.dir_results, exist_ok=True)
+        self._get_random_seed()
+        self._load_tables()
+        self.join_info = join_tables(self.base_dir_data)
+
+    def _set_params_from_dict(self, param_dict):
         '''
-
-        Parameters:
-            base_dir_data:
-            fname_petiole
-            fname_total_n
-            fname_cropscan
-            random_seed
-            dir_results (``str``): the directory to save any intermediate
-                results to. If ``None``, results are stored in ``feature_data``
-                object memory.
+        Sets any of the parameters in ``param_dict`` to self as long as they
+        are in the ``__allowed_params`` list
         '''
-        self.base_dir_data = base_dir_data
-        self.fname_petiole = fname_petiole
-        self.fname_total_n = fname_total_n
-        self.fname_cropscan = fname_cropscan
-        self.random_seed = random_seed
-        self.dir_results = dir_results
+        if param_dict is not None and 'FeatureData' in param_dict:
+            params_fd = param_dict['FeatureData']
+        elif param_dict is not None and 'FeatureData' not in param_dict:
+            params_fd = param_dict
+        else:  # param_dict is None
+            return
+        for k, v in params_fd.items():
+            if k in self.__class__.__allowed_params:
+                setattr(self, k, v)
 
+    def _set_params_from_kwargs(self, **kwargs):
+        '''
+        Sets any of the passed kwargs to self as long as long as they are in
+        the ``__allowed_params`` list. Notice that if 'param_dict' is passed,
+        then its contents are set before the rest of the kwargs, which are
+        passed to ``FeatureData`` more explicitly.
+        '''
+        if 'param_dict' in kwargs:
+            self._set_params_from_dict(kwargs.get('param_dict'))
+        if kwargs is not None:
+            for k, v in kwargs.items():
+                if k in self.__class__.__allowed_params:
+                    setattr(self, k, v)
+
+    def _set_attributes(self):
+        '''
+        Sets any class attribute to ``None`` that will be created in one of the
+        user functions
+        '''
         self.df_pet_no3 = None
         self.df_vine_n_pct = None
         self.df_tuber_n_pct = None
@@ -81,19 +124,6 @@ class feature_data(object):
         self.stratify_train = None
         self.stratify_test = None
 
-        if self.dir_results is not None:
-            os.makedirs(self.dir_results, exist_ok=True)
-
-        self._get_random_seed()
-        self._load_tables()
-        self.join_info = join_tables(self.base_dir_data)
-
-        # extra kwargs that are set when parameters are passed via user functs
-        self.date_tolerance = None
-        self.ground_truth = None
-        self.group_feats = None
-        self.stratify = None
-        self.test_size = None
 
     def _get_labels_x(self, group_feats, cols=None):
         '''
@@ -191,7 +221,6 @@ class feature_data(object):
         # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
         # self.df_cs = df_cs[pd.notnull(df_cs['value'])]
 
-
     def _write_to_readme(self, msg, msi_run_id=None, row=None):
         '''
         Writes ``msg`` to the README.txt file
@@ -282,15 +311,6 @@ class feature_data(object):
         df = df_train.copy()
         df = df.append(df_test).reset_index(drop=True)
         return df
-
-    def _set_params(self, **kwargs):
-        '''
-        Simply sets any of the passed paramers to self as long as they
-        '''
-        if kwargs is not None:
-            for k, v in kwargs.items():
-                if k in self.__class__.__allowed_kwargs and v is not None:
-                    setattr(self, k, v)
 
     def _impute_missing_data(self, X, method='iterative'):
         '''
@@ -399,10 +419,7 @@ class feature_data(object):
         print('Number of observations: {0}'.format(len(val_index)))
         print(*val_list, sep='\n')
 
-    def get_feat_group_X_y(
-            self, group_feats, ground_truth='vine_n_pct', date_tolerance=3,
-            random_seed=None, test_size=0.4, stratify=['study', 'date'],
-            impute_method='iterative'):
+    def get_feat_group_X_y(self, **kwargs):
         '''
         Retrieves all the necessary columns in ``group_feats``, then filters
         the dataframe so that it is left with only the identifying columns
@@ -432,24 +449,25 @@ class feature_data(object):
             >>> from research_tools import feature_groups
 
             >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
-            >>> feat_data_cs = feature_data(base_dir_data)
             >>> group_feats = feature_groups.cs_test2
-            >>> feat_data_cs.get_feat_group_X_y(group_feats)
+            >>> feat_data_cs = feature_data(base_dir_data=base_dir_data, random_seed=None)
+            >>> feat_data_cs.get_feat_group_X_y(test_size=0.1)
             >>> print('Shape of training matrix "X": {0}'.format(feat_data_cs.X_train.shape))
             >>> print('Shape of training vector "y": {0}'.format(feat_data_cs.y_train.shape))
             >>> print('Shape of testing matrix "X":  {0}'.format(feat_data_cs.X_test.shape))
             >>> print('Shape of testing vector "y":  {0}'.format(feat_data_cs.y_test.shape))
         '''
-        self._set_params(
-            group_feats=group_feats, ground_truth=ground_truth,
-            date_tolerance=date_tolerance, random_seed=random_seed,
-            test_size=test_size, stratify=stratify)
-        df, labels_y_id, label_y = self._get_response_df(ground_truth)
-        df = self._join_group_feats(df, group_feats, date_tolerance)
+        self._set_params_from_kwargs(**kwargs)
+            # group_feats=group_feats, ground_truth=ground_truth,
+            # date_tolerance=date_tolerance, test_size=test_size,
+            # stratify=stratify)
+
+        df, labels_y_id, label_y = self._get_response_df(self.ground_truth)
+        df = self._join_group_feats(df, self.group_feats, self.date_tolerance)
         df = self._train_test_split_df(df)
 
         X_train, X_test, y_train, y_test = self._get_X_and_y(
-            df, impute_method=impute_method)
+            df, impute_method=self.impute_method)
 
         labels_id = ['study', 'year', 'plot_id', 'date', 'train_test']
         self.df_X = df[labels_id + self.labels_x]
@@ -461,8 +479,7 @@ class feature_data(object):
         if self.dir_results is not None:
             self._save_df_X_y()
 
-    def kfold_repeated_stratified(
-            self, n_splits=4, n_repeats=3, train_test='train', print_out=False):
+    def kfold_repeated_stratified(self, **kwargs):
         '''
         Builds a repeated, stratified k-fold cross-validation ``sklearn``
         object for both the X matrix and y vector based on
@@ -470,11 +487,15 @@ class feature_data(object):
         cross-validation object can be used for any ``sklearn`` model.
 
         Parameters:
-            n_splits (``int``): Number of folds. Must be at least 2.
-            n_repeats (``int``): Number of times cross-validator needs to be repeated.
+            n_splits (``int``): Number of folds. Must be at least 2
+                (default: 4).
+            n_repeats (``int``): Number of times cross-validator needs to be
+                repeated (default: 3).
             train_test (``str``): Because ``df_X`` and ``df_y`` have a column
                 denoting whether any given observation belongs to the training
-                set or the test set, we have
+                set or the test set. This parameter indicates if observations
+                from the training set (i.e., "train") or the test set (i.e.,
+                "test") should be stratified (default: "train").
             print_out (``bool``): If ``print_out`` is set to ``True``, the
                 number of observations in each k-fold stratification will be
                 printed to the console (default: ``False``).
@@ -488,16 +509,18 @@ class feature_data(object):
             >>> from research_tools import feature_groups
 
             >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
-            >>> feat_data_cs = feature_data(base_dir_data)
+            >>> feat_data_cs = feature_data(base_dir_data=base_dir_data)
             >>> group_feats = feature_groups.cs_test2
-            >>> feat_data_cs.get_feat_group_X_y(group_feats)
+            >>> feat_data_cs.get_feat_group_X_y(group_feats=group_feats)
             >>> cv_rep_strat = feat_data_cs.kfold_repeated_stratified(print_out=True)
         '''
-        if train_test == 'train':
+        self._set_params_from_kwargs(**kwargs)
+
+        if self.train_test == 'train':
             X = self.X_train
             y = self.y_train
             stratify_vector = self.stratify_train
-        elif train_test == 'test':
+        elif self.train_test == 'test':
             X = self.X_test
             y = self.y_test
             stratify_vector = self.stratify_test
@@ -506,11 +529,12 @@ class feature_data(object):
         assert len(X) == len(y), msg1
         assert len(stratify_vector) == len(y), msg2
 
-        rskf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats,
-                                       random_state=self.random_seed)
-        if print_out is True:
+        rskf = RepeatedStratifiedKFold(
+            n_splits=self.n_splits, n_repeats=self.n_repeats,
+            random_state=self.random_seed)
+        if self.print_out is True:
             print('\nNumber of splits: {0}\nNumber of repetitions: {1}'
-                  ''.format(n_splits, n_repeats))
+                  ''.format(self.n_splits, self.n_repeats))
             cv_rep_strat = rskf.split(X, stratify_vector)
             self._kfold_repeated_stratified_print(cv_rep_strat)
         cv_rep_strat = rskf.split(X, stratify_vector)

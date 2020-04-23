@@ -32,6 +32,6 @@ name = 'research_tools'
 __version__ = '0.0.1'
 
 __all__ = ['join_tables',
-           'feature_data',
+           'feature_groups',
            'test_data',
            'tuning']
