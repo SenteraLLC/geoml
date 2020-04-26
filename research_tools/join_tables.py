@@ -15,22 +15,26 @@ import os
 import pandas as pd
 
 
-class join_tables(object):
+class JoinTables(object):
     '''
     Class for joining tables that contain training data. In addition to the
     join, there are functions available to add new columns to the table to
     act as unique features to explain the response variable being predicted.
     '''
-    def __init__(self, base_dir=None):
+    __allowed_params = (
+        'base_dir_data')
+    def __init__(self, **kwargs):
         '''
         For now, we can just access a base directory that contains all the
         tables (as .csv files), but as the tables become larger and/or more
         complex, it may be a good idea to connect via a database.
 
         Parameters:
-            base_dir (``str``): The base directory containing all the tables
+            base_dir_data (``str``): The base directory containing all the tables
                 available to be joined.
         '''
+        self.base_dir_data = None
+
         self.cols_require = {
             'df_dates': ['study', 'year', 'date_plant', 'date_emerge'],
             'df_exp': ['study', 'year', 'plot_id', 'rep', 'trt_id'],
@@ -82,7 +86,47 @@ class join_tables(object):
                 'names are in "df.columns".'
                 ''.format(self.cols_require['rate_ntd']))
             }
-        self.load_tables(base_dir)
+
+        self._set_params_from_kwargs_jt(**kwargs)
+        self._set_attributes_jt(**kwargs)
+
+        self.load_tables(**kwargs)
+
+    def _set_params_from_dict_jt(self, param_dict):
+        '''
+        Sets any of the parameters in ``param_dict`` to self as long as they
+        are in the ``__allowed_params`` list
+        '''
+        if param_dict is not None and 'JoinTables' in param_dict:
+            params_fd = param_dict['JoinTables']
+        elif param_dict is not None and 'JoinTables' not in param_dict:
+            params_fd = param_dict
+        else:  # param_dict is None
+            return
+        for k, v in params_fd.items():
+            if k in self.__class__.__allowed_params:
+                setattr(self, k, v)
+
+    def _set_params_from_kwargs_jt(self, **kwargs):
+        '''
+        Sets any of the passed kwargs to self as long as long as they are in
+        the ``__allowed_params`` list. Notice that if 'param_dict' is passed,
+        then its contents are set before the rest of the kwargs, which are
+        passed to ``FeatureData`` more explicitly.
+        '''
+        if 'param_dict' in kwargs:
+            self._set_params_from_dict_jt(kwargs.get('param_dict'))
+        if kwargs is not None:
+            for k, v in kwargs.items():
+                if k in self.__class__.__allowed_params:
+                    setattr(self, k, v)
+
+    def _set_attributes_jt(self, **kwargs):
+        '''
+        Sets any class attribute to ``None`` that will be created in one of the
+        user functions
+        '''
+        self.fnames = None
 
     def _cr_rate_ntd(self, df):
         '''
@@ -197,31 +241,32 @@ class join_tables(object):
         df_n_crf = self._check_requirements(df_n_crf, f='df_n_crf', date_format=date_format)
         self.df_n_crf = df_n_crf
 
-    def load_tables(self, base_dir=None):
+    def load_tables(self, **kwargs):
         '''
         Loads all of the tables required to take full advantage of the rest of
         the functions in this class
 
         Parameters:
-            base_dir (``str``): The base directory containing all the tables
+            base_dir_data (``str``): The base directory containing all the tables
                 available to be joined.
         '''
-        if base_dir is not None:
+        self._set_params_from_kwargs_jt(**kwargs)
+
+        if self.base_dir_data is not None:
             self.fnames = {
-                # 'cropscan': os.path.join(base_dir, 'cropscan.csv'),
-                'dates': os.path.join(base_dir, 'metadata_dates.csv'),
-                'experiments': os.path.join(base_dir, 'metadata_exp.csv'),
-                'treatments': os.path.join(base_dir, 'metadata_trt.csv'),
-                'n_apps': os.path.join(base_dir, 'metadata_trt_n.csv'),
-                'n_crf': os.path.join(base_dir, 'metadata_trt_n_crf.csv')}
-                # 'petiole_no3': os.path.join(base_dir, 'tissue_petiole_NO3_ppm.csv'),
-                # 'total_n': os.path.join(base_dir, 'tissue_wp_N_pct.csv')}
+                # 'cropscan': os.path.join(self.base_dir_data, 'cropscan.csv'),
+                'dates': os.path.join(self.base_dir_data, 'metadata_dates.csv'),
+                'experiments': os.path.join(self.base_dir_data, 'metadata_exp.csv'),
+                'treatments': os.path.join(self.base_dir_data, 'metadata_trt.csv'),
+                'n_apps': os.path.join(self.base_dir_data, 'metadata_trt_n.csv'),
+                'n_crf': os.path.join(self.base_dir_data, 'metadata_trt_n_crf.csv')}
+                # 'petiole_no3': os.path.join(self.base_dir_data, 'tissue_petiole_NO3_ppm.csv'),
+                # 'total_n': os.path.join(self.base_dir_data, 'tissue_wp_N_pct.csv')}
             self._read_dfs()
 
         else:
-            print('WARNING: ``base_dir`` was not passed. Functions may not '
+            print('WARNING: ``base_dir_data`` was not passed. Functions may not '
                   'perform as expected.\n')
-        self.base_dir = base_dir
 
     def join_closest_date(
             self, df_left, df_right, left_on='date', right_on='date',

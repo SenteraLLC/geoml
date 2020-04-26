@@ -20,10 +20,10 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
 from research_tools import feature_groups
-from research_tools import join_tables
+from research_tools import JoinTables
 
 
-class feature_data(object):
+class FeatureData(object):
     '''
     Class that provides file management functionality specifically for research
     data that are used for the basic training of supervised regression models.
@@ -54,21 +54,27 @@ class feature_data(object):
         self.n_repeats = 3
         self.train_test = 'train'
         self.print_out = False
+        # self.test_f_self(**kwargs)
 
-        self._set_params_from_kwargs(**kwargs)
-        self._set_attributes()
+        self._set_params_from_kwargs_fd(**kwargs)
+        self._set_attributes_fd(**kwargs)
 
         if self.base_dir_data is None:
             raise ValueError('<base_dir_data> must be set to access data '
                              'tables, either with <param_dict> or via '
-                             '<**kwargs>')
+                             '<**kwargs>.')
         if self.dir_results is not None:
             os.makedirs(self.dir_results, exist_ok=True)
         self._get_random_seed()
         self._load_tables()
-        self.join_info = join_tables(self.base_dir_data)
+        self.join_info = JoinTables(base_dir_data=self.base_dir_data)
 
-    def _set_params_from_dict(self, param_dict):
+    # def set_params_from_kwargs(self, **kwargs):
+    #     print('_set_params_from_kwargs - entering')
+    #     print(kwargs)
+    #     print('_set_params_from_kwargs - exiting')
+
+    def _set_params_from_dict_fd(self, param_dict):
         '''
         Sets any of the parameters in ``param_dict`` to self as long as they
         are in the ``__allowed_params`` list
@@ -83,7 +89,7 @@ class feature_data(object):
             if k in self.__class__.__allowed_params:
                 setattr(self, k, v)
 
-    def _set_params_from_kwargs(self, **kwargs):
+    def _set_params_from_kwargs_fd(self, **kwargs):
         '''
         Sets any of the passed kwargs to self as long as long as they are in
         the ``__allowed_params`` list. Notice that if 'param_dict' is passed,
@@ -91,13 +97,13 @@ class feature_data(object):
         passed to ``FeatureData`` more explicitly.
         '''
         if 'param_dict' in kwargs:
-            self._set_params_from_dict(kwargs.get('param_dict'))
+            self._set_params_from_dict_fd(kwargs.get('param_dict'))
         if kwargs is not None:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
 
-    def _set_attributes(self):
+    def _set_attributes_fd(self, **kwargs):
         '''
         Sets any class attribute to ``None`` that will be created in one of the
         user functions
@@ -366,8 +372,8 @@ class feature_data(object):
 
     def _save_df_X_y(self):
         '''
-        Saves both ``feature_data.df_X`` and ``feature_data.df_y`` to
-        ``feature_data.dir_results``.
+        Saves both ``FeatureData.df_X`` and ``FeatureData.df_y`` to
+        ``FeatureData.dir_results``.
         '''
         if self.group_feats is None or self.label_y is None:
             print('<group_feats> and <label_y> must be set to save data to '
@@ -445,19 +451,19 @@ class feature_data(object):
             impute_method (``str``):
 
         Example:
-            >>> from research_tools import feature_data
+            >>> from research_tools import FeatureData
             >>> from research_tools import feature_groups
 
             >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
             >>> group_feats = feature_groups.cs_test2
-            >>> feat_data_cs = feature_data(base_dir_data=base_dir_data, random_seed=None)
+            >>> feat_data_cs = FeatureData(base_dir_data=base_dir_data, random_seed=None)
             >>> feat_data_cs.get_feat_group_X_y(test_size=0.1)
             >>> print('Shape of training matrix "X": {0}'.format(feat_data_cs.X_train.shape))
             >>> print('Shape of training vector "y": {0}'.format(feat_data_cs.y_train.shape))
             >>> print('Shape of testing matrix "X":  {0}'.format(feat_data_cs.X_test.shape))
             >>> print('Shape of testing vector "y":  {0}'.format(feat_data_cs.y_test.shape))
         '''
-        self._set_params_from_kwargs(**kwargs)
+        self._set_params_from_kwargs_fd(**kwargs)
             # group_feats=group_feats, ground_truth=ground_truth,
             # date_tolerance=date_tolerance, test_size=test_size,
             # stratify=stratify)
@@ -483,7 +489,7 @@ class feature_data(object):
         '''
         Builds a repeated, stratified k-fold cross-validation ``sklearn``
         object for both the X matrix and y vector based on
-        ``feature_data.df_X`` and ``feature_data.df_y``. The returned
+        ``FeatureData.df_X`` and ``FeatureData.df_y``. The returned
         cross-validation object can be used for any ``sklearn`` model.
 
         Parameters:
@@ -505,16 +511,16 @@ class feature_data(object):
                 suitable to be used with sklearn models.
 
         Example:
-            >>> from research_tools import feature_data
+            >>> from research_tools import FeatureData
             >>> from research_tools import feature_groups
 
             >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
-            >>> feat_data_cs = feature_data(base_dir_data=base_dir_data)
+            >>> feat_data_cs = FeatureData(base_dir_data=base_dir_data)
             >>> group_feats = feature_groups.cs_test2
             >>> feat_data_cs.get_feat_group_X_y(group_feats=group_feats)
             >>> cv_rep_strat = feat_data_cs.kfold_repeated_stratified(print_out=True)
         '''
-        self._set_params_from_kwargs(**kwargs)
+        self._set_params_from_kwargs_fd(**kwargs)
 
         if self.train_test == 'train':
             X = self.X_train
@@ -539,4 +545,3 @@ class feature_data(object):
             self._kfold_repeated_stratified_print(cv_rep_strat)
         cv_rep_strat = rskf.split(X, stratify_vector)
         return cv_rep_strat
-

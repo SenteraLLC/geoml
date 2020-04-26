@@ -15,8 +15,8 @@ import os
 import pandas as pd
 import pytest
 
-from research_tools import feature_data
 from research_tools import feature_groups
+from research_tools import FeatureData
 
 
 @pytest.fixture
@@ -27,8 +27,8 @@ def test_feature_data_basic_args():
 @pytest.fixture
 def test_feature_data_init_fixture():
     base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
-    feat_data_cs = feature_data(
-        param_dict=feature_groups.param_dict, base_dir_data=base_dir_data,
+    feat_data_cs = FeatureData(
+        param_dict=feature_groups.param_dict_test, base_dir_data=base_dir_data,
         random_seed=0)
     return feat_data_cs
 
@@ -36,16 +36,16 @@ def test_feature_data_init_fixture():
 def test_feature_data_dir_results_fixture(tmp_path):
     base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
     dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
-    feat_data_cs = feature_data(
-        param_dict=feature_groups.param_dict, base_dir_data=base_dir_data,
+    feat_data_cs = FeatureData(
+        param_dict=feature_groups.param_dict_test, base_dir_data=base_dir_data,
         random_seed=0, dir_results=dir_results)
     return feat_data_cs
 
 @pytest.fixture
 def test_feature_data_get_feat_group_X_y_fixture():
     base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
-    feat_data_cs = feature_data(
-        param_dict=feature_groups.param_dict, base_dir_data=base_dir_data,
+    feat_data_cs = FeatureData(
+        param_dict=feature_groups.param_dict_test, base_dir_data=base_dir_data,
         random_seed=0)
     group_feats = feature_groups.cs_test2
     feat_data_cs.get_feat_group_X_y(
@@ -57,8 +57,8 @@ def test_feature_data_get_feat_group_X_y_fixture():
 def test_feature_data_get_feat_group_X_y_dir_results_fixture(tmp_path):
     base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
     dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
-    feat_data_cs = feature_data(
-        param_dict=feature_groups.param_dict, base_dir_data=base_dir_data,
+    feat_data_cs = FeatureData(
+        param_dict=feature_groups.param_dict_test, base_dir_data=base_dir_data,
         random_seed=0, dir_results=dir_results)
     group_feats = feature_groups.cs_test2
     feat_data_cs.get_feat_group_X_y(
@@ -289,37 +289,37 @@ class Test_feature_data_dir_results:
 class Test_feature_data_set_kwargs:
     def test_set_kwargs_no_base_dir_data(self):
         with pytest.raises(ValueError):
-            feat_data_cs = feature_data()
+            feat_data_cs = FeatureData()
 
     def test_set_kwargs_base_dir_data(self, test_feature_data_basic_args):
         base_dir_data = test_feature_data_basic_args
-        feat_data_cs = feature_data(base_dir_data=base_dir_data)
+        feat_data_cs = FeatureData(base_dir_data=base_dir_data)
         assert feat_data_cs.base_dir_data == base_dir_data
 
     def test_set_kwargs_random_seed(self, test_feature_data_basic_args):
         base_dir_data = test_feature_data_basic_args
-        feat_data_cs = feature_data(base_dir_data=base_dir_data, random_seed=0)
+        feat_data_cs = FeatureData(base_dir_data=base_dir_data, random_seed=0)
         assert feat_data_cs.random_seed == 0
 
     def test_set_kwargs_by_param_dict_random_seed(self):
-        feat_data_cs = feature_data(param_dict=feature_groups.param_dict)
-        random_seed = feature_groups.param_dict['FeatureData']['random_seed']
+        feat_data_cs = FeatureData(param_dict=feature_groups.param_dict_test)
+        random_seed = feature_groups.param_dict_test['FeatureData']['random_seed']
         assert feat_data_cs.random_seed == random_seed
 
     def test_set_kwargs_param_dict_override_random_seed(self):
-        feat_data_cs = feature_data(param_dict=feature_groups.param_dict,
+        feat_data_cs = FeatureData(param_dict=feature_groups.param_dict_test,
                                     random_seed=0)
         assert feat_data_cs.random_seed == 0
 
     def test_set_kwargs_get_feat_group_X_y_override_random_seed(self):
-        feat_data_cs = feature_data(param_dict=feature_groups.param_dict,
+        feat_data_cs = FeatureData(param_dict=feature_groups.param_dict_test,
                                     random_seed=0)
         feat_data_cs.get_feat_group_X_y(group_feats=feature_groups.cs_test2,
                                         random_seed=100)
         assert feat_data_cs.random_seed == 100
 
     def test_set_kwargs_kfold_repeated_stratified_override_random_seed(self):
-        feat_data_cs = feature_data(param_dict=feature_groups.param_dict,
+        feat_data_cs = FeatureData(param_dict=feature_groups.param_dict_test,
                                     random_seed=0)
         feat_data_cs.get_feat_group_X_y(group_feats=feature_groups.cs_test2)
         cv_rep_strat = feat_data_cs.kfold_repeated_stratified(random_seed=100)

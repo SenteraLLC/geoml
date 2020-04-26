@@ -23,15 +23,21 @@ __author__ = 'Tyler J. Nigon'
 __license__ = ('TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.')
 __email__ = 'tyler@insight-sensing.com'
 
-from .join_tables import join_tables
-from .feature_data import feature_data
-from .test_data import test_data
-from .tuning import tuning
+
+from .join_tables import JoinTables
+from .feature_data import FeatureData
+from .feature_selection import FeatureSelection
+# from .feature_data import FeatureData
+# from .feature_selection import FeatureSelection
+# from .join_tables import JoinTables
+from .tests.data import testdata
+# from .tuning import Tuning
 
 name = 'research_tools'
 __version__ = '0.0.1'
 
-__all__ = ['join_tables',
-           'feature_groups',
+__all__ = ['FeatureData',
+           'FeatureSelection',
+           'JoinTables',
            'test_data',
-           'tuning']
+           'Tuning']

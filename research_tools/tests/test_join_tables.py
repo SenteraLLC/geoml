@@ -12,17 +12,18 @@ Insight Sensing Corporation. All rights reserved.
 
 import pandas as pd
 import pytest
-from research_tools import join_tables
-from research_tools import test_data
+
+from research_tools import feature_groups
+from research_tools import JoinTables
+from research_tools import testdata
 
 
 @pytest.fixture
 def test_data_fixture():
-    data_dir = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
-    my_join = join_tables(data_dir)
-    data = test_data(data_dir)
-    df_pet_no3, df_vine_n, df_cs = data.df_pet_no3, data.df_vine_n, data.df_cs
-    return df_pet_no3, df_vine_n, df_cs, my_join
+    # data_dir = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
+    my_join = JoinTables(param_dict=feature_groups.param_dict_test)
+    data = testdata(my_join.base_dir_data)
+    return data.df_pet_no3, data.df_vine_n, data.df_cs, my_join
 
 @pytest.fixture
 def test_data_fixture_pseudo():
@@ -32,7 +33,7 @@ def test_data_fixture_pseudo():
         'plot_id': [101]})
     df_left = df.copy()
     df_right = df.copy()
-    my_join = join_tables()
+    my_join = JoinTables()
     return df_left, df_right, my_join
 
 
