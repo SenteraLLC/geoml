@@ -9,10 +9,17 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+import numpy as np
+
+from sklearn.preprocessing import PowerTransformer
+from sklearn.compose import TransformedTargetRegressor
+
+from sklearn.linear_model import Lasso
+from sklearn.cross_decomposition import PLSRegression
 
 
 cs_test1 = {
-    'dae': 'dae',
+    'dap': 'dap',
     'rate_ntd': {'col_rate_n': 'rate_n_kgha',
                  'col_out': 'rate_ntd_kgha'},
     'cropscan_bands': ['460', '510', '560', '610', '660', '680', '710', '720',
@@ -43,9 +50,9 @@ param_dict_test = {
         'n_splits': 4,
         'n_repeats': 3,
         'train_test': 'train',
-        'print_out': True},
+        'print_out_fd': False},
     'FeatureSelection': {
-        'model_fs_str': 'Lasso',
+        'model_fs': Lasso(),
         'model_fs_params_set': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
         'model_fs_params_adjust_min': {'alpha': 1},  # these are initial values to begin
         'model_fs_params_adjust_max': {'alpha': 1e-3},  # the search for the range of parameters
@@ -53,9 +60,16 @@ param_dict_test = {
         'n_linspace': 100,
         # 'method_alpha_min': 'full',
         'exit_on_stagnant_n': 5,
-        'step_pct': 0.01},
+        'step_pct': 0.01,
+        'print_out_fs': False},
     'Tuning': {
-        'param1': 1,
-        'param2': 3}
+        'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=False, method='yeo-johnson', standardize=True)),
+        'regressor_params': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
+        'param_grid': {'alpha': list(np.logspace(-4, 0, 5))},
+        'n_jobs_tune': 2,  # this should be chosen with care in context of rest of parallel processing
+        'scoring': ('neg_mean_absolute_error', 'neg_mean_squared_error', 'r2'),
+        'refit': 'neg_mean_absolute_error',
+        'rank_scoring': 'neg_mean_absolute_error',
+        'print_out_tune': False}
     }
 

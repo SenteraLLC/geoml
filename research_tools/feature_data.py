@@ -34,7 +34,7 @@ class FeatureData(object):
         'base_dir_data', 'fname_petiole', 'fname_total_n', 'fname_cropscan',
         'random_seed', 'dir_results', 'group_feats', 'ground_truth',
         'date_tolerance', 'test_size', 'stratify', 'impute_method', 'n_splits',
-        'n_repeats', 'train_test', 'print_out')
+        'n_repeats', 'train_test', 'print_out_fd')
 
     def __init__(self, **kwargs):
         # FeatureData defaults
@@ -53,7 +53,7 @@ class FeatureData(object):
         self.n_splits = 2
         self.n_repeats = 3
         self.train_test = 'train'
-        self.print_out = False
+        self.print_out_fd = False
         # self.test_f_self(**kwargs)
 
         self._set_params_from_kwargs_fd(**kwargs)
@@ -113,7 +113,6 @@ class FeatureData(object):
         self.df_tuber_n_pct = None
         self.df_cs = None
 
-        self.df_full = None
         self.df_X = None
         self.df_y = None
 
@@ -134,7 +133,8 @@ class FeatureData(object):
     def _get_labels_x(self, group_feats, cols=None):
         '''
         Parses ``group_feats`` and returns a list of column headings so that
-        a df can be subset to build the X matrix
+        a df can be subset to build the X matrix with only the appropriate
+        features indicated by ``group_feats``.
         '''
         labels_x = []
         for key in group_feats:
@@ -155,33 +155,6 @@ class FeatureData(object):
         self.labels_x = labels_x
         return self.labels_x
 
-    def _filter_df_bands(self, df, bands=None, wl_range=None):
-        '''
-        Filters dataframe so it only keeps bands designated by ``bands`` or
-        between the bands in ``wl_range``.
-        '''
-        msg1 = ('Only one of ``bands`` or ``wl_range`` must be passed, not '
-               'both.')
-        msg2 = ('At least one of ``bands`` or ``wl_range`` must be passed.')
-        assert not (bands is not None and wl_range is not None), msg1
-        assert not (bands is None and wl_range is None), msg2
-
-        bands_to_keep = []
-        if wl_range is not None:
-            for c in df.columns:
-                if not c.isnumeric():
-                    bands_to_keep.append(c)
-                elif int(c) >= wl_range[0] or int(c) <= wl_range[1]:
-                    bands_to_keep.append(c)
-        if bands is not None:
-            for c in df.columns:
-                if not c.isnumeric():
-                    bands_to_keep.append(c)
-                elif c in bands or int(c) in bands:
-                    bands_to_keep.append(c)
-        df_filter = df[bands_to_keep].dropna(axis=1)
-        return df_filter, bands_to_keep
-
     def _join_group_feats(self, df, group_feats, date_tolerance):
         '''
         Joins predictors to ``df`` based on the contents of group_feats
@@ -189,7 +162,7 @@ class FeatureData(object):
         if 'dae' in group_feats:
             df = self.join_info.dae(df)  # add DAE
         if 'dap' in group_feats:
-            df = self.join_info.dap(df)  # add DAE
+            df = self.join_info.dap(df)  # add DAP
         if 'rate_ntd' in group_feats:
             value = group_feats['rate_ntd']['col_rate_n']
             unit_str = value.rsplit('_', 1)[1]
@@ -463,6 +436,7 @@ class FeatureData(object):
             >>> print('Shape of testing matrix "X":  {0}'.format(feat_data_cs.X_test.shape))
             >>> print('Shape of testing vector "y":  {0}'.format(feat_data_cs.y_test.shape))
         '''
+        print('Getting feature data...')
         self._set_params_from_kwargs_fd(**kwargs)
             # group_feats=group_feats, ground_truth=ground_truth,
             # date_tolerance=date_tolerance, test_size=test_size,
@@ -502,7 +476,7 @@ class FeatureData(object):
                 set or the test set. This parameter indicates if observations
                 from the training set (i.e., "train") or the test set (i.e.,
                 "test") should be stratified (default: "train").
-            print_out (``bool``): If ``print_out`` is set to ``True``, the
+            print_out_fd (``bool``): If ``print_out_fd`` is set to ``True``, the
                 number of observations in each k-fold stratification will be
                 printed to the console (default: ``False``).
 
@@ -518,7 +492,7 @@ class FeatureData(object):
             >>> feat_data_cs = FeatureData(base_dir_data=base_dir_data)
             >>> group_feats = feature_groups.cs_test2
             >>> feat_data_cs.get_feat_group_X_y(group_feats=group_feats)
-            >>> cv_rep_strat = feat_data_cs.kfold_repeated_stratified(print_out=True)
+            >>> cv_rep_strat = feat_data_cs.kfold_repeated_stratified(print_out_fd=True)
         '''
         self._set_params_from_kwargs_fd(**kwargs)
 
@@ -538,7 +512,7 @@ class FeatureData(object):
         rskf = RepeatedStratifiedKFold(
             n_splits=self.n_splits, n_repeats=self.n_repeats,
             random_state=self.random_seed)
-        if self.print_out is True:
+        if self.print_out_fd is True:
             print('\nNumber of splits: {0}\nNumber of repetitions: {1}'
                   ''.format(self.n_splits, self.n_repeats))
             cv_rep_strat = rskf.split(X, stratify_vector)

@@ -33,6 +33,29 @@ def test_feature_data_init_fixture():
     return feat_data_cs
 
 @pytest.fixture
+def test_feature_data_init_param_dict_simple_fixture():
+    param_dict_fd = {
+        'base_dir_data': 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data',
+        'random_seed': 999,
+        'fname_petiole': 'tissue_petiole_NO3_ppm.csv',
+        'fname_total_n': 'tissue_wp_N_pct.csv',
+        'fname_cropscan': 'cropscan.csv',
+        'dir_results': None,
+        'group_feats': feature_groups.cs_test2,
+        'ground_truth': 'vine_n_pct',
+        'date_tolerance': 3,
+        'test_size': 0.4,
+        'stratify': ['study', 'date'],
+        'impute_method': 'iterative',
+        'n_splits': 4,
+        'n_repeats': 3,
+        'train_test': 'train',
+        'print_out_fd': False}
+    feat_data_cs = FeatureData(
+        param_dict=param_dict_fd, random_seed=0)
+    return feat_data_cs
+
+@pytest.fixture
 def test_feature_data_dir_results_fixture(tmp_path):
     base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
     dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
@@ -97,6 +120,36 @@ class Test_feature_data_exist_df:
         assert len(feat_data_cs.df_cs) > 3
 
 
+class Test_feature_data_exist_simple_df:
+    def test_simple_df_pet_no3(self, test_feature_data_init_param_dict_simple_fixture):
+        feat_data_cs = test_feature_data_init_param_dict_simple_fixture
+        cols_require = ['study', 'year', 'plot_id', 'date', 'tissue', 'measure',
+                        'value']
+        assert set(cols_require).issubset(feat_data_cs.df_pet_no3.columns)
+        assert len(feat_data_cs.df_pet_no3) > 1000
+
+    def test_simple_df_vine_n_pct(self, test_feature_data_init_param_dict_simple_fixture):
+        feat_data_cs = test_feature_data_init_param_dict_simple_fixture
+        cols_require = ['study', 'year', 'plot_id', 'date', 'tissue', 'measure',
+                        'value']
+        assert set(cols_require).issubset(feat_data_cs.df_vine_n_pct.columns)
+        assert len(feat_data_cs.df_vine_n_pct) > 500
+
+    def test_simple_df_tuber_n_pct(self, test_feature_data_init_param_dict_simple_fixture):
+        feat_data_cs = test_feature_data_init_param_dict_simple_fixture
+        cols_require = ['study', 'year', 'plot_id', 'date', 'tissue', 'measure',
+                        'value']
+        assert set(cols_require).issubset(feat_data_cs.df_tuber_n_pct.columns)
+        assert len(feat_data_cs.df_tuber_n_pct) > 500
+
+    def test_simple_df_cs(self, test_feature_data_init_param_dict_simple_fixture):
+        feat_data_cs = test_feature_data_init_param_dict_simple_fixture
+        cols_require = ['study', 'year', 'plot_id', 'date']
+        assert set(cols_require).issubset(feat_data_cs.df_cs.columns)
+        assert len(feat_data_cs.df_cs.columns) > 8
+        assert len(feat_data_cs.df_cs) > 3
+
+
 class Test_feature_data_self:
     def test_group_feats(self, test_feature_data_get_feat_group_X_y_fixture):
         feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
@@ -119,6 +172,35 @@ class Test_feature_data_self:
     def test_stratify(self, test_feature_data_get_feat_group_X_y_fixture):
         feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
         assert feat_data_cs.stratify == ['study', 'date']
+
+
+class Test_feature_data_self_other_X_and_y:
+    '''Modifies the X and y variables to increase coverage'''
+    def test_group_cropscan_bands(self, test_feature_data_init_fixture):
+        feat_data_cs = test_feature_data_init_fixture
+        group_feats = feature_groups.cs_test1
+        feat_data_cs.get_feat_group_X_y(group_feats=group_feats)
+        cs_bands_expected = ['460', '510', '560', '610', '660', '680', '710',
+                             '720', '740', '760', '810', '870', '900']
+        assert feat_data_cs.group_feats['dap'] == 'dap'
+        assert feat_data_cs.group_feats['rate_ntd'] == {'col_rate_n': 'rate_n_kgha', 'col_out': 'rate_ntd_kgha'}
+        assert feat_data_cs.group_feats['cropscan_bands'] == cs_bands_expected
+        with pytest.raises(KeyError):
+            assert feat_data_cs.group_feats['cropscan_wl_range1']
+
+    def test_get_y_pet_no3_ppm(self, test_feature_data_init_fixture):
+        feat_data_cs = test_feature_data_init_fixture
+        group_feats = feature_groups.cs_test1
+        feat_data_cs.get_feat_group_X_y(group_feats=group_feats,
+                                        ground_truth='pet_no3_ppm')
+        assert 'Petiole' in feat_data_cs.df_y['tissue'].unique()
+
+    def test_get_y_tuber_n_pct(self, test_feature_data_init_fixture):
+        feat_data_cs = test_feature_data_init_fixture
+        group_feats = feature_groups.cs_test1
+        feat_data_cs.get_feat_group_X_y(group_feats=group_feats,
+                                        ground_truth='tuber_n_pct')
+        assert 'Tuber' in feat_data_cs.df_y['tissue'].unique()
 
 
 class Test_feature_data_X_and_y:
@@ -223,7 +305,7 @@ class Test_feature_data_cv_rep_strat:
             self, test_feature_data_get_feat_group_X_y_fixture):
         feat_data_cs = test_feature_data_get_feat_group_X_y_fixture
         cv_rep_strat = feat_data_cs.kfold_repeated_stratified(
-            n_splits=2, n_repeats=3, train_test='train')
+            n_splits=2, n_repeats=3, train_test='train', print_out_fd=True)
         for train_index, val_index in cv_rep_strat:
             train_fold = feat_data_cs.stratify_train[train_index]
             val_fold = feat_data_cs.stratify_train[val_index]
@@ -290,6 +372,11 @@ class Test_feature_data_set_kwargs:
     def test_set_kwargs_no_base_dir_data(self):
         with pytest.raises(ValueError):
             feat_data_cs = FeatureData()
+
+    def test_set_kwargs_param_dict_none(self, test_feature_data_basic_args):
+        base_dir_data = test_feature_data_basic_args
+        feat_data_cs = FeatureData(param_dict=None, base_dir_data=base_dir_data)
+        assert feat_data_cs.base_dir_data == base_dir_data
 
     def test_set_kwargs_base_dir_data(self, test_feature_data_basic_args):
         base_dir_data = test_feature_data_basic_args

@@ -39,17 +39,18 @@ class FeatureSelection(FeatureData):
         n_feats (``int``): The maximum number of features to consider
     '''
     __allowed_params = (
-        'model_fs_str', 'model_fs_params_set', 'model_fs_params_adjust_min', 'model_fs_params_adjust_max',
+        'model_fs', 'model_fs_params_set', 'model_fs_params_adjust_min', 'model_fs_params_adjust_max',
         'n_feats', 'n_linspace', 'exit_on_stagnant_n',
-        'step_pct')
+        'step_pct', 'print_out_fs')
 
     def __init__(self, **kwargs):
         super(FeatureSelection, self).__init__(**kwargs)
         self.get_feat_group_X_y()
         cv_rep_strat = self.kfold_repeated_stratified()
         # FeatureData defaults
-        self.model_fs_str = 'Lasso'  # params below are specific to this model
-        self.model_fs_params_set = {'precompute': 'auto',
+        self.model_fs = None  # params below are specific to this model
+        self.model_fs_name = None
+        self.model_fs_params_set = {'precompute': True,
                                     'max_iter': 100000,
                                     'tol': 0.001,
                                     'warm_start': True,
@@ -61,10 +62,11 @@ class FeatureSelection(FeatureData):
         # self.method_alpha_min = 'full'
         self.exit_on_stagnant_n = 5
         self.step_pct = 0.01
+        self.print_out_fs = False
 
         self._set_params_from_kwargs_fs(**kwargs)
         self._set_attributes_fs()
-        self._set_model_fs()
+        # self._set_model_fs()
 
     def _set_params_from_dict_fs(self, param_dict):
         '''
@@ -80,6 +82,8 @@ class FeatureSelection(FeatureData):
         for k, v in params_fd.items():
             if k in self.__class__.__allowed_params:
                 setattr(self, k, v)
+        if 'model_fs' in params_fd.keys():
+            self._set_model_fs()
 
     def _set_params_from_kwargs_fs(self, **kwargs):
         '''
@@ -94,13 +98,14 @@ class FeatureSelection(FeatureData):
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
+            if 'model_fs' in kwargs.keys():
+                self._set_model_fs()
 
     def _set_attributes_fs(self):
         '''
         Sets any class attribute to ``None`` that will be created in one of the
         user functions from the ``feature_selection`` class
         '''
-        self.model_fs = None
         self.model_fs_params_feats_min = None
         self.model_fs_params_feats_max = None
         self.df_fs_params = None
@@ -116,18 +121,23 @@ class FeatureSelection(FeatureData):
         there is a discrepancy), the model's random state is set/reset to avoid
         any discrepancy.
         '''
-        if self.model_fs_str == 'Lasso':
-            from sklearn.linear_model import Lasso
-            self.model_fs = Lasso(**self.model_fs_params_set)
-            self.model_fs.set_params(**self.model_fs_params_adjust_max)  # initializes alpha_init*
-        elif self.model_fs_str == 'PCA':
-            raise NotImplementedError('PCA is not implemented.')
-        else:
-            raise NotImplementedError('{0} is not implemented.'.format(self.model_fs_str))
+        self.model_fs.set_params(**self.model_fs_params_set)
 
-        if self.model_fs.random_state != self.random_seed:
-            self.model_fs.set_params(**{'random_state': self.random_seed})
-            # myfs.model_fs.random_state = myfs.random_seed
+        if 'regressor' in self.model_fs.get_params().keys():
+            regressor_key_fs = 'regressor__'
+            self.model_fs_name = type(self.model_fs.regressor).__name__
+            try:
+                self.model_fs.set_params(**{regressor_key_fs + 'random_state': self.random_seed})
+            except ValueError:
+                print('Invalid parameter <random_state> for estimator, thus '
+                      '<random_state> cannot be set.\n')
+        else:
+            self.model_fs_name = type(self.model_fs).__name__
+            try:
+                self.model_fs.set_params(**{'random_state': self.random_seed})
+            except ValueError:
+                print('Invalid parameter <random_state> for estimator, thus '
+                      '<random_state> cannot be set.\n')
 
     def _f_feat_n(self, **kwargs):
         '''
@@ -136,17 +146,23 @@ class FeatureSelection(FeatureData):
         passed via <kwargs>, which will be passed to the sklearn model
         instance.
         '''
-        cols = ['model_fs', 'feat_n', 'features', 'feat_ranking', 'params']
+        cols = ['model_fs', 'params_fs', 'feat_n', 'feats_x_select',
+                'labels_x_select', 'rank_x_select']
         self.model_fs.set_params(**kwargs)
         self.model_fs.fit(self.X_train, self.y_train)
         model_bs = SelectFromModel(self.model_fs, prefit=True)
         feats = model_bs.get_support(indices=True)
         coefs = self.model_fs.coef_[feats]  # get ranking coefficients
         feat_ranking = rankdata(-coefs, method='min')
-        data = [self.model_fs_str, len(feats), tuple(feats),
-                tuple(feat_ranking), self.model_fs.get_params()]
+        feats_x_select = [self.labels_x[i] for i in feats]
+        data = [self.model_fs_name, self.model_fs.get_params(),
+                len(feats), tuple(feats), tuple(feats_x_select),
+                tuple(feat_ranking)]
         df = pd.DataFrame(data=[data], columns=cols)
         return df
+
+
+
 
     def _params_adjust(self, param_dict, key, increase=True, factor=10):
         val = param_dict[key]
@@ -184,7 +200,7 @@ class FeatureSelection(FeatureData):
             step_pct /= 2
         else:  # keep step_pct the same
             pass
-        if step_pct != step_pct_old:
+        if step_pct != step_pct_old and self.print_out_fs == True:
             print('<step_pct> adjusted from {0} to {1}'.format(step_pct_old, step_pct))
         # print('Old "step_pct": {0}'.format(step_pct))
         # print('New "step_pct": {0}'.format(step_pct))
@@ -244,10 +260,12 @@ class FeatureSelection(FeatureData):
                 self.model_fs_params_adjust_max = self._params_adjust(
                     self.model_fs_params_adjust_max, key='alpha',
                     increase=True, factor=(1-step_pct))
-            print('Adjusted parameters: {0}'.format(self.model_fs_params_adjust_max))
-            print('Features selected: {0}\n'.format(feat_n_sel))
-            # print('Iterations without progress: {0}\n'.format(same_n))
-        print('Using up to {0} selected features\n'.format(feat_n_sel))
+            if self.print_out_fs == True:
+                print('Adjusted parameters: {0}'.format(self.model_fs_params_adjust_max))
+                print('Features selected: {0}\n'.format(feat_n_sel))
+                # print('Iterations without progress: {0}\n'.format(same_n))
+        if self.print_out_fs == True:
+            print('Using up to {0} selected features\n'.format(feat_n_sel))
         self.model_fs_params_feats_max = self.model_fs_params_adjust_max
         self.step_pct = step_pct
 
@@ -281,7 +299,9 @@ class FeatureSelection(FeatureData):
 
     def _lasso_fs_df(self):
         '''
-        Creates <df_fs_params> for the Lasso method
+        Creates a "template" dataframe that provides all the necessary
+        information for the ``Tuning`` class to achieve the specific number of
+        features determined by the ``FeatureSelection`` class.
         '''
         self._find_features_min()
         self._find_features_max(
@@ -300,9 +320,69 @@ class FeatureSelection(FeatureData):
                 df = df_temp.copy()
             else:
                 df = df.append(df_temp)
-        df = df.drop_duplicates(subset=['features', 'feat_ranking'],
-                                ignore_index=True)
+        df = df.drop_duplicates(subset=['feats_x_select'], ignore_index=True)
         self.df_fs_params = df
+
+    def _fs_get_X_select_test(self, df_fs_params_idx):
+        '''
+        References <df_fs_params> to provide a new matrix X that only includes
+        the selected features.
+
+        Parameters:
+            df_fs_params_idx (``int``): The index of <df_fs_params> to retrieve
+                sklearn model parameters (the will be stored in the "params"
+                column).
+        '''
+        msg1 = ('<df_fs_params> must be populated; be sure to execute '
+                '``find_feat_selection_params()`` prior to running '
+                '``get_X_select()``.')
+        msg2 = ('The selected features are different from those listed in '
+                'index [{0}] of <df_fs_params>, but the regressor parameters '
+                'are the same. Please be sure <X_train> or '
+                '<y_train> were not modified, or that the contents of '
+                '<df_fs_params> were not modified. (this is probably a '
+                'limitation of repeatability by ``sklearn.SelectFromModel``).'
+                ''.format(df_fs_params_idx))
+        msg3 = ('The selected features are different from those listed in '
+                'index [{0}] of <df_fs_params> because the regressor parameters '
+                'are DIFFERENT. Please be sure the contents of '
+                '<df_fs_params> were not modified. (this is probably a bug in '
+                'your workflow)'
+                ''.format(df_fs_params_idx))
+        assert isinstance(self.df_fs_params, pd.DataFrame), msg1
+
+        self.model_fs.set_params(**self.df_fs_params.iloc[df_fs_params_idx]['params_fs'])
+        self.model_fs.fit(self.X_train, self.y_train)
+        model_select = SelectFromModel(self.model_fs, prefit=True)
+
+        feats_now = tuple(model_select.get_support(indices=True))
+        labels_x_select_now = tuple([self.labels_x[i] for i in feats_now])
+
+
+        labels_x_select = self.df_fs_params.iloc[df_fs_params_idx]['labels_x_select']
+        if labels_x_select_now != labels_x_select:
+            params_from_df = self.df_fs_params.iloc[df_fs_params_idx]['params_fs']
+            params_from_model = self.model_fs.get_params()
+            if params_from_df == params_from_model:
+                print('params: {0}'.format(params_from_df))
+                print('Features selected just now: {0}'.format(labels_x_select_now))
+                print('<df_fs_features>: {0}'.format(labels_x_select))
+                print(msg2 + '\n')
+            else:
+                print('from_df: {0}'.format(params_from_df))
+                print('from_model: {0}\n'.format(params_from_model))
+                print('Features selected just now: {0}'.format(labels_x_select_now))
+                print('<df_fs_features>: {0}'.format(labels_x_select))
+                print(msg3 + '\n')
+            X_train_select, X_test_select = self._fs_get_X_select_simple(df_fs_params_idx)
+        else:
+            X_train_select = model_select.transform(self.X_train)
+            X_test_select = model_select.transform(self.X_test)
+            self.X_train_select = X_train_select
+            self.X_test_select = X_test_select
+            self.labels_x_select = labels_x_select
+            self.rank_x_select = self.df_fs_params.iloc[df_fs_params_idx]['rank_x_select']
+        return X_train_select, X_test_select
 
     def fs_find_params(self, **kwargs):
         '''
@@ -321,6 +401,7 @@ class FeatureSelection(FeatureData):
                 (``list``), and the parameters to recreate the feature
                 selection scenario (``dict``).
         '''
+        print('Performing feature selection...')
         self._set_params_from_kwargs_fs(**kwargs)
 
         # msg = ('``method_alpha_min`` must be either "full" or'
@@ -333,12 +414,12 @@ class FeatureSelection(FeatureData):
         if self.n_feats > self.X_train.shape[1]:
             self.n_feats = self.X_train.shape[1]
 
-        if self.model_fs_str == 'Lasso':
+        if self.model_fs_name == 'Lasso':
             self._lasso_fs_df()
-        elif self.model_fs_str == 'PCA':
-            raise NotImplementedError('{0} is not implemented.'.format(self.model_fs_str))
-        else:
-            raise NotImplementedError('{0} is not implemented.'.format(self.model_fs_str))
+        elif self.model_fs_name == 'PCA':
+            raise NotImplementedError('{0} is not implemented.'.format(self.model_fs_name))
+        # else:
+        #     raise NotImplementedError('{0} is not implemented.'.format(self.model_fs_name))
 
     def fs_get_X_select(self, df_fs_params_idx):
         '''
@@ -353,38 +434,15 @@ class FeatureSelection(FeatureData):
         msg1 = ('<df_fs_params> must be populated; be sure to execute '
                 '``find_feat_selection_params()`` prior to running '
                 '``get_X_select()``.')
-        msg2 = ('<model_fs_str> must match the model indicated by the '
-                '"model_fs" column of <df_fs_params>.')
         assert isinstance(self.df_fs_params, pd.DataFrame), msg1
-        assert (self.df_fs_params.iloc[df_fs_params_idx]['model_fs'] ==
-                self.model_fs_str), msg2
 
-        self.model_fs.set_params(**self.df_fs_params.iloc[df_fs_params_idx]['params'])
-        self.model_fs.fit(self.X_train, self.y_train)
-        model_select = SelectFromModel(self.model_fs, prefit=True)
+        feats_x_select = self.df_fs_params.iloc[df_fs_params_idx]['feats_x_select']
 
-        # features = np.array(
-        #     self.df_fs_params.iloc[df_fs_params_idx]['features'],
-        #     dtype='int64')
-        features = self.df_fs_params.iloc[df_fs_params_idx]['features']
-        msg3 = ('The selected features are different from those listed in '
-                'index [{0}] of <df_fs_params>. Please be sure <X_train> or '
-                '<y_train> were not modified, or that the contents of '
-                '<df_fs_params> were not modified. (this is probably a bug in '
-                'your workflow)'
-                ''.format(df_fs_params_idx))
-        features_now = tuple(model_select.get_support(indices=True))
-        if features_now != features:
-            print('Features selected just now: {0}'.format(features_now))
-            print('<df_fs_features>: {0}'.format(features))
-            raise ValueError(msg3)
-
-        X_train_select = model_select.transform(self.X_train)
-        X_test_select = model_select.transform(self.X_test)
+        X_train_select = self.X_train[:,feats_x_select]
+        X_test_select = self.X_test[:,feats_x_select]
         self.X_train_select = X_train_select
         self.X_test_select = X_test_select
-        self.labels_x_select = [self.labels_x[i] for i in features]
+        self.labels_x_select = self.df_fs_params.iloc[df_fs_params_idx]['labels_x_select']
+        self.rank_x_select = self.df_fs_params.iloc[df_fs_params_idx]['rank_x_select']
         return X_train_select, X_test_select
-
-
 

@@ -37,13 +37,21 @@ def test_feature_selection_get_X_select_fixture():
 
 
 class Test_feature_selection_self:
-    def test_model_fs_str(self, test_feature_selection_init_fixture):
+    def test_model_fs_name(self, test_feature_selection_init_fixture):
         myfs = test_feature_selection_init_fixture
-        assert myfs.model_fs_str == 'Lasso'
+        assert type(myfs.model_fs).__name__ == 'Lasso'
 
     def test_model_fs_params_set(self, test_feature_selection_init_fixture):
         myfs = test_feature_selection_init_fixture
         assert myfs.model_fs_params_set == {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True}
+
+    def test_model_fs_precompute_not_set(self, test_feature_selection_init_fixture):
+        '''
+        As long as 'precompute' is set in __init__, "param_dict_test" should
+        override it. This tests to be sure this happens in the proper order.
+        '''
+        myfs = test_feature_selection_init_fixture
+        assert myfs.model_fs.get_params()['precompute'] == False
 
     def test_model_fs_params_adjust_min(self, test_feature_selection_init_fixture):
         myfs = test_feature_selection_init_fixture

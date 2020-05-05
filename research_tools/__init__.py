@@ -27,17 +27,14 @@ __email__ = 'tyler@insight-sensing.com'
 from .join_tables import JoinTables
 from .feature_data import FeatureData
 from .feature_selection import FeatureSelection
-# from .feature_data import FeatureData
-# from .feature_selection import FeatureSelection
-# from .join_tables import JoinTables
+from .tuning import Tuning
 from .tests.data import testdata
-# from .tuning import Tuning
 
 name = 'research_tools'
 __version__ = '0.0.1'
 
-__all__ = ['FeatureData',
+__all__ = ['JoinTables',
+           'FeatureData',
            'FeatureSelection',
-           'JoinTables',
-           'test_data',
-           'Tuning']
+           'Tuning',
+           'testdata']
