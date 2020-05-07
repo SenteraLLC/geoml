@@ -62,14 +62,14 @@ param_dict_test = {
         'exit_on_stagnant_n': 5,
         'step_pct': 0.01,
         'print_out_fs': False},
-    'Tuning': {
-        'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=False, method='yeo-johnson', standardize=True)),
+    'Training': {
+        'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=True, method='yeo-johnson', standardize=True)),
         'regressor_params': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
         'param_grid': {'alpha': list(np.logspace(-4, 0, 5))},
         'n_jobs_tune': 2,  # this should be chosen with care in context of rest of parallel processing
         'scoring': ('neg_mean_absolute_error', 'neg_mean_squared_error', 'r2'),
         'refit': 'neg_mean_absolute_error',
         'rank_scoring': 'neg_mean_absolute_error',
-        'print_out_tune': False}
+        'print_out_train': False}
     }
 
