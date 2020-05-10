@@ -110,6 +110,7 @@ class Training(FeatureSelection):
         self.df_tune = None
         self.df_tune_filtered = None
         self.df_test = None
+        self.df_pred = None
         self.df_test_filtered = None
 
     def _set_regressor(self):
@@ -130,8 +131,8 @@ class Training(FeatureSelection):
             # all the old parameters!
             # Yes, as long as it is accessed via regressor.regressor instead of
             # reseting regressor (via regressor.set_params(regressor=Lasso()))
-            # estimator_level1 = type(my_tune.regressor).__name__
-            # estimator_level2 = type(my_tune.regressor.regressor).__name__
+            # estimator_level1 = type(my_train.regressor).__name__
+            # estimator_level2 = type(my_train.regressor.regressor).__name__
             self.regressor_name = type(self.regressor.regressor).__name__
             try:
                 self.regressor.set_params(**{self.regressor_key + 'random_state': self.random_seed})
@@ -218,7 +219,7 @@ class Training(FeatureSelection):
         '''
         Gets column names for tuning dataframe
         '''
-        cols = ['model_fs', 'feat_n', 'feats_x_select', 'rank_x_select',
+        cols = ['uid', 'model_fs', 'feat_n', 'feats_x_select', 'rank_x_select',
                 'regressor_name', 'regressor', 'params_regressor',
                 'params_tuning']
         prefixes = ['score_train_', 'std_train_', 'score_val_', 'std_val_']
@@ -232,7 +233,7 @@ class Training(FeatureSelection):
         '''
         Gets column names for test dataframe
         '''
-        cols = ['model_fs', 'feat_n', 'feats_x_select', 'rank_x_select',
+        cols = ['uid', 'model_fs', 'feat_n', 'feats_x_select', 'rank_x_select',
                 'regressor_name', 'regressor', 'params_regressor']
         prefixes = ['train_', 'test_']
         scoring = ['neg_mae', 'neg_rmse', 'r2']
@@ -252,7 +253,7 @@ class Training(FeatureSelection):
                 ``_tune_grid_search``.
             rank (``int``): The rank to retrieve values for (1 is highest rank).
         '''
-        data = [self.model_fs_name, len(self.labels_x_select),
+        data = [np.nan, self.model_fs_name, len(self.labels_x_select),
                 self.labels_x_select, self.rank_x_select,
                 self.regressor_name, self.regressor]
         if not isinstance(df, pd.DataFrame):
@@ -300,7 +301,7 @@ class Training(FeatureSelection):
     #     cols.remove('value')
     #     cols.extend(['value_obs', 'value_pred'])
 
-    #     feat_n_list = list(my_tune.df_tune['feat_n'])
+    #     feat_n_list = list(my_train.df_tune['feat_n'])
     #     cols_preds = cols_meta + feat_n_list
     #     df_pred = pd.DataFrame(columns=cols_preds)
     #     df_pred[cols_meta] = df_test[cols_meta]
@@ -318,7 +319,7 @@ class Training(FeatureSelection):
             X = self.X_test_select
             y = self.y_test
         y_pred = self.regressor.predict(X)
-        # sns.scatterplot(x=my_tune.y_test, y=y_pred)
+        # sns.scatterplot(x=my_train.y_test, y=y_pred)
 
 
         neg_mae = -mean_absolute_error(y, y_pred)
@@ -337,14 +338,14 @@ class Training(FeatureSelection):
         Parameters:
             df (``pd.DataFrame``):
         '''
-        data = [self.model_fs_name, len(self.labels_x_select),
+        data = [df.iloc[0]['uid'], self.model_fs_name, len(self.labels_x_select),
                 self.labels_x_select, self.rank_x_select,
                 self.regressor_name, self.regressor]
-        if pd.isnull(df['params_regressor'][0]):
+        if pd.isnull(df.iloc[0]['params_regressor']):
             data.extend([np.nan] * (len(self._get_df_test_cols()) - len(data)))
             df_test1 = pd.DataFrame(
-                data=[data], columns=self._get_df_test_cols())
-            return df_test1
+                data=[data], index=[df.index[0]], columns=self._get_df_test_cols())
+            return df_test1, None
 
         msg = ('<params_regressor> are not equal. (this is a bug)')
         assert self.regressor.get_params() == df['params_regressor'].values[0], msg
@@ -355,8 +356,8 @@ class Training(FeatureSelection):
         y_pred, test_neg_mae, test_neg_rmse, test_r2 = self._error(train_or_test='test')
         data.extend([train_neg_mae, test_neg_mae, train_neg_rmse, test_neg_rmse,
                      train_r2, test_r2])
-        df_test1 = pd.DataFrame([data], columns=self._get_df_test_cols())
-        return df_test1
+        df_test1 = pd.DataFrame([data], index=[df.index[0]], columns=self._get_df_test_cols())
+        return df_test1, y_pred
 
 
         # estimator = df_tune_filtered2.iloc[0]['regressor']
@@ -415,6 +416,20 @@ class Training(FeatureSelection):
     #             df_tune_all_list = append_tuning_results(df_tune_all_list, df_tune_feat_list)
     #     return df_tune_all_list
 
+    # def _set_df_pred_idx(self):
+    #     df = self.df_test_filtered
+    #     idx_full = self.df_pred.columns.get_level_values(level=0)
+    #     idx_filtered = []
+    #     for i in idx_full:
+    #         # print(i)
+    #         if i in self.df_y.columns:
+    #             idx_filtered.append(i)
+    #         elif i in list(df['index_full']):
+    #             idx_filtered.append(df[df['index_full'] == i].index[0])
+    #         else:
+    #             idx_filtered.append(np.nan)  # keep -1
+    #     self.df_pred.columns = pd.MultiIndex.from_arrays([idx_full, idx_filtered], names=('full', 'filtered'))
+
     def _filter_test_results(self, scoring='test_neg_mae'):
         '''
         Remove dupilate number of features (keep only lowest error)
@@ -434,44 +449,69 @@ class Training(FeatureSelection):
         idx_feat1 = df['feat_n'].searchsorted(1, side='left')
         if np.isnan(df.iloc[idx_feat1][scoring]):
             idx.iloc[idx_feat1] = True
-        df['feat_n'] = df['feat_n'].apply(pd.to_numeric)
-        df_filtered = df[idx].drop_duplicates(['regressor_name', 'feat_n']).sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
+
+        df_filtered = self.df_test[idx].drop_duplicates(['regressor_name', 'feat_n'])
+        # df_filtered.reset_index(level=df_filtered.index.names, inplace=True)
+        # df_filtered = df_filtered.rename(columns={'index': 'index_full'})
+        df_filtered.reset_index(drop=True, inplace=True)
         self.df_test_filtered = df_filtered
+        # self._set_df_pred_idx()
+
+    def _get_uid(self, idx):
+        if self.df_test is None:
+            idx_max = 0
+        else:
+            idx_max = self.df_test.index.max() + 1
+        return int(idx_max + idx)
 
     def train(self, **kwargs):
         '''
         Perform tuning for each unique scenario from ``FeatureSelection``
         (i.e., for each row in <df_fs_params>).
         '''
-        print('Executing hyperparameter tuning...')
+        print('Executing hyperparameter tuning and estimator training...')
         self._set_params_from_kwargs_tune(**kwargs)
 
         df_tune = self.df_tune
         df_test = self.df_test
+        df_pred = self.df_pred
         for idx in self.df_fs_params.index:
             X_train_select, X_test_select = self.fs_get_X_select(idx)
             n_feats = len(self.df_fs_params.iloc[idx]['feats_x_select'])
             if self.print_out_train == True:
                 print('Number of features: {0}'.format(n_feats))
-
-            # param_grid_dict = self._param_grid_add_key(param_grid_dict, key)
-
             df_tune_grid = self._tune_grid_search()
             df_tune_rank = self._get_tune_results(df_tune_grid, rank=1)
+            uid = self._get_uid(idx)
+            df_tune_rank.loc[0, 'uid'] = uid
+            df_tune_rank = df_tune_rank.rename(index={0: uid})
             if df_tune is None:
                 df_tune = df_tune_rank.copy()
             else:
                 df_tune = df_tune.append(df_tune_rank)
+            df_test1, y_pred = self._get_test_results(df_tune_rank)
             if df_test is None:
-                df_test = self._get_test_results(df_tune_rank)
+                df_test = df_test1.copy()
             else:
-                df_test = df_test.append(self._get_test_results(df_tune_rank))
+                df_test = df_test.append(df_test1)
 
             if self.print_out_train is True:
                 print('{0}:'.format(self.regressor_name))
                 print('R2: {0:.3f}\n'.format(df_tune_rank['score_val_r2'].values[0]))
 
-        df_tune = df_tune.sort_values('feat_n').reset_index(drop=True)
+            if df_pred is None:
+                df_pred = self.df_y[self.df_y['train_test'] == 'test'].copy()
+
+                # col_idx = [self.df_y.columns, self.df_y.columns]
+                # df_pred.columns = pd.MultiIndex.from_arrays(col_idx, names=('full', 'filtered'))
+
+            if y_pred is not None:  # have to store y_pred while we have it
+                df_pred[uid] = y_pred
+                # df_pred[(uid, np.nan)] = y_pred
+
+        # df_tune = df_tune.sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
+        # df_test = df_test.sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
         self.df_tune = df_tune
         self.df_test = df_test
+        self.df_pred = df_pred
         self._filter_test_results(scoring='test_neg_mae')
