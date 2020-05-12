@@ -19,7 +19,7 @@ from sklearn.impute import KNNImputer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
-from research_tools import feature_groups
+# from research_tools import feature_groups
 from research_tools import JoinTables
 
 
@@ -44,7 +44,10 @@ class FeatureData(object):
         self.fname_total_n = 'tissue_wp_N_pct.csv'
         self.fname_cropscan = 'cropscan.csv'
         self.dir_results = None
-        self.group_feats = feature_groups.cs_test2
+        self.group_feats = {'dae': 'dae',
+                            'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                                         'col_out': 'rate_ntd_kgha'},
+                            'cropscan_wl_range1': [400, 900]}
         self.ground_truth = 'vine_n_pct'
         self.date_tolerance = 3
         self.test_size = 0.4

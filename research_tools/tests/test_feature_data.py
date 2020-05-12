@@ -36,8 +36,9 @@ def test_feature_data_init_fixture():
 
 @pytest.fixture
 def test_feature_data_init_config_dict_simple_fixture():
+    test_dir = os.path.dirname(os.path.abspath(__file__))
     config_dict_fd = {
-        'base_dir_data': 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data',
+        'base_dir_data': os.path.join(test_dir, 'testdata'),
         'random_seed': 999,
         'fname_petiole': 'tissue_petiole_NO3_ppm.csv',
         'fname_total_n': 'tissue_wp_N_pct.csv',
@@ -59,7 +60,8 @@ def test_feature_data_init_config_dict_simple_fixture():
 
 @pytest.fixture
 def test_feature_data_dir_results_fixture(tmp_path):
-    base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir_data = os.path.join(test_dir, 'testdata')
     dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
     feat_data_cs = FeatureData(
         config_dict=config.config_dict, base_dir_data=base_dir_data,
@@ -68,7 +70,8 @@ def test_feature_data_dir_results_fixture(tmp_path):
 
 @pytest.fixture
 def test_feature_data_get_feat_group_X_y_fixture():
-    base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir_data = os.path.join(test_dir, 'testdata')
     feat_data_cs = FeatureData(
         config_dict=config.config_dict, base_dir_data=base_dir_data,
         random_seed=0)
@@ -80,7 +83,8 @@ def test_feature_data_get_feat_group_X_y_fixture():
 
 @pytest.fixture
 def test_feature_data_get_feat_group_X_y_dir_results_fixture(tmp_path):
-    base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir_data = os.path.join(test_dir, 'testdata')
     dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
     feat_data_cs = FeatureData(
         config_dict=config.config_dict, base_dir_data=base_dir_data,
