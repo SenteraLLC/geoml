@@ -15,17 +15,10 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.preprocessing import PowerTransformer
 from sklearn.compose import TransformedTargetRegressor
 
-# from research_tools import feature_groups
+import pytest
 from research_tools.tests import config
 from research_tools import Training
 
-
-import pytest
-
-@pytest.fixture
-def test_training_init_fixture():
-    my_train = Training(config_dict=config.config_dict, print_out=False)
-    return my_train
 
 @pytest.fixture
 def test_training_init_fixture():
@@ -263,10 +256,11 @@ class Test_training_set_kwargs:
 
 
 class Test_training_predict:
-    def test_predict_X_check_n_feats(self, test_training_train_fixture):
-        my_train = test_training_train_fixture
-        feats = my_train.df_test['feat_n'].unique()
-        assert([1,2,3,4,5] == sorted(list(feats)))
+    # def test_predict_X_check_n_feats(self, test_training_train_fixture):
+    #     my_train = test_training_train_fixture
+    #     feats = my_train.df_test['feat_n'].unique()
+    #     assert(len(feats) == len())
+    #     assert([1,2,3,4,5] == sorted(list(feats)))
 
     def test_predict_X_n_feats_2(self, test_training_train_fixture):
         my_train = test_training_train_fixture

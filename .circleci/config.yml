@@ -41,7 +41,15 @@ jobs:
           command: |
              source /home/circleci/miniconda/etc/profile.d/conda.sh
              conda activate test
-             pytest research_tools --cov=research_tools
+             # pytest research_tools --cov=research_tools
+             mkdir test-results
+             pytest research_tools --junitxml=test-results/junit.xml --cov=research_tools
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: test-results
 
 workflows:
   main:
