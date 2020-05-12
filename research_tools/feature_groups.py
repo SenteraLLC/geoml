@@ -42,7 +42,7 @@ param_dict_test = {
         'fname_cropscan': 'cropscan.csv',
         'dir_results': None,
         'group_feats': cs_test2,
-        'ground_truth': 'vine_n_pct',
+        'ground_truth': 'vine_n_pct',  # 'vine_n_pct', 'pet_no3_ppm'
         'date_tolerance': 3,
         'test_size': 0.4,
         'stratify': ['study', 'date'],

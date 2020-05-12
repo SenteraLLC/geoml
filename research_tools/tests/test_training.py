@@ -144,42 +144,42 @@ class Test_training_df_tune_scores:
         assert my_train.rank_scoring == my_train.scoring[0]
 
 
-class Test_training_df_test:
-    def test_df_test_scores(self, test_training_train_fixture):
+class Test_training_df_test_full:
+    def test_df_test_full_scores(self, test_training_train_fixture):
         my_train = test_training_train_fixture
         prefixes = ['train_', 'test_']
         scoring = ['neg_mae', 'neg_rmse', 'r2']
         for obj_str in scoring:
             for prefix in prefixes:
                 col = prefix + obj_str
-                assert col in my_train.df_test
+                assert col in my_train.df_test_full
 
-    def test_df_test_uid_unique(self, test_training_train_fixture):
+    def test_df_test_full_uid_unique(self, test_training_train_fixture):
         my_train = test_training_train_fixture
-        assert list(my_train.df_test['uid']) == list(my_train.df_test['uid'].unique())
+        assert list(my_train.df_test_full['uid']) == list(my_train.df_test_full['uid'].unique())
 
 
-class Test_training_df_test_filtered_features:
+class Test_training_df_test_features:
     def test_features_no_duplicates(self, test_training_train_fixture):
         my_train = test_training_train_fixture
-        n_rows = len(my_train.df_test_filtered['feat_n'])
-        n_unique = len(set(my_train.df_test_filtered['feat_n']))
+        n_rows = len(my_train.df_test['feat_n'])
+        n_unique = len(set(my_train.df_test['feat_n']))
         assert n_rows == n_unique
 
     def test_features_unique_feat_n(self, test_training_train_fixture):
         my_train = test_training_train_fixture
-        feats_all = sorted(list(my_train.df_test_filtered['feat_n']))
-        feats_unique = sorted(list(my_train.df_test_filtered['feat_n'].unique()))
+        feats_all = sorted(list(my_train.df_test['feat_n']))
+        feats_unique = sorted(list(my_train.df_test['feat_n'].unique()))
         assert feats_all == feats_unique
 
     def test_features_len_feats_x_select(self, test_training_train_fixture):
         my_train = test_training_train_fixture
-        for idx, row in my_train.df_test_filtered.iterrows():
+        for idx, row in my_train.df_test.iterrows():
             assert row['feat_n'] == len(row['feats_x_select'])
 
     def test_features_len_rank_n_select(self, test_training_train_fixture):
         my_train = test_training_train_fixture
-        for idx, row in my_train.df_test_filtered.iterrows():
+        for idx, row in my_train.df_test.iterrows():
             assert row['feat_n'] == len(row['rank_x_select'])
 
 class Test_training_df_tune_params:
@@ -240,7 +240,7 @@ class Test_training_set_kwargs:
                           regressor=regressor, regressor_params=regressor_params,
                           param_grid=param_grid)
         my_train.train()
-        assert 'PLSRegression' in my_train.df_test_filtered['regressor_name'].unique()
+        assert 'PLSRegression' in my_train.df_test['regressor_name'].unique()
 
     def test_set_kwargs_regressor_two_models(self, test_training_train_fixture):
         my_train = test_training_train_fixture
@@ -252,40 +252,45 @@ class Test_training_set_kwargs:
         my_train.train(regressor=regressor,
                                 regressor_params=regressor_params,
                                 param_grid=param_grid)
-        assert 'Lasso' in my_train.df_test_filtered['regressor_name'].unique()
-        assert 'PLSRegression' in my_train.df_test_filtered['regressor_name'].unique()
+        assert 'Lasso' in my_train.df_test['regressor_name'].unique()
+        assert 'PLSRegression' in my_train.df_test['regressor_name'].unique()
 
 
 class Test_training_predict:
+    def test_predict_X_check_n_feats(self, test_training_train_fixture):
+        my_train = test_training_train_fixture
+        feats = my_train.df_test['feat_n'].unique()
+        assert([1,2,3,4,5] in feats)
+
     def test_predict_X_n_feats_2(self, test_training_train_fixture):
         my_train = test_training_train_fixture
         feat_n = 2
-        est = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['regressor'].values[0]
-        feat_x_select = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['feats_x_select'].values[0]
+        est = my_train.df_test[my_train.df_test['feat_n'] == feat_n]['regressor'].values[0]
+        feat_x_select = my_train.df_test[my_train.df_test['feat_n'] == feat_n]['feats_x_select'].values[0]
         data = my_train.df_X[list(feat_x_select)].values
         assert(len(est.predict(data)) == len(data))
 
     def test_predict_X_n_feats_3(self, test_training_train_fixture):
         my_train = test_training_train_fixture
         feat_n = 3
-        est = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['regressor'].values[0]
-        feat_x_select = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['feats_x_select'].values[0]
+        est = my_train.df_test[my_train.df_test['feat_n'] == feat_n]['regressor'].values[0]
+        feat_x_select = my_train.df_test[my_train.df_test['feat_n'] == feat_n]['feats_x_select'].values[0]
         data = my_train.df_X[list(feat_x_select)].values
         assert(len(est.predict(data)) == len(data))
 
     def test_predict_X_n_feats_4(self, test_training_train_fixture):
         my_train = test_training_train_fixture
         feat_n = 4
-        est = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['regressor'].values[0]
-        feat_x_select = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['feats_x_select'].values[0]
+        est = my_train.df_test[my_train.df_test['feat_n'] == feat_n]['regressor'].values[0]
+        feat_x_select = my_train.df_test[my_train.df_test['feat_n'] == feat_n]['feats_x_select'].values[0]
         data = my_train.df_X[list(feat_x_select)].values
         assert(len(est.predict(data)) == len(data))
 
     def test_predict_X_n_feats_5(self, test_training_train_fixture):
         my_train = test_training_train_fixture
         feat_n = 5
-        est = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['regressor'].values[0]
-        feat_x_select = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['feats_x_select'].values[0]
+        est = my_train.df_test[my_train.df_test['feat_n'] == feat_n]['regressor'].values[0]
+        feat_x_select = my_train.df_test[my_train.df_test['feat_n'] == feat_n]['feats_x_select'].values[0]
         data = my_train.df_X[list(feat_x_select)].values
         assert(len(est.predict(data)) == len(data))
 
