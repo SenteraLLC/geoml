@@ -29,8 +29,17 @@ jobs:
              # Install test requirements
              conda install -n test anaconda-project pytest pytest-cov
       - run:
+          name: Conda information
+          command: |
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
+             conda activate test
+             conda info
+             conda config --show
+             conda list --show-channel-urls
+      - run:
           name: Run tests
           command: |
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
              conda activate test
              pytest research_tools --cov=research_tools
 
