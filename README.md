@@ -25,7 +25,7 @@ Dependencies are provided for both a production environment (e.g., one that woul
 `conda install -c conda-forge pandas`
 
 ### Dev/Test
-`conda create -n insight_prod python=3.8`
+`conda create -n insight_dev python=3.8`
 `conda install -c anaconda scikit-learn`
 `conda install -c conda-forge pandas`
 `conda install -c conda-forge pytest`

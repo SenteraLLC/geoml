@@ -15,7 +15,8 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.preprocessing import PowerTransformer
 from sklearn.compose import TransformedTargetRegressor
 
-from research_tools import feature_groups
+# from research_tools import feature_groups
+from research_tools.tests import config
 from research_tools import Training
 
 
@@ -23,18 +24,23 @@ import pytest
 
 @pytest.fixture
 def test_training_init_fixture():
-    my_train = Training(param_dict=feature_groups.param_dict_test, print_out=False)
+    my_train = Training(config_dict=config.config_dict, print_out=False)
+    return my_train
+
+@pytest.fixture
+def test_training_init_fixture():
+    my_train = Training(config_dict=config.config_dict, print_out=False)
     return my_train
 
 @pytest.fixture
 def test_training_train_fixture():
-    my_train = Training(param_dict=feature_groups.param_dict_test, print_out=False)
+    my_train = Training(config_dict=config.config_dict, print_out=False)
     my_train.train()
     return my_train
 
 # @pytest.fixture
 # def test_training_PLSR_fixture():
-#     my_train = Training(param_dict=feature_groups.param_dict_test,
+#     my_train = Training(config_dict=config.config_dict,
 #                       regressor=PLSRegression(), print_out=False)
 #     return my_train
 
@@ -42,52 +48,52 @@ def test_training_train_fixture():
 class Test_training_self:
     def test_kwargs_override_regressor(self):
         '''<regressor_params> must also be set with <regressor>'''
-        tune_pls = Training(param_dict=feature_groups.param_dict_test,
+        tune_pls = Training(config_dict=config.config_dict,
                           regressor=PLSRegression(), regressor_params=None)
         assert isinstance(tune_pls.regressor, PLSRegression)
 
     def test_kwargs_override_regressor_params(self):
         regressor_params = {'n_components': 3, 'max_iter': 10000}
-        tune_pls = Training(param_dict=feature_groups.param_dict_test,
+        tune_pls = Training(config_dict=config.config_dict,
                           regressor=PLSRegression(),
                           regressor_params=regressor_params)
         assert tune_pls.regressor_params == regressor_params
 
     def test_kwargs_override_param_grid(self):
         param_grid = {'alpha': list(np.logspace(-4, 0, 10))}
-        my_train = Training(param_dict=feature_groups.param_dict_test,
+        my_train = Training(config_dict=config.config_dict,
                          param_grid=param_grid)
         assert my_train.param_grid == param_grid
 
     def test_kwargs_override_n_jobs_tune(self):
         n_jobs_tune = 4
-        my_train = Training(param_dict=feature_groups.param_dict_test,
+        my_train = Training(config_dict=config.config_dict,
                          n_jobs_tune=n_jobs_tune)
         assert my_train.n_jobs_tune == n_jobs_tune
 
     def test_kwargs_override_scoring(self):
         scoring = ('neg_mean_squared_error', 'r2')
-        my_train = Training(param_dict=feature_groups.param_dict_test,
+        my_train = Training(config_dict=config.config_dict,
                          scoring=scoring)
         assert my_train.scoring == scoring
 
     def test_kwargs_override_refit(self):
         scoring = ('neg_mean_absolute_error', 'neg_mean_squared_error', 'r2')
         refit = scoring[1]
-        my_train = Training(param_dict=feature_groups.param_dict_test,
+        my_train = Training(config_dict=config.config_dict,
                          refit=refit)
         assert my_train.refit == refit
 
     def test_kwargs_override_rank_scoring(self):
         scoring = ('neg_mean_absolute_error', 'neg_mean_squared_error', 'r2')
         rank_scoring = scoring[1]
-        my_train = Training(param_dict=feature_groups.param_dict_test,
+        my_train = Training(config_dict=config.config_dict,
                          rank_scoring=rank_scoring)
         assert my_train.rank_scoring == rank_scoring
 
     def test_kwargs_override_print_out_train(self):
         print_out_train = True
-        my_train = Training(param_dict=feature_groups.param_dict_test,
+        my_train = Training(config_dict=config.config_dict,
                            print_out_train=print_out_train)
         my_train.train()  # for test coverage on print_out_train=True
         assert my_train.print_out_train == print_out_train
@@ -96,10 +102,10 @@ class Test_training_self:
 class Test_training_self_simple:
     def test_kwargs_override_regressor(self):
         '''
-        Sets param_dict manually instead of using nested from feature_groups
+        Sets config_dict manually instead of using nested from feature_groups
         '''
-        base_dir_data = feature_groups.param_dict_test['FeatureData']['base_dir_data']
-        param_dict_tune = {
+        base_dir_data = config.config_dict['FeatureData']['base_dir_data']
+        config_dict_tune = {
             'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=False, method='yeo-johnson', standardize=True)),
             'regressor_params': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
             'param_grid': {'alpha': list(np.logspace(-4, 0, 5))},
@@ -108,7 +114,7 @@ class Test_training_self_simple:
             'refit': 'neg_mean_absolute_error',
             'rank_scoring': 'neg_mean_absolute_error',
             'print_out_train': True}
-        my_train = Training(param_dict=param_dict_tune, base_dir_data=base_dir_data)
+        my_train = Training(config_dict=config_dict_tune, base_dir_data=base_dir_data)
         assert my_train.print_out_train == True
 
 class Test_training_df_tune_scores:
@@ -138,7 +144,7 @@ class Test_training_df_tune_scores:
             assert col in my_train.df_tune
 
     def test_scores_no_rank_scoring(self, test_training_train_fixture):
-        my_train = Training(param_dict=feature_groups.param_dict_test,
+        my_train = Training(config_dict=config.config_dict,
                           rank_scoring=None)
         my_train.train()
         assert my_train.rank_scoring == my_train.scoring[0]
@@ -225,9 +231,9 @@ class Test_training_set_kwargs:
         with pytest.raises(ValueError):
             my_train = Training()
 
-    def test_set_kwargs_param_dict_none(self):
-        base_dir_data = feature_groups.param_dict_test['FeatureData']['base_dir_data']
-        my_train = Training(param_dict=None, base_dir_data=base_dir_data)
+    def test_set_kwargs_config_dict_none(self):
+        base_dir_data = config.config_dict['FeatureData']['base_dir_data']
+        my_train = Training(config_dict=None, base_dir_data=base_dir_data)
         assert my_train.base_dir_data == base_dir_data
 
     def test_set_kwargs_regressor(self):
@@ -236,7 +242,7 @@ class Test_training_set_kwargs:
                 copy=False, method='yeo-johnson', standardize=True))
         regressor_params = {'n_components': 3, 'max_iter': 10000}
         param_grid = {'n_components': list(np.linspace(2, 10, 9, dtype=int)), 'scale': [True, False]}
-        my_train = Training(param_dict=feature_groups.param_dict_test,
+        my_train = Training(config_dict=config.config_dict,
                           regressor=regressor, regressor_params=regressor_params,
                           param_grid=param_grid)
         my_train.train()

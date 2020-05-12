@@ -61,7 +61,7 @@ class FeatureData(object):
 
         if self.base_dir_data is None:
             raise ValueError('<base_dir_data> must be set to access data '
-                             'tables, either with <param_dict> or via '
+                             'tables, either with <config_dict> or via '
                              '<**kwargs>.')
         if self.dir_results is not None:
             os.makedirs(self.dir_results, exist_ok=True)
@@ -74,16 +74,16 @@ class FeatureData(object):
     #     print(kwargs)
     #     print('_set_params_from_kwargs - exiting')
 
-    def _set_params_from_dict_fd(self, param_dict):
+    def _set_params_from_dict_fd(self, config_dict):
         '''
-        Sets any of the parameters in ``param_dict`` to self as long as they
+        Sets any of the parameters in ``config_dict`` to self as long as they
         are in the ``__allowed_params`` list
         '''
-        if param_dict is not None and 'FeatureData' in param_dict:
-            params_fd = param_dict['FeatureData']
-        elif param_dict is not None and 'FeatureData' not in param_dict:
-            params_fd = param_dict
-        else:  # param_dict is None
+        if config_dict is not None and 'FeatureData' in config_dict:
+            params_fd = config_dict['FeatureData']
+        elif config_dict is not None and 'FeatureData' not in config_dict:
+            params_fd = config_dict
+        else:  # config_dict is None
             return
         for k, v in params_fd.items():
             if k in self.__class__.__allowed_params:
@@ -92,12 +92,12 @@ class FeatureData(object):
     def _set_params_from_kwargs_fd(self, **kwargs):
         '''
         Sets any of the passed kwargs to self as long as long as they are in
-        the ``__allowed_params`` list. Notice that if 'param_dict' is passed,
+        the ``__allowed_params`` list. Notice that if 'config_dict' is passed,
         then its contents are set before the rest of the kwargs, which are
         passed to ``FeatureData`` more explicitly.
         '''
-        if 'param_dict' in kwargs:
-            self._set_params_from_dict_fd(kwargs.get('param_dict'))
+        if 'config_dict' in kwargs:
+            self._set_params_from_dict_fd(kwargs.get('config_dict'))
         if kwargs is not None:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:

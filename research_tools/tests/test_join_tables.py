@@ -11,18 +11,18 @@ Insight Sensing Corporation. All rights reserved.
 """
 
 import pandas as pd
-import pytest
-
-from research_tools import feature_groups
 from research_tools import JoinTables
-from research_tools import testdata
+
+import pytest
+from research_tools.tests import config
+from research_tools.tests import data
 
 
 @pytest.fixture
 def test_data_fixture():
     # data_dir = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
-    my_join = JoinTables(param_dict=feature_groups.param_dict_test)
-    data = testdata(my_join.base_dir_data)
+    my_join = JoinTables(config_dict=config.config_dict)
+    # data = testdata(my_join.base_dir_data)
     return data.df_pet_no3, data.df_vine_n, data.df_cs, my_join
 
 @pytest.fixture
