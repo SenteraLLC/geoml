@@ -9,6 +9,7 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+from copy import deepcopy
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
@@ -27,7 +28,8 @@ class Training(FeatureSelection):
     '''
     __allowed_params = (
         'regressor', 'regressor_params', 'param_grid', 'n_jobs_tune',
-        'scoring', 'refit', 'rank_scoring', 'print_out_train')
+        'scoring', 'refit', 'rank_scoring', 'print_out_train',
+        'base_dir_results')
 
     def __init__(self, **kwargs):
         '''
@@ -50,6 +52,7 @@ class Training(FeatureSelection):
         self.refit = self.scoring[0]
         self.rank_scoring = self.scoring[0]
         self.print_out_train = False
+        # self.base_dir_results = None
 
         self._set_params_from_kwargs_tune(**kwargs)
         self._set_attributes_tune()
@@ -255,7 +258,7 @@ class Training(FeatureSelection):
         '''
         data = [np.nan, self.model_fs_name, len(self.labels_x_select),
                 self.labels_x_select, self.rank_x_select,
-                self.regressor_name, self.regressor]
+                self.regressor_name, deepcopy(self.regressor)]
         if not isinstance(df, pd.DataFrame):
             data.extend([np.nan] * (len(self._get_df_tune_cols()) - len(data)))
             df_tune1 = pd.DataFrame(
@@ -327,6 +330,25 @@ class Training(FeatureSelection):
         r2 = r2_score(y, y_pred)
         return y_pred, neg_mae, neg_rmse, r2
 
+    def _fit_all_data(self):
+        '''
+        Fits ``Training.regressor`` using the full dataset (i.e., training and
+        test dataset).
+
+        Cross validation is required to be sure our model is not overfit (i.e,
+        that the model is not too complex); after hyperparameter tuning and
+        testing, it is fine to train the model with the full dataset as long
+        as the hyperparameters are set according to the results from the
+        cross-validation.
+
+        Caution: there should not be any feature selection, tuning,
+        optimization, etc. after this function is executed.
+        '''
+        X = np.concatenate((self.X_train_select, self.X_test_select))
+        y = np.concatenate((self.y_train, self.y_test))
+        self.regressor.fit(X, y)
+        # print(self.regressor.score(X, y))
+
     def _get_test_results(self, df):
         '''
         Trains the model for "current" tuning scenario and computes the
@@ -340,7 +362,7 @@ class Training(FeatureSelection):
         '''
         data = [df.iloc[0]['uid'], self.model_fs_name, len(self.labels_x_select),
                 self.labels_x_select, self.rank_x_select,
-                self.regressor_name, self.regressor]
+                self.regressor_name, deepcopy(self.regressor)]
         if pd.isnull(df.iloc[0]['params_regressor']):
             data.extend([np.nan] * (len(self._get_df_test_cols()) - len(data)))
             df_test1 = pd.DataFrame(
@@ -350,10 +372,14 @@ class Training(FeatureSelection):
         msg = ('<params_regressor> are not equal. (this is a bug)')
         assert self.regressor.get_params() == df['params_regressor'].values[0], msg
 
-        data.extend([self.regressor.get_params()])
         self.regressor.fit(self.X_train_select, self.y_train)
+
         _, train_neg_mae, train_neg_rmse, train_r2 = self._error(train_or_test='train')
         y_pred, test_neg_mae, test_neg_rmse, test_r2 = self._error(train_or_test='test')
+
+        self._fit_all_data()  # Fit using both train and test data
+        data[-1] = deepcopy(self.regressor)
+        data.extend([self.regressor.get_params()])
         data.extend([train_neg_mae, test_neg_mae, train_neg_rmse, test_neg_rmse,
                      train_r2, test_r2])
         df_test1 = pd.DataFrame([data], index=[df.index[0]], columns=self._get_df_test_cols())
@@ -515,3 +541,19 @@ class Training(FeatureSelection):
         self.df_test = df_test
         self.df_pred = df_pred
         self._filter_test_results(scoring='test_neg_mae')
+
+    # def set_regressor(self, feat_n=None, **kwargs):
+    #     '''
+    #     Sets the regressor for a given <feat_n> from <Tuning.df_test_filtered>.
+
+    #     Parameters:
+    #         feat_n (``int``): The DataFrame to get the regressor from
+    #             (default: ``Training.df_test_filtered``).
+    #     '''
+    #     self._set_params_from_kwargs_tune(**kwargs)
+    #     if feat_n is None:
+    #         feat_n = X.sha
+    #     params = df[df['feat_n'] == feat_n]['params_regressor'].values[0]
+    #     my_train.regressor.set_params(**params)
+
+

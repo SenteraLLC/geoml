@@ -32,7 +32,6 @@ def test_training_train_fixture():
     my_train.train()
     return my_train
 
-
 # @pytest.fixture
 # def test_training_PLSR_fixture():
 #     my_train = Training(param_dict=feature_groups.param_dict_test,
@@ -140,7 +139,7 @@ class Test_training_df_tune_scores:
 
     def test_scores_no_rank_scoring(self, test_training_train_fixture):
         my_train = Training(param_dict=feature_groups.param_dict_test,
-                         rank_scoring=None)
+                          rank_scoring=None)
         my_train.train()
         assert my_train.rank_scoring == my_train.scoring[0]
 
@@ -238,8 +237,8 @@ class Test_training_set_kwargs:
         regressor_params = {'n_components': 3, 'max_iter': 10000}
         param_grid = {'n_components': list(np.linspace(2, 10, 9, dtype=int)), 'scale': [True, False]}
         my_train = Training(param_dict=feature_groups.param_dict_test,
-                         regressor=regressor, regressor_params=regressor_params,
-                         param_grid=param_grid)
+                          regressor=regressor, regressor_params=regressor_params,
+                          param_grid=param_grid)
         my_train.train()
         assert 'PLSRegression' in my_train.df_test_filtered['regressor_name'].unique()
 
@@ -251,8 +250,42 @@ class Test_training_set_kwargs:
         regressor_params = {'n_components': 3, 'max_iter': 10000}
         param_grid = {'n_components': list(np.linspace(2, 5, 4, dtype=int)), 'scale': [True, False]}
         my_train.train(regressor=regressor,
-                               regressor_params=regressor_params,
-                               param_grid=param_grid)
+                                regressor_params=regressor_params,
+                                param_grid=param_grid)
         assert 'Lasso' in my_train.df_test_filtered['regressor_name'].unique()
         assert 'PLSRegression' in my_train.df_test_filtered['regressor_name'].unique()
+
+
+class Test_training_predict:
+    def test_predict_X_n_feats_2(self, test_training_train_fixture):
+        my_train = test_training_train_fixture
+        feat_n = 2
+        est = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['regressor'].values[0]
+        feat_x_select = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['feats_x_select'].values[0]
+        data = my_train.df_X[list(feat_x_select)].values
+        assert(len(est.predict(data)) == len(data))
+
+    def test_predict_X_n_feats_3(self, test_training_train_fixture):
+        my_train = test_training_train_fixture
+        feat_n = 3
+        est = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['regressor'].values[0]
+        feat_x_select = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['feats_x_select'].values[0]
+        data = my_train.df_X[list(feat_x_select)].values
+        assert(len(est.predict(data)) == len(data))
+
+    def test_predict_X_n_feats_4(self, test_training_train_fixture):
+        my_train = test_training_train_fixture
+        feat_n = 4
+        est = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['regressor'].values[0]
+        feat_x_select = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['feats_x_select'].values[0]
+        data = my_train.df_X[list(feat_x_select)].values
+        assert(len(est.predict(data)) == len(data))
+
+    def test_predict_X_n_feats_5(self, test_training_train_fixture):
+        my_train = test_training_train_fixture
+        feat_n = 5
+        est = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['regressor'].values[0]
+        feat_x_select = my_train.df_test_filtered[my_train.df_test_filtered['feat_n'] == feat_n]['feats_x_select'].values[0]
+        data = my_train.df_X[list(feat_x_select)].values
+        assert(len(est.predict(data)) == len(data))
 

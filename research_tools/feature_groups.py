@@ -71,5 +71,6 @@ param_dict_test = {
         'refit': 'neg_mean_absolute_error',
         'rank_scoring': 'neg_mean_absolute_error',
         'print_out_train': False}
+        # 'base_dir_results': 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'}
     }
 
