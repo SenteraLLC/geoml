@@ -1,12 +1,13 @@
-# https://circleci.com/gh/Anaconda-Platform/anaconda-client/
+version: 2.1
 
-version: 2
+orbs:
+  python: circleci/python@0.2.1
 
-# Reuse variables
-# -----------------------------------------------------------------------------
-main_test: &main_test
+jobs:
+  build-and-test:
+    working_directory: ~/research_tools
     docker:
-      - image: circleci/node:6.10-browsers  # Needed to run GUI tests
+      - image: circleci/python:3.8.2
     steps:
       - checkout
       - run:
@@ -28,39 +29,8 @@ main_test: &main_test
              # Install test requirements
              conda install -n test anaconda-project pytest pytest-cov
              pytest research_tools --cov=research_tools
-      # - run:
-      #     name: Conda information
-      #     command: |
-      #        source /home/circleci/miniconda/etc/profile.d/conda.sh
-      #        conda activate test
-      #        conda info
-      #        conda config --show
-      #        conda list --show-channel-urls
-      # - run:
-      #     name: Run lint and format checks
-      #     command: |
-      #        source /home/circleci/miniconda/etc/profile.d/conda.sh
-      #        conda activate test
-      #        # flake8 binstar_client
-      # - run:
-      #     name: Run tests
-      #     command: |
-      #        source /home/circleci/miniconda/etc/profile.d/conda.sh
-      #        conda activate test
-      #        pytest binstar_client --cov=binstar_client
-# -----------------------------------------------------------------------------
-jobs:
-  py38:
-    <<: *main_test
-    environment:
-      - PYTHON_VERSION: 3.8
-
 
 workflows:
-  version: 2
-  lint-and-test:
+  main:
     jobs:
-      - py27
-      - py37
-      - py36
-      - py35
+      - build-and-test
