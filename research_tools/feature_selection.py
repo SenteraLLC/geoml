@@ -11,9 +11,6 @@ Insight Sensing Corporation. All rights reserved.
 """
 import numpy as np
 import pandas as pd
-import warnings
-# from sklearn.utils.testing import ignore_warnings
-# from sklearn.exceptions import ConvergenceWarning
 from scipy.stats import rankdata
 from sklearn.feature_selection import SelectFromModel
 
@@ -206,7 +203,6 @@ class FeatureSelection(FeatureData):
         # print('New "step_pct": {0}'.format(step_pct))
         return step_pct
 
-    # @ignore_warnings(category=ConvergenceWarning)
     def _find_features_max(self, n_feats, step_pct=0.01, exit_on_stagnant_n=5):
         '''
         Finds the model parameters that will result in having the max number

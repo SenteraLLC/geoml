@@ -23,8 +23,22 @@ from research_tools import FeatureSelection
 class Training(FeatureSelection):
     '''
     ``Training`` inherits from an instance of ``FeatureSelection`` (which
-    inherits from ``FeatureData``), then includes functions to carry out the
-    hyperparameter tuning steps.
+    inherits from ``FeatureData``), and consists of functions to carry out the
+    hyperparameter tuning and chooses the most suitable hyperparameters for
+    each unique number of features. Testing is then performed using the chosen
+    hyperparameters and results recorded, then each estimator (i.e., for each
+    number of features) is fit using the full dataset (i.e., train and test
+    sets), being sure to use the hyperparameters and features selected from
+    cross validation. After ``Training.train()`` is executed, each trained
+    estimator is stored in ``Training.df_test`` under the "regressor" column.
+    The full set of estimators (i.e., for all feature selection combinations,
+    with potential duplicate estimators for the same number of features) is
+    stored in ``Training.df_test_full``. These estimators are fully trained
+    and cross validated, and can be safely distributed to predict new
+    observations. Care must be taken to ensure information about input features
+    is tracked (not only the number of features, but specifications) so new
+    data can be preocessed to be ingested by the estimator to make new
+    predictions.
     '''
     __allowed_params = (
         'regressor', 'regressor_params', 'param_grid', 'n_jobs_tune',
@@ -111,10 +125,9 @@ class Training(FeatureSelection):
         user functions from the ``feature_selection`` class
         '''
         self.df_tune = None
-        self.df_tune_filtered = None
-        self.df_test = None
+        self.df_test_full = None
         self.df_pred = None
-        self.df_test_filtered = None
+        self.df_test = None
 
     def _set_regressor(self):
         '''
@@ -365,9 +378,9 @@ class Training(FeatureSelection):
                 self.regressor_name, deepcopy(self.regressor)]
         if pd.isnull(df.iloc[0]['params_regressor']):
             data.extend([np.nan] * (len(self._get_df_test_cols()) - len(data)))
-            df_test1 = pd.DataFrame(
+            df_test_full1 = pd.DataFrame(
                 data=[data], index=[df.index[0]], columns=self._get_df_test_cols())
-            return df_test1, None
+            return df_test_full1, None
 
         msg = ('<params_regressor> are not equal. (this is a bug)')
         assert self.regressor.get_params() == df['params_regressor'].values[0], msg
@@ -382,8 +395,8 @@ class Training(FeatureSelection):
         data.extend([self.regressor.get_params()])
         data.extend([train_neg_mae, test_neg_mae, train_neg_rmse, test_neg_rmse,
                      train_r2, test_r2])
-        df_test1 = pd.DataFrame([data], index=[df.index[0]], columns=self._get_df_test_cols())
-        return df_test1, y_pred
+        df_test_full1 = pd.DataFrame([data], index=[df.index[0]], columns=self._get_df_test_cols())
+        return df_test_full1, y_pred
 
 
         # estimator = df_tune_filtered2.iloc[0]['regressor']
@@ -443,7 +456,7 @@ class Training(FeatureSelection):
     #     return df_tune_all_list
 
     # def _set_df_pred_idx(self):
-    #     df = self.df_test_filtered
+    #     df = self.df_test
     #     idx_full = self.df_pred.columns.get_level_values(level=0)
     #     idx_filtered = []
     #     for i in idx_full:
@@ -462,7 +475,7 @@ class Training(FeatureSelection):
 
         Parameters:
             scoring (``str``): If there are multiple scenarios with the same
-                number of features, <scoring> corresponds to the <df_test>
+                number of features, <scoring> corresponds to the <df_test_full>
                 column that will be used to determine which scenario to keep
                 (keeps the highest).
         '''
@@ -470,24 +483,24 @@ class Training(FeatureSelection):
                'Have you executed ``tune_and_train()`` yet?')
         assert isinstance(self.df_tune, pd.DataFrame), msg
 
-        df = self.df_test
+        df = self.df_test_full
         idx = df.groupby(['regressor_name', 'feat_n'])[scoring].transform(max) == df[scoring]
         idx_feat1 = df['feat_n'].searchsorted(1, side='left')
         if np.isnan(df.iloc[idx_feat1][scoring]):
             idx.iloc[idx_feat1] = True
 
-        df_filtered = self.df_test[idx].drop_duplicates(['regressor_name', 'feat_n'])
+        df_filtered = self.df_test_full[idx].drop_duplicates(['regressor_name', 'feat_n'])
         # df_filtered.reset_index(level=df_filtered.index.names, inplace=True)
         # df_filtered = df_filtered.rename(columns={'index': 'index_full'})
         df_filtered.reset_index(drop=True, inplace=True)
-        self.df_test_filtered = df_filtered
+        self.df_test = df_filtered
         # self._set_df_pred_idx()
 
     def _get_uid(self, idx):
-        if self.df_test is None:
+        if self.df_test_full is None:
             idx_max = 0
         else:
-            idx_max = self.df_test.index.max() + 1
+            idx_max = self.df_test_full.index.max() + 1
         return int(idx_max + idx)
 
     def train(self, **kwargs):
@@ -499,7 +512,7 @@ class Training(FeatureSelection):
         self._set_params_from_kwargs_tune(**kwargs)
 
         df_tune = self.df_tune
-        df_test = self.df_test
+        df_test_full = self.df_test_full
         df_pred = self.df_pred
         for idx in self.df_fs_params.index:
             X_train_select, X_test_select = self.fs_get_X_select(idx)
@@ -515,11 +528,11 @@ class Training(FeatureSelection):
                 df_tune = df_tune_rank.copy()
             else:
                 df_tune = df_tune.append(df_tune_rank)
-            df_test1, y_pred = self._get_test_results(df_tune_rank)
-            if df_test is None:
-                df_test = df_test1.copy()
+            df_test_full1, y_pred = self._get_test_results(df_tune_rank)
+            if df_test_full is None:
+                df_test_full = df_test_full1.copy()
             else:
-                df_test = df_test.append(df_test1)
+                df_test_full = df_test_full.append(df_test_full1)
 
             if self.print_out_train is True:
                 print('{0}:'.format(self.regressor_name))
@@ -536,19 +549,19 @@ class Training(FeatureSelection):
                 # df_pred[(uid, np.nan)] = y_pred
 
         # df_tune = df_tune.sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
-        # df_test = df_test.sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
+        # df_test_full = df_test_full.sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
         self.df_tune = df_tune
-        self.df_test = df_test
+        self.df_test_full = df_test_full
         self.df_pred = df_pred
         self._filter_test_results(scoring='test_neg_mae')
 
     # def set_regressor(self, feat_n=None, **kwargs):
     #     '''
-    #     Sets the regressor for a given <feat_n> from <Tuning.df_test_filtered>.
+    #     Sets the regressor for a given <feat_n> from <Tuning.df_test>.
 
     #     Parameters:
     #         feat_n (``int``): The DataFrame to get the regressor from
-    #             (default: ``Training.df_test_filtered``).
+    #             (default: ``Training.df_test``).
     #     '''
     #     self._set_params_from_kwargs_tune(**kwargs)
     #     if feat_n is None:
