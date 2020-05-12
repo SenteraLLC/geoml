@@ -28,6 +28,9 @@ jobs:
              conda install -n test --file requirements.txt
              # Install test requirements
              conda install -n test anaconda-project pytest pytest-cov
+          name: Run tests
+          command: |
+             conda activate test
              pytest research_tools --cov=research_tools
 
 workflows:

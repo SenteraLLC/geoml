@@ -1,1 +1,3 @@
 research_tools/scripts
+research_tools/.pytest_cache
+research_tools/__pycache__

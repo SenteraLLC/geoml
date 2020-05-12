@@ -266,7 +266,7 @@ class Test_training_predict:
     def test_predict_X_check_n_feats(self, test_training_train_fixture):
         my_train = test_training_train_fixture
         feats = my_train.df_test['feat_n'].unique()
-        assert([1,2,3,4,5] in feats)
+        assert([1,2,3,4,5] == sorted(list(feats)))
 
     def test_predict_X_n_feats_2(self, test_training_train_fixture):
         my_train = test_training_train_fixture
