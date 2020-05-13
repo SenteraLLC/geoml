@@ -6,7 +6,7 @@ The overall goal is to determine the baseline prediction accuracy we should expe
 
 [![CircleCI](https://circleci.com/gh/insight-sensing/research_tools/tree/dev.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/research_tools?branch=dev)
 [![GitHub issues](https://img.shields.io/github/issues/insight-sensing/research_tools.svg)](https://github.com/insight-sensing/research_tools/issues)
-[![Code coverage]((https://codecov.io/gh/insight-sensing/research_tools/branch/dev/graph/badge.svg)]()
+[![Code coverage](https://codecov.io/gh/insight-sensing/research_tools/branch/dev/graph/badge.svg)]()
 
 ## Classes
 There are multiple classes that work together to perform all the necessary steps for training supervised regression estimators. Here is a brief summary:
