@@ -63,8 +63,8 @@ config_dict = {
         'n_linspace': 100,
         # 'method_alpha_min': 'full',
         'exit_on_stagnant_n': 5,
-        'step_pct': 0.01,
-        'print_out_fs': False},
+        'step_pct': 0.1,
+        'print_out_fs': True},
     'Training': {
         'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=True, method='yeo-johnson', standardize=True)),
         'regressor_params': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},

@@ -158,9 +158,6 @@ class FeatureSelection(FeatureData):
         df = pd.DataFrame(data=[data], columns=cols)
         return df
 
-
-
-
     def _params_adjust(self, config_dict, key, increase=True, factor=10):
         val = config_dict[key]
         if increase is True:
@@ -308,7 +305,7 @@ class FeatureSelection(FeatureData):
         param_val_list = list(np.logspace(params_min, params_max,
                                           num=self.n_linspace, base=np.e))
         df = None
-        param_adjust_temp = self.model_fs_params_feats_min
+        param_adjust_temp = self.model_fs_params_feats_min.copy()
         for val in param_val_list:
             param_adjust_temp['alpha'] = val
             df_temp = self._f_feat_n(**param_adjust_temp)

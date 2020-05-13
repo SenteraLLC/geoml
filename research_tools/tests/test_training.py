@@ -22,12 +22,13 @@ from research_tools import Training
 
 @pytest.fixture
 def test_training_init_fixture():
-    my_train = Training(config_dict=config.config_dict.copy(), print_out=False)
+    my_train = Training(config_dict=config.config_dict.copy(), print_out_train=False)
     return my_train
 
 @pytest.fixture
 def test_training_train_fixture():
-    my_train = Training(config_dict=config.config_dict.copy(), print_out=False)
+    my_train = Training(config_dict=config.config_dict.copy(), print_out_train=False)
+    print(my_train.df_fs_params)
     my_train.train()
     return my_train
 
@@ -260,6 +261,7 @@ class Test_training_set_kwargs:
 class Test_training_predict:
     def test_predict_X_check_n_feats(self, test_training_train_fixture):
         my_train = test_training_train_fixture
+        # feats = my_train.df_fs_params['feat_n'].unique()
         feats = my_train.df_test['feat_n'].unique()
         assert([1,2,3,4,5] == sorted(list(feats)))
 
