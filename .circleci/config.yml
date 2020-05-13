@@ -2,6 +2,7 @@ version: 2.1
 
 orbs:
   python: circleci/python@0.2.1
+  codecov: codecov/codecov@2.0.20
 
 jobs:
   build-and-test:
@@ -27,7 +28,8 @@ jobs:
              # Install run requirements
              conda install -n test --file requirements.txt
              # Install test requirements
-             conda install -n test anaconda-project pytest pytest-cov
+             conda install -n test pytest pytest-cov
+             # conda install -n test -c conda-forge codecov && codecov -t 59dd1844-ad4a-46d7-88a0-27372244bacd
       - run:
           name: Conda information
           command: |
@@ -44,6 +46,9 @@ jobs:
              # pytest research_tools --cov=research_tools
              mkdir test-results
              pytest research_tools --junitxml=test-results/junit.xml --cov=research_tools
+
+      - codecov/upload:
+          file: .coverage
 
       - store_test_results:
           path: test-results
