@@ -92,30 +92,30 @@ class JoinTables(object):
 
         self.load_tables(**kwargs)
 
-    def _set_params_from_dict_jt(self, param_dict):
+    def _set_params_from_dict_jt(self, config_dict):
         '''
-        Sets any of the parameters in ``param_dict`` to self as long as they
+        Sets any of the parameters in ``config_dict`` to self as long as they
         are in the ``__allowed_params`` list
         '''
-        if param_dict is not None and 'JoinTables' in param_dict:
-            params_fd = param_dict['JoinTables']
-        elif param_dict is not None and 'JoinTables' not in param_dict:
-            params_fd = param_dict
-        else:  # param_dict is None
+        if config_dict is not None and 'JoinTables' in config_dict:
+            params_jt = config_dict['JoinTables']
+        elif config_dict is not None and 'JoinTables' not in config_dict:
+            params_jt = config_dict
+        else:  # config_dict is None
             return
-        for k, v in params_fd.items():
+        for k, v in params_jt.items():
             if k in self.__class__.__allowed_params:
                 setattr(self, k, v)
 
     def _set_params_from_kwargs_jt(self, **kwargs):
         '''
         Sets any of the passed kwargs to self as long as long as they are in
-        the ``__allowed_params`` list. Notice that if 'param_dict' is passed,
+        the ``__allowed_params`` list. Notice that if 'config_dict' is passed,
         then its contents are set before the rest of the kwargs, which are
         passed to ``FeatureData`` more explicitly.
         '''
-        if 'param_dict' in kwargs:
-            self._set_params_from_dict_jt(kwargs.get('param_dict'))
+        if 'config_dict' in kwargs:
+            self._set_params_from_dict_jt(kwargs.get('config_dict'))
         if kwargs is not None:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:

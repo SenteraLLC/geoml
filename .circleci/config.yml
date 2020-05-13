@@ -1,0 +1,57 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@0.2.1
+
+jobs:
+  build-and-test:
+    working_directory: ~/research_tools
+    docker:
+      - image: circleci/python:3.8.2
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+             wget https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
+             bash miniconda.sh -b -p "$HOME"/miniconda
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
+             conda activate base
+             # Conda configuration
+             conda config --set always_yes yes --set auto_update_conda false
+             # Update conda
+             conda update conda
+             # Create test environment
+             conda create -n test python=$PYTHON_VERSION
+             conda activate test
+             # Install run requirements
+             conda install -n test --file requirements.txt
+             # Install test requirements
+             conda install -n test anaconda-project pytest pytest-cov
+      - run:
+          name: Conda information
+          command: |
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
+             conda activate test
+             conda info
+             conda config --show
+             conda list --show-channel-urls
+      - run:
+          name: Run tests
+          command: |
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
+             conda activate test
+             # pytest research_tools --cov=research_tools
+             mkdir test-results
+             pytest research_tools --junitxml=test-results/junit.xml --cov=research_tools
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: test-results
+
+workflows:
+  main:
+    jobs:
+      - build-and-test

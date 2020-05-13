@@ -11,25 +11,24 @@ Insight Sensing Corporation. All rights reserved.
 """
 
 import pytest
-
-from research_tools import feature_groups
+from research_tools.tests import config
 from research_tools import FeatureSelection
 
 
 @pytest.fixture
 def test_feature_selection_init_fixture():
-    myfs = FeatureSelection(param_dict=feature_groups.param_dict_test, print_out=False)
+    myfs = FeatureSelection(config_dict=config.config_dict.copy(), print_out_fs=False)
     return myfs
 
 @pytest.fixture
 def test_feature_selection_find_params_fixture():
-    myfs = FeatureSelection(param_dict=feature_groups.param_dict_test, print_out=False)
+    myfs = FeatureSelection(config_dict=config.config_dict.copy(), print_out_fs=False)
     myfs.fs_find_params()
     return myfs
 
 @pytest.fixture
 def test_feature_selection_get_X_select_fixture():
-    myfs = FeatureSelection(param_dict=feature_groups.param_dict_test, print_out=False)
+    myfs = FeatureSelection(config_dict=config.config_dict.copy(), print_out_fs=False)
     myfs.fs_find_params()
     idx = 2
     X_train_select, X_test_select = myfs.fs_get_X_select(df_fs_params_idx=idx)
@@ -47,7 +46,7 @@ class Test_feature_selection_self:
 
     def test_model_fs_precompute_not_set(self, test_feature_selection_init_fixture):
         '''
-        As long as 'precompute' is set in __init__, "param_dict_test" should
+        As long as 'precompute' is set in __init__, "config_dict" should
         override it. This tests to be sure this happens in the proper order.
         '''
         myfs = test_feature_selection_init_fixture
@@ -75,7 +74,7 @@ class Test_feature_selection_self:
 
     def test_step_pct(self, test_feature_selection_init_fixture):
         myfs = test_feature_selection_init_fixture
-        assert myfs.step_pct == 0.01
+        assert myfs.step_pct == 0.1
 
 
 class Test_feature_selection_find_params:

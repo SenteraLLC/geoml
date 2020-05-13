@@ -73,16 +73,16 @@ class Training(FeatureSelection):
         # self._set_regressor()
 
 
-    def _set_params_from_dict_tune(self, param_dict):
+    def _set_params_from_dict_tune(self, config_dict):
         '''
-        Sets any of the parameters in ``param_dict`` to self as long as they
+        Sets any of the parameters in ``config_dict`` to self as long as they
         are in the ``__allowed_params`` list
         '''
-        if param_dict is not None and 'Training' in param_dict:
-            params_fd = param_dict['Training']
-        elif param_dict is not None and 'Training' not in param_dict:
-            params_fd = param_dict
-        else:  # param_dict is None
+        if config_dict is not None and 'Training' in config_dict:
+            params_fd = config_dict['Training']
+        elif config_dict is not None and 'Training' not in config_dict:
+            params_fd = config_dict
+        else:  # config_dict is None
             return
         for k, v in params_fd.items():
             if k in self.__class__.__allowed_params:
@@ -91,12 +91,12 @@ class Training(FeatureSelection):
     def _set_params_from_kwargs_tune(self, **kwargs):
         '''
         Sets any of the passed kwargs to self as long as long as they are in
-        the ``__allowed_params`` list. Notice that if 'param_dict' is passed,
+        the ``__allowed_params`` list. Notice that if 'config_dict' is passed,
         then its contents are set before the rest of the kwargs, which are
         passed to ``Training`` more explicitly.
         '''
-        if 'param_dict' in kwargs:
-            self._set_params_from_dict_tune(kwargs.get('param_dict'))
+        if 'config_dict' in kwargs:
+            self._set_params_from_dict_tune(kwargs.get('config_dict'))
         if kwargs is not None:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
@@ -107,14 +107,14 @@ class Training(FeatureSelection):
         # Now, after all kwargs are set, set the regressor
         if 'regressor' in kwargs:
             self._set_regressor()
-        elif kwargs.get('param_dict') is None:
+        elif kwargs.get('config_dict') is None:
             pass
-        elif 'param_dict' in kwargs and 'Training' in kwargs.get('param_dict'):
-            params_fd = kwargs.get('param_dict')['Training']
+        elif 'config_dict' in kwargs and 'Training' in kwargs.get('config_dict'):
+            params_fd = kwargs.get('config_dict')['Training']
             # print(params_fd.keys())
-            if 'regressor' in kwargs.get('param_dict')['Training'].keys():
+            if 'regressor' in kwargs.get('config_dict')['Training'].keys():
                 self._set_regressor()
-        #     ('param_dict' in kwargs and 'regressor' in kwargs.get('param_dict')['Training'].items())):
+        #     ('config_dict' in kwargs and 'regressor' in kwargs.get('config_dict')['Training'].items())):
         #     print('setting regressor')
             # if k == 'regressor':
         # self._set_regressor()

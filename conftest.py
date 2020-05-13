@@ -9,4 +9,15 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+import os
+import pytest
 
+
+test_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        'research_tools', 'tests')
+data_dir = os.path.join(test_dir, 'testdata')
+
+
+# @pytest.fixture(scope="session")
+# def data_path():
+#     return lambda filename: join(data_dir, filename)
