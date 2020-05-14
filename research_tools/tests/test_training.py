@@ -9,6 +9,7 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+from copy import deepcopy
 import numpy as np
 from sklearn.linear_model import Lasso
 from sklearn.cross_decomposition import PLSRegression
@@ -22,13 +23,14 @@ from research_tools import Training
 
 @pytest.fixture
 def test_training_init_fixture():
-    my_train = Training(config_dict=config.config_dict.copy(), print_out_train=False)
+    my_config = deepcopy(config.config_dict)
+    my_train = Training(config_dict=my_config, print_out_train=False)
     return my_train
 
 @pytest.fixture
 def test_training_train_fixture():
-    my_train = Training(config_dict=config.config_dict.copy(), print_out_train=False)
-    print(my_train.df_fs_params)
+    my_config = deepcopy(config.config_dict)
+    my_train = Training(config_dict=my_config, print_out_train=False)
     my_train.train()
     return my_train
 
@@ -42,52 +44,60 @@ def test_training_train_fixture():
 class Test_training_self:
     def test_kwargs_override_regressor(self):
         '''<regressor_params> must also be set with <regressor>'''
-        tune_pls = Training(config_dict=config.config_dict.copy(),
-                          regressor=PLSRegression(), regressor_params=None)
+        my_config = deepcopy(config.config_dict)
+        tune_pls = Training(config_dict=my_config,
+                            regressor=PLSRegression(), regressor_params=None)
         assert isinstance(tune_pls.regressor, PLSRegression)
 
     def test_kwargs_override_regressor_params(self):
         regressor_params = {'n_components': 3, 'max_iter': 10000}
-        tune_pls = Training(config_dict=config.config_dict.copy(),
+        my_config = deepcopy(config.config_dict)
+        tune_pls = Training(config_dict=my_config,
                           regressor=PLSRegression(),
                           regressor_params=regressor_params)
         assert tune_pls.regressor_params == regressor_params
 
     def test_kwargs_override_param_grid(self):
         param_grid = {'alpha': list(np.logspace(-4, 0, 10))}
-        my_train = Training(config_dict=config.config_dict.copy(),
+        my_config = deepcopy(config.config_dict)
+        my_train = Training(config_dict=my_config,
                          param_grid=param_grid)
         assert my_train.param_grid == param_grid
 
     def test_kwargs_override_n_jobs_tune(self):
+        my_config = deepcopy(config.config_dict)
         n_jobs_tune = 4
-        my_train = Training(config_dict=config.config_dict.copy(),
+        my_train = Training(config_dict=my_config,
                          n_jobs_tune=n_jobs_tune)
         assert my_train.n_jobs_tune == n_jobs_tune
 
     def test_kwargs_override_scoring(self):
+        my_config = deepcopy(config.config_dict)
         scoring = ('neg_mean_squared_error', 'r2')
-        my_train = Training(config_dict=config.config_dict.copy(),
+        my_train = Training(config_dict=my_config,
                          scoring=scoring)
         assert my_train.scoring == scoring
 
     def test_kwargs_override_refit(self):
+        my_config = deepcopy(config.config_dict)
         scoring = ('neg_mean_absolute_error', 'neg_mean_squared_error', 'r2')
         refit = scoring[1]
-        my_train = Training(config_dict=config.config_dict.copy(),
+        my_train = Training(config_dict=my_config,
                          refit=refit)
         assert my_train.refit == refit
 
     def test_kwargs_override_rank_scoring(self):
+        my_config = deepcopy(config.config_dict)
         scoring = ('neg_mean_absolute_error', 'neg_mean_squared_error', 'r2')
         rank_scoring = scoring[1]
-        my_train = Training(config_dict=config.config_dict.copy(),
+        my_train = Training(config_dict=my_config,
                          rank_scoring=rank_scoring)
         assert my_train.rank_scoring == rank_scoring
 
     def test_kwargs_override_print_out_train(self):
+        my_config = deepcopy(config.config_dict)
         print_out_train = True
-        my_train = Training(config_dict=config.config_dict.copy(),
+        my_train = Training(config_dict=my_config,
                            print_out_train=print_out_train)
         my_train.train()  # for test coverage on print_out_train=True
         assert my_train.print_out_train == print_out_train
@@ -98,7 +108,7 @@ class Test_training_self_simple:
         '''
         Sets config_dict manually instead of using nested from feature_groups
         '''
-        my_config = config.config_dict.copy()
+        my_config = deepcopy(config.config_dict)
         base_dir_data = my_config['FeatureData']['base_dir_data']
         config_dict_tune = {
             'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=False, method='yeo-johnson', standardize=True)),
@@ -139,7 +149,8 @@ class Test_training_df_tune_scores:
             assert col in my_train.df_tune
 
     def test_scores_no_rank_scoring(self, test_training_train_fixture):
-        my_train = Training(config_dict=config.config_dict.copy(),
+        my_config = deepcopy(config.config_dict)
+        my_train = Training(config_dict=my_config,
                           rank_scoring=None)
         my_train.train()
         assert my_train.rank_scoring == my_train.scoring[0]
@@ -227,7 +238,7 @@ class Test_training_set_kwargs:
             my_train = Training()
 
     def test_set_kwargs_config_dict_none(self):
-        my_config = config.config_dict.copy()
+        my_config = deepcopy(config.config_dict)
         base_dir_data = my_config['FeatureData']['base_dir_data']
         my_train = Training(config_dict=None, base_dir_data=base_dir_data)
         assert my_train.base_dir_data == base_dir_data
@@ -238,7 +249,8 @@ class Test_training_set_kwargs:
                 copy=False, method='yeo-johnson', standardize=True))
         regressor_params = {'n_components': 3, 'max_iter': 10000}
         param_grid = {'n_components': list(np.linspace(2, 10, 9, dtype=int)), 'scale': [True, False]}
-        my_train = Training(config_dict=config.config_dict.copy(),
+        my_config = deepcopy(config.config_dict)
+        my_train = Training(config_dict=my_config,
                           regressor=regressor, regressor_params=regressor_params,
                           param_grid=param_grid)
         my_train.train()

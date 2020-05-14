@@ -87,7 +87,7 @@ class FeatureSelection(FeatureData):
         Sets any of the passed kwargs to self as long as long as they are in
         the ``__allowed_params`` list. Notice that if 'config_dict' is passed,
         then its contents are set before the rest of the kwargs, which are
-        passed to ``FeatureData`` more explicitly.
+        passed to ``FeatureSelection`` more explicitly.
         '''
         if 'config_dict' in kwargs:
             self._set_params_from_dict_fs(kwargs.get('config_dict'))
@@ -118,6 +118,8 @@ class FeatureSelection(FeatureData):
         there is a discrepancy), the model's random state is set/reset to avoid
         any discrepancy.
         '''
+        if self.model_fs_params_set is None:
+            self.model_fs_params_set = {}
         self.model_fs.set_params(**self.model_fs_params_set)
 
         if 'regressor' in self.model_fs.get_params().keys():

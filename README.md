@@ -4,9 +4,13 @@ API to process and analyze all of the historical data collected from the Rosen l
 
 The overall goal is to determine the baseline prediction accuracy we should expect for each response variable (e.g., petiole nitrate, vine N, biomass, etc.) for a given set of input features (e.g., cropscan bands, hyperspectral imagery, weather, etc.).
 
+## Build and test status
+
+### master
 [![codecov master](https://codecov.io/gh/insight-sensing/research_tools/branch/master/graph/badge.svg?token=45FYM8VS7H)](https://codecov.io/gh/insight-sensing/research_tools)
-[![codecov dev](https://codecov.io/gh/insight-sensing/research_tools/branch/dev/graph/badge.svg?token=45FYM8VS7H)](https://codecov.io/gh/insight-sensing/research_tools)
 [![build master](https://circleci.com/gh/insight-sensing/research_tools/tree/master.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/research_tools?branch=dev)
+
+### dev
 [![build dev](https://circleci.com/gh/insight-sensing/research_tools/tree/dev.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/research_tools?branch=dev)
 
 ## Classes
