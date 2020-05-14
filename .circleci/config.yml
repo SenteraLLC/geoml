@@ -2,7 +2,7 @@ version: 2.1
 
 orbs:
   python: circleci/python@0.2.1
-  codecov: codecov/codecov@1.0.5
+  # codecov: codecov/codecov@1.0.5
 
 jobs:
   build-and-test:
@@ -25,6 +25,7 @@ jobs:
              conda activate test
              conda install -n test --file requirements.txt
              conda install -n test pytest pytest-cov
+             conda install -n test -c conda-forge codecov
       - run:
           name: Conda information
           command: |
@@ -41,8 +42,15 @@ jobs:
              mkdir test-results
              pytest --junitxml=test-results/junit.xml --cov=research_tools --cov-report=xml
 
-      - codecov/upload:
-          file: .coverage
+      - run:
+          name: Upload code coverage
+          command: |
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
+             conda activate test
+             codecov -t 59dd1844-ad4a-46d7-88a0-27372244bacd
+
+      # - codecov/upload:
+      #     file: .coverage
           # token: 59dd1844-ad4a-46d7-88a0-27372244bacd
 
       - store_test_results:
