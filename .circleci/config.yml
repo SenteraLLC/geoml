@@ -1,0 +1,65 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@0.2.1
+  # codecov: codecov/codecov@1.0.5
+
+jobs:
+  build-and-test:
+    working_directory: ~/research_tools
+    docker:
+      - image: circleci/python:3.8.2
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+             wget https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
+             bash miniconda.sh -b -p "$HOME"/miniconda
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
+             conda activate base
+             conda config --set always_yes yes --set auto_update_conda false
+             conda update conda
+             # Create test environment
+             conda create -n test python=$PYTHON_VERSION
+             conda activate test
+             conda install -n test --file requirements.txt
+             conda install -n test pytest pytest-cov
+             conda install -n test -c conda-forge codecov
+      - run:
+          name: Conda information
+          command: |
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
+             conda activate test
+             conda info
+             conda config --show
+             conda list --show-channel-urls
+      - run:
+          name: Run tests
+          command: |
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
+             conda activate test
+             mkdir test-results
+             pytest --junitxml=test-results/junit.xml --cov=research_tools --cov-report=xml
+
+      - run:
+          name: Upload code coverage
+          command: |
+             source /home/circleci/miniconda/etc/profile.d/conda.sh
+             conda activate test
+             codecov -t 59dd1844-ad4a-46d7-88a0-27372244bacd
+
+      # - codecov/upload:
+      #     file: .coverage
+          # token: 59dd1844-ad4a-46d7-88a0-27372244bacd
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: test-results
+
+workflows:
+  main:
+    jobs:
+      - build-and-test

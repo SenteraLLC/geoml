@@ -1,0 +1,117 @@
+study,year,trt_id,trt_n,trt_var,trt_irr
+NNI,2019,1,N.1,Russet Burbank,IRR.1
+NNI,2019,2,N.2,Russet Burbank,IRR.1
+NNI,2019,3,N.3,Russet Burbank,IRR.1
+NNI,2019,4,N.4,Russet Burbank,IRR.1
+NNI,2019,5,N.5,Russet Burbank,IRR.1
+NNI,2019,6,N.6,Russet Burbank,IRR.1
+NNI,2019,7,N.7,Russet Burbank,IRR.1
+NNI,2019,8,N.8,Russet Burbank,IRR.1
+Sanjay,2019,1,N.A,MN13142,IRR.1
+Sanjay,2019,2,N.A,Russet Burbank,IRR.1
+Sanjay,2019,3,N.A,Umatilla,IRR.1
+Sanjay,2019,4,N.A,Lamoka,IRR.1
+Sanjay,2019,5,N.A,Clearwater,IRR.1
+Sanjay,2019,6,N.A,Russet Burbank,IRR.1
+Sanjay,2019,7,N.B,MN13142,IRR.1
+Sanjay,2019,8,N.B,Russet Burbank,IRR.1
+Sanjay,2019,9,N.B,Umatilla,IRR.1
+Sanjay,2019,10,N.B,Lamoka,IRR.1
+Sanjay,2019,11,N.B,Clearwater,IRR.1
+Sanjay,2019,12,N.B,Russet Burbank,IRR.1
+Sanjay,2019,13,N.C,MN13142,IRR.1
+Sanjay,2019,14,N.C,Russet Burbank,IRR.1
+Sanjay,2019,15,N.C,Umatilla,IRR.1
+Sanjay,2019,16,N.C,Lamoka,IRR.1
+Sanjay,2019,17,N.C,Clearwater,IRR.1
+Sanjay,2019,18,N.C,Russet Burbank,IRR.1
+Sanjay,2018,1,N.A,MN13142,IRR.1
+Sanjay,2018,2,N.A,Russet Burbank,IRR.1
+Sanjay,2018,3,N.A,Umatilla,IRR.1
+Sanjay,2018,4,N.A,Lamoka,IRR.1
+Sanjay,2018,5,N.A,Clearwater,IRR.1
+Sanjay,2018,6,N.A,Ivory Russet,IRR.1
+Sanjay,2018,7,N.B,MN13142,IRR.1
+Sanjay,2018,8,N.B,Russet Burbank,IRR.1
+Sanjay,2018,9,N.B,Umatilla,IRR.1
+Sanjay,2018,10,N.B,Lamoka,IRR.1
+Sanjay,2018,11,N.B,Clearwater,IRR.1
+Sanjay,2018,12,N.B,Ivory Russet,IRR.1
+Sanjay,2018,13,N.C,MN13142,IRR.1
+Sanjay,2018,14,N.C,Russet Burbank,IRR.1
+Sanjay,2018,15,N.C,Umatilla,IRR.1
+Sanjay,2018,16,N.C,Lamoka,IRR.1
+Sanjay,2018,17,N.C,Clearwater,IRR.1
+Sanjay,2018,18,N.C,Ivory Russet,IRR.1
+IxN,2017,1,N.1,Russet Burbank,IRR.1
+IxN,2017,2,N.1,Russet Burbank,IRR.2
+IxN,2017,3,N.2,Russet Burbank,IRR.1
+IxN,2017,4,N.2,Russet Burbank,IRR.2
+IxN,2017,5,N.3,Russet Burbank,IRR.1
+IxN,2017,6,N.3,Russet Burbank,IRR.2
+IxN,2017,7,N.4,Russet Burbank,IRR.1
+IxN,2017,8,N.4,Russet Burbank,IRR.2
+IxN,2017,9,N.5,Russet Burbank,IRR.1
+IxN,2017,10,N.5,Russet Burbank,IRR.2
+IxN,2017,11,N.6,Russet Burbank,IRR.1
+IxN,2017,12,N.6,Russet Burbank,IRR.2
+IxN,2016,1,N.1,Russet Burbank,IRR.1
+IxN,2016,2,N.1,Russet Burbank,IRR.2
+IxN,2016,3,N.2,Russet Burbank,IRR.1
+IxN,2016,4,N.2,Russet Burbank,IRR.2
+IxN,2016,5,N.3,Russet Burbank,IRR.1
+IxN,2016,6,N.3,Russet Burbank,IRR.2
+IxN,2016,7,N.4,Russet Burbank,IRR.1
+IxN,2016,8,N.4,Russet Burbank,IRR.2
+IxN,2016,9,N.5,Russet Burbank,IRR.1
+IxN,2016,10,N.5,Russet Burbank,IRR.2
+IxN,2016,11,N.6,Russet Burbank,IRR.1
+IxN,2016,12,N.6,Russet Burbank,IRR.2
+Chloro,2016,1,N.1,Russet Burbank,IRR.1
+Chloro,2016,2,N.1,Norland,IRR.1
+Chloro,2016,3,N.2,Russet Burbank,IRR.1
+Chloro,2016,4,N.2,Norland,IRR.1
+Chloro,2016,5,N.3,Russet Burbank,IRR.1
+Chloro,2016,6,N.3,Norland,IRR.1
+Chloro,2016,7,N.4,Russet Burbank,IRR.1
+Chloro,2016,8,N.4,Norland,IRR.1
+Refl,2011,1,N.1,Russet Burbank,IRR.1
+Refl,2011,2,N.1,Russet Burbank,IRR.2
+Refl,2011,3,N.1,Alpine Russet,IRR.1
+Refl,2011,4,N.1,Alpine Russet,IRR.2
+Refl,2011,5,N.2,Russet Burbank,IRR.1
+Refl,2011,6,N.2,Russet Burbank,IRR.2
+Refl,2011,7,N.2,Alpine Russet,IRR.1
+Refl,2011,8,N.2,Alpine Russet,IRR.2
+Refl,2011,9,N.3,Russet Burbank,IRR.1
+Refl,2011,10,N.3,Russet Burbank,IRR.2
+Refl,2011,11,N.3,Alpine Russet,IRR.1
+Refl,2011,12,N.3,Alpine Russet,IRR.2
+Refl,2011,13,N.4,Russet Burbank,IRR.1
+Refl,2011,14,N.4,Russet Burbank,IRR.2
+Refl,2011,15,N.4,Alpine Russet,IRR.1
+Refl,2011,16,N.4,Alpine Russet,IRR.2
+Refl,2011,17,N.5,Russet Burbank,IRR.1
+Refl,2011,18,N.5,Russet Burbank,IRR.2
+Refl,2011,19,N.5,Alpine Russet,IRR.1
+Refl,2011,20,N.5,Alpine Russet,IRR.2
+Refl,2010,1,N.1,Russet Burbank,IRR.1
+Refl,2010,2,N.1,Russet Burbank,IRR.2
+Refl,2010,3,N.1,Alpine Russet,IRR.1
+Refl,2010,4,N.1,Alpine Russet,IRR.2
+Refl,2010,5,N.2,Russet Burbank,IRR.1
+Refl,2010,6,N.2,Russet Burbank,IRR.2
+Refl,2010,7,N.2,Alpine Russet,IRR.1
+Refl,2010,8,N.2,Alpine Russet,IRR.2
+Refl,2010,9,N.3,Russet Burbank,IRR.1
+Refl,2010,10,N.3,Russet Burbank,IRR.2
+Refl,2010,11,N.3,Alpine Russet,IRR.1
+Refl,2010,12,N.3,Alpine Russet,IRR.2
+Refl,2010,13,N.4,Russet Burbank,IRR.1
+Refl,2010,14,N.4,Russet Burbank,IRR.2
+Refl,2010,15,N.4,Alpine Russet,IRR.1
+Refl,2010,16,N.4,Alpine Russet,IRR.2
+Refl,2010,17,N.5,Russet Burbank,IRR.1
+Refl,2010,18,N.5,Russet Burbank,IRR.2
+Refl,2010,19,N.5,Alpine Russet,IRR.1
+Refl,2010,20,N.5,Alpine Russet,IRR.2

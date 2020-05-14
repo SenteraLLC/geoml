@@ -1,0 +1,21 @@
+# Scripts
+research_tools/scripts
+# research_tools/.pytest_cache
+# research_tools/__pycache__
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Unit test / coverage reports
+htmlcov/
+test-results/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints

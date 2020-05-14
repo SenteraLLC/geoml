@@ -65,16 +65,16 @@ class FeatureSelection(FeatureData):
         self._set_attributes_fs()
         # self._set_model_fs()
 
-    def _set_params_from_dict_fs(self, param_dict):
+    def _set_params_from_dict_fs(self, config_dict):
         '''
-        Sets any of the parameters in ``param_dict`` to self as long as they
+        Sets any of the parameters in ``config_dict`` to self as long as they
         are in the ``__allowed_params`` list
         '''
-        if param_dict is not None and 'FeatureSelection' in param_dict:
-            params_fd = param_dict['FeatureSelection']
-        elif param_dict is not None and 'FeatureSelection' not in param_dict:
-            params_fd = param_dict
-        else:  # param_dict is None
+        if config_dict is not None and 'FeatureSelection' in config_dict:
+            params_fd = config_dict['FeatureSelection']
+        elif config_dict is not None and 'FeatureSelection' not in config_dict:
+            params_fd = config_dict
+        else:  # config_dict is None
             return
         for k, v in params_fd.items():
             if k in self.__class__.__allowed_params:
@@ -85,12 +85,12 @@ class FeatureSelection(FeatureData):
     def _set_params_from_kwargs_fs(self, **kwargs):
         '''
         Sets any of the passed kwargs to self as long as long as they are in
-        the ``__allowed_params`` list. Notice that if 'param_dict' is passed,
+        the ``__allowed_params`` list. Notice that if 'config_dict' is passed,
         then its contents are set before the rest of the kwargs, which are
-        passed to ``FeatureData`` more explicitly.
+        passed to ``FeatureSelection`` more explicitly.
         '''
-        if 'param_dict' in kwargs:
-            self._set_params_from_dict_fs(kwargs.get('param_dict'))
+        if 'config_dict' in kwargs:
+            self._set_params_from_dict_fs(kwargs.get('config_dict'))
         if kwargs is not None:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
@@ -118,6 +118,8 @@ class FeatureSelection(FeatureData):
         there is a discrepancy), the model's random state is set/reset to avoid
         any discrepancy.
         '''
+        if self.model_fs_params_set is None:
+            self.model_fs_params_set = {}
         self.model_fs.set_params(**self.model_fs_params_set)
 
         if 'regressor' in self.model_fs.get_params().keys():
@@ -158,16 +160,13 @@ class FeatureSelection(FeatureData):
         df = pd.DataFrame(data=[data], columns=cols)
         return df
 
-
-
-
-    def _params_adjust(self, param_dict, key, increase=True, factor=10):
-        val = param_dict[key]
+    def _params_adjust(self, config_dict, key, increase=True, factor=10):
+        val = config_dict[key]
         if increase is True:
-            param_dict[key] = val*factor
+            config_dict[key] = val*factor
         else:
-            param_dict[key] = val/factor
-        return param_dict
+            config_dict[key] = val/factor
+        return config_dict
 
     def _gradient_descent_step_pct_feat_max(
             self, feat_n_sel, feat_n_last, n_feats, step_pct):
@@ -308,7 +307,7 @@ class FeatureSelection(FeatureData):
         param_val_list = list(np.logspace(params_min, params_max,
                                           num=self.n_linspace, base=np.e))
         df = None
-        param_adjust_temp = self.model_fs_params_feats_min
+        param_adjust_temp = self.model_fs_params_feats_min.copy()
         for val in param_val_list:
             param_adjust_temp['alpha'] = val
             df_temp = self._f_feat_n(**param_adjust_temp)

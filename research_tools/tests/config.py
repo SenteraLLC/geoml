@@ -10,6 +10,7 @@ Insight Sensing Corporation. All rights reserved.
 @contributors: [Tyler J. Nigon]
 """
 import numpy as np
+import os
 
 from sklearn.preprocessing import PowerTransformer
 from sklearn.compose import TransformedTargetRegressor
@@ -17,6 +18,8 @@ from sklearn.compose import TransformedTargetRegressor
 from sklearn.linear_model import Lasso
 from sklearn.cross_decomposition import PLSRegression
 
+
+test_dir = os.path.dirname(os.path.abspath(__file__))
 
 cs_test1 = {
     'dap': 'dap',
@@ -31,11 +34,11 @@ cs_test2 = {
                  'col_out': 'rate_ntd_kgha'},
     'cropscan_wl_range1': [400, 900]}
 
-param_dict_test = {
+config_dict = {
     'JoinTables': {
-        'base_dir_data': 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'},
+        'base_dir_data': os.path.join(test_dir, 'testdata')},
     'FeatureData': {
-        'base_dir_data': 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data',
+        'base_dir_data': os.path.join(test_dir, 'testdata'),
         'random_seed': 999,
         'fname_petiole': 'tissue_petiole_NO3_ppm.csv',
         'fname_total_n': 'tissue_wp_N_pct.csv',
@@ -60,8 +63,8 @@ param_dict_test = {
         'n_linspace': 100,
         # 'method_alpha_min': 'full',
         'exit_on_stagnant_n': 5,
-        'step_pct': 0.01,
-        'print_out_fs': False},
+        'step_pct': 0.1,
+        'print_out_fs': True},
     'Training': {
         'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=True, method='yeo-johnson', standardize=True)),
         'regressor_params': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
@@ -71,6 +74,5 @@ param_dict_test = {
         'refit': 'neg_mean_absolute_error',
         'rank_scoring': 'neg_mean_absolute_error',
         'print_out_train': False}
-        # 'base_dir_results': 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'}
     }
 
