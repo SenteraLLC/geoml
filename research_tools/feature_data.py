@@ -351,10 +351,10 @@ class FeatureData(object):
         Saves both ``FeatureData.df_X`` and ``FeatureData.df_y`` to
         ``FeatureData.dir_results``.
         '''
-        if self.group_feats is None or self.label_y is None:
-            print('<group_feats> and <label_y> must be set to save data to '
-                  '<dir_results>. Have you ran `get_feat_group_X_y()` yet?')
-            return
+        # if self.group_feats is None or self.label_y is None:
+        #     print('<group_feats> and <label_y> must be set to save data to '
+        #           '<dir_results>. Have you ran `get_feat_group_X_y()` yet?')
+        #     return
         dir_out = os.path.join(self.dir_results, self.label_y)
         os.makedirs(dir_out, exist_ok=True)
 

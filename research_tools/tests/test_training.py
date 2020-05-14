@@ -16,9 +16,9 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.preprocessing import PowerTransformer
 from sklearn.compose import TransformedTargetRegressor
 
-import pytest
 from research_tools.tests import config
 from research_tools import Training
+import pytest
 
 
 @pytest.fixture
@@ -251,8 +251,8 @@ class Test_training_set_kwargs:
         param_grid = {'n_components': list(np.linspace(2, 10, 9, dtype=int)), 'scale': [True, False]}
         my_config = deepcopy(config.config_dict)
         my_train = Training(config_dict=my_config,
-                          regressor=regressor, regressor_params=regressor_params,
-                          param_grid=param_grid)
+                            regressor=regressor, regressor_params=regressor_params,
+                            param_grid=param_grid)
         my_train.train()
         assert 'PLSRegression' in my_train.df_test['regressor_name'].unique()
 
