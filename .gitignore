@@ -10,6 +10,7 @@ __pycache__/
 
 # Unit test / coverage reports
 htmlcov/
+test-results/
 .coverage
 .coverage.*
 .cache
