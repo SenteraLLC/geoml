@@ -48,7 +48,7 @@ jobs:
              pytest --junitxml=test-results/junit.xml --cov=research_tools --cov-report=xml
              # codecov -t 59dd1844-ad4a-46d7-88a0-27372244bacd
 
-       - codecov/upload:
+      - codecov/upload:
           file: .coverage
           token: 59dd1844-ad4a-46d7-88a0-27372244bacd
 
