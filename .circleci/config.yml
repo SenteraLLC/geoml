@@ -45,11 +45,12 @@ jobs:
              conda activate test
              # pytest research_tools --cov=research_tools
              mkdir test-results
-             pytest research_tools --junitxml=test-results/junit.xml --cov=research_tools
-             codecov -t 59dd1844-ad4a-46d7-88a0-27372244bacd
+             pytest --junitxml=test-results/junit.xml --cov=research_tools --cov-report=xml
+             # codecov -t 59dd1844-ad4a-46d7-88a0-27372244bacd
 
-      # - codecov/upload:
-      #     file: .coverage
+       - codecov/upload:
+          file: .coverage
+          token: 59dd1844-ad4a-46d7-88a0-27372244bacd
 
       - store_test_results:
           path: test-results
