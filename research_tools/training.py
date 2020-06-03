@@ -41,8 +41,8 @@ class Training(FeatureSelection):
     predictions.
     '''
     __allowed_params = (
-        'regressor', 'regressor_params', 'param_grid', 'n_jobs_tune',
-        'scoring', 'refit', 'rank_scoring', 'print_out_train',
+        'base_data_dir', 'regressor', 'regressor_params', 'param_grid',
+        'n_jobs_tune', 'scoring', 'refit', 'rank_scoring', 'print_out_train',
         'base_dir_results')
 
     def __init__(self, **kwargs):
@@ -493,6 +493,13 @@ class Training(FeatureSelection):
         '''
         Perform tuning for each unique scenario from ``FeatureSelection``
         (i.e., for each row in <df_fs_params>).
+
+        Example:
+            >>> from research_tools import Training
+            >>> from research_tools.tests import config
+
+            >>> my_train = Training(config_dict=config.config_dict)
+            >>> my_train.train()
         '''
         print('Executing hyperparameter tuning and estimator training...')
         self._set_params_from_kwargs_train(**kwargs)

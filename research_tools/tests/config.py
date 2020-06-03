@@ -55,6 +55,7 @@ config_dict = {
         'train_test': 'train',
         'print_out_fd': False},
     'FeatureSelection': {
+        'base_dir_data': os.path.join(test_dir, 'testdata'),
         'model_fs': Lasso(),
         'model_fs_params_set': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
         'model_fs_params_adjust_min': {'alpha': 1},  # these are initial values to begin
@@ -66,6 +67,7 @@ config_dict = {
         'step_pct': 0.1,
         'print_out_fs': False},
     'Training': {
+        'base_dir_data': os.path.join(test_dir, 'testdata'),
         'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=True, method='yeo-johnson', standardize=True)),
         'regressor_params': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
         'param_grid': {'alpha': list(np.logspace(-4, 0, 5))},
