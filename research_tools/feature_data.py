@@ -60,7 +60,7 @@ class FeatureData(object):
         # self.test_f_self(**kwargs)
 
         self._set_params_from_kwargs_fd(**kwargs)
-        self._set_attributes_fd(**kwargs)
+        self._set_attributes_fd()
 
         if self.base_dir_data is None:
             raise ValueError('<base_dir_data> must be set to access data '
@@ -106,7 +106,7 @@ class FeatureData(object):
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
 
-    def _set_attributes_fd(self, **kwargs):
+    def _set_attributes_fd(self):
         '''
         Sets any class attribute to ``None`` that will be created in one of the
         user functions
@@ -428,16 +428,18 @@ class FeatureData(object):
 
         Example:
             >>> from research_tools import FeatureData
-            >>> from research_tools import feature_groups
+            >>> from research_tools.tests import config
 
-            >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
-            >>> group_feats = feature_groups.cs_test2
-            >>> feat_data_cs = FeatureData(base_dir_data=base_dir_data, random_seed=None)
+            >>> feat_data_cs = FeatureData(config_dict=config.config_dict)
             >>> feat_data_cs.get_feat_group_X_y(test_size=0.1)
             >>> print('Shape of training matrix "X": {0}'.format(feat_data_cs.X_train.shape))
             >>> print('Shape of training vector "y": {0}'.format(feat_data_cs.y_train.shape))
             >>> print('Shape of testing matrix "X":  {0}'.format(feat_data_cs.X_test.shape))
             >>> print('Shape of testing vector "y":  {0}'.format(feat_data_cs.y_test.shape))
+            Shape of training matrix "X": (579, 14)
+            Shape of training vector "y": (579,)
+            Shape of testing matrix "X":  (65, 14)
+            Shape of testing vector "y":  (65,)
         '''
         print('Getting feature data...')
         self._set_params_from_kwargs_fd(**kwargs)
@@ -489,13 +491,25 @@ class FeatureData(object):
 
         Example:
             >>> from research_tools import FeatureData
-            >>> from research_tools import feature_groups
+            >>> from research_tools.tests import config
 
-            >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
-            >>> feat_data_cs = FeatureData(base_dir_data=base_dir_data)
-            >>> group_feats = feature_groups.cs_test2
-            >>> feat_data_cs.get_feat_group_X_y(group_feats=group_feats)
+            >>> feat_data_cs = FeatureData(config_dict=config.config_dict)
+            >>> feat_data_cs.get_feat_group_X_y()
             >>> cv_rep_strat = feat_data_cs.kfold_repeated_stratified(print_out_fd=True)
+            Number of splits: 2
+            Number of repetitions: 3
+            The number of observations in each cross-validation dataset are listed below.
+            The key represents the <stratify_train> ID, and the value represents the number of observations used from that stratify ID
+            Total number of observations: 386
+
+            K-fold train set:
+            Number of observations: 193
+            {0: 10, 1: 9, 2: 10, 3: 9, 4: 10, 5: 9, 6: 9, 7: 10, 8: 9, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
+            {0: 9, 1: 10, 2: 9, 3: 9, 4: 9, 5: 10, 6: 10, 7: 9, 8: 10, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
+            {0: 10, 1: 9, 2: 10, 3: 9, 4: 10, 5: 9, 6: 9, 7: 10, 8: 9, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
+            {0: 9, 1: 10, 2: 9, 3: 9, 4: 9, 5: 10, 6: 10, 7: 9, 8: 10, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
+            {0: 10, 1: 9, 2: 10, 3: 9, 4: 10, 5: 9, 6: 9, 7: 10, 8: 9, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
+            {0: 9, 1: 10, 2: 9, 3: 9, 4: 9, 5: 10, 6: 10, 7: 9, 8: 10, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
         '''
         self._set_params_from_kwargs_fd(**kwargs)
 

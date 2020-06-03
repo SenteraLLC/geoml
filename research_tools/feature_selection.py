@@ -37,7 +37,8 @@ class FeatureSelection(FeatureData):
         n_feats (``int``): The maximum number of features to consider
     '''
     __allowed_params = (
-        'model_fs', 'model_fs_params_set', 'model_fs_params_adjust_min', 'model_fs_params_adjust_max',
+        'base_data_dir', 'model_fs', 'model_fs_params_set',
+        'model_fs_params_adjust_min', 'model_fs_params_adjust_max',
         'n_feats', 'n_linspace', 'exit_on_stagnant_n',
         'step_pct', 'print_out_fs')
 
@@ -46,6 +47,7 @@ class FeatureSelection(FeatureData):
         self.get_feat_group_X_y()
         cv_rep_strat = self.kfold_repeated_stratified()
         # FeatureData defaults
+        self.base_data_dir = None
         self.model_fs = Lasso()  # params below are specific to this model
         self.model_fs_name = type(self.model_fs).__name__
         self.model_fs_params_set = {'precompute': True,
@@ -335,6 +337,18 @@ class FeatureSelection(FeatureData):
                 (``int``), the feature indices (``list``), the feature ranking
                 (``list``), and the parameters to recreate the feature
                 selection scenario (``dict``).
+
+        Example:
+            >>> from research_tools import FeatureSelection
+            >>> from research_tools.tests import config
+
+            >>> myfs = FeatureSelection(config_dict=config.config_dict)
+            >>> myfs.fs_find_params()
+            >>> X_train_select, X_test_select = myfs.fs_get_X_select(df_fs_params_idx=2)
+            >>> print(X_train_select[0:3])
+            [[ 49.         235.3785       0.6442    ]
+             [ 57.         358.672        0.67396667]
+             [ 63.         246.587        0.48595   ]]
         '''
         print('Performing feature selection...')
         self._set_params_from_kwargs_fs(**kwargs)
@@ -366,6 +380,14 @@ class FeatureSelection(FeatureData):
             df_fs_params_idx (``int``): The index of <df_fs_params> to retrieve
                 sklearn model parameters (the will be stored in the "params"
                 column).
+
+        Example:
+            >>> from research_tools import FeatureSelection
+            >>> from research_tools.tests import config
+
+            >>> myfs = FeatureSelection(config_dict=config.config_dict)
+            >>> myfs.fs_find_params()
+            >>> X_train_select, X_test_select = myfs.fs_get_X_select(2)
         '''
         msg1 = ('<df_fs_params> must be populated; be sure to execute '
                 '``find_feat_selection_params()`` prior to running '
