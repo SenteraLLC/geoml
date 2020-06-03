@@ -37,7 +37,7 @@ class Training(FeatureSelection):
     and cross validated, and can be safely distributed to predict new
     observations. Care must be taken to ensure information about input features
     is tracked (not only the number of features, but specifications) so new
-    data can be preocessed to be ingested by the estimator to make new
+    data can be processed to be ingested by the estimator to make new
     predictions.
     '''
     __allowed_params = (
@@ -68,12 +68,12 @@ class Training(FeatureSelection):
         self.print_out_train = False
         # self.base_dir_results = None
 
-        self._set_params_from_kwargs_tune(**kwargs)
-        self._set_attributes_tune()
+        self._set_params_from_kwargs_train(**kwargs)
+        self._set_attributes_train()
         # self._set_regressor()
 
 
-    def _set_params_from_dict_tune(self, config_dict):
+    def _set_params_from_dict_train(self, config_dict):
         '''
         Sets any of the parameters in ``config_dict`` to self as long as they
         are in the ``__allowed_params`` list
@@ -88,7 +88,7 @@ class Training(FeatureSelection):
             if k in self.__class__.__allowed_params:
                 setattr(self, k, v)
 
-    def _set_params_from_kwargs_tune(self, **kwargs):
+    def _set_params_from_kwargs_train(self, **kwargs):
         '''
         Sets any of the passed kwargs to self as long as long as they are in
         the ``__allowed_params`` list. Notice that if 'config_dict' is passed,
@@ -96,7 +96,7 @@ class Training(FeatureSelection):
         passed to ``Training`` more explicitly.
         '''
         if 'config_dict' in kwargs:
-            self._set_params_from_dict_tune(kwargs.get('config_dict'))
+            self._set_params_from_dict_train(kwargs.get('config_dict'))
         if kwargs is not None:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
@@ -119,7 +119,7 @@ class Training(FeatureSelection):
             # if k == 'regressor':
         # self._set_regressor()
 
-    def _set_attributes_tune(self):
+    def _set_attributes_train(self):
         '''
         Sets any class attribute to ``None`` that will be created in one of the
         user functions from the ``feature_selection`` class
@@ -216,20 +216,6 @@ class Training(FeatureSelection):
         except ValueError as e:
             print('Estimator was unable to fit due to {0}'.format(e))
             return None
-
-    # def _get_df_tune_cols(self):
-    #     '''
-    #     Gets column names for tuning dataframe
-    #     '''
-    #     cols = ['model_fs', 'feat_n', 'feats_x_select', 'rank_x_select',
-    #             'regressor_name', 'regressor', 'params_regressor',
-    #             'params_tuning']
-    #     prefixes = ['score_train_', 'std_train_', 'score_val_', 'std_val_']
-    #     for obj_str in self.scoring:
-    #         for prefix in prefixes:
-    #             col = prefix + obj_str
-    #             cols.extend([col])
-    #     return cols
 
     def _get_df_tune_cols(self):
         '''
@@ -509,7 +495,7 @@ class Training(FeatureSelection):
         (i.e., for each row in <df_fs_params>).
         '''
         print('Executing hyperparameter tuning and estimator training...')
-        self._set_params_from_kwargs_tune(**kwargs)
+        self._set_params_from_kwargs_train(**kwargs)
 
         df_tune = self.df_tune
         df_test_full = self.df_test_full
@@ -563,7 +549,7 @@ class Training(FeatureSelection):
     #         feat_n (``int``): The DataFrame to get the regressor from
     #             (default: ``Training.df_test``).
     #     '''
-    #     self._set_params_from_kwargs_tune(**kwargs)
+    #     self._set_params_from_kwargs_train(**kwargs)
     #     if feat_n is None:
     #         feat_n = X.sha
     #     params = df[df['feat_n'] == feat_n]['params_regressor'].values[0]
