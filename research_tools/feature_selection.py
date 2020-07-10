@@ -38,22 +38,15 @@ class FeatureSelection(FeatureData):
         n_feats (``int``): The maximum number of features to consider
     '''
     __allowed_params = (
-<<<<<<< HEAD
-        'model_fs', 'model_fs_params_set', 'model_fs_params_adjust_min', 'model_fs_params_adjust_max',
-        'n_feats', 'n_linspace', 'print_out_fs')
-=======
-        'base_data_dir', 'model_fs', 'model_fs_params_set',
-        'model_fs_params_adjust_min', 'model_fs_params_adjust_max',
-        'n_feats', 'n_linspace', 'exit_on_stagnant_n',
-        'step_pct', 'print_out_fs')
->>>>>>> 72dd1dfadcc9c4df4d8a007316ac8237b54d6d77
+        'model_fs', 'model_fs_params_set', 'model_fs_params_adjust_min',
+        'model_fs_params_adjust_max', 'n_feats', 'n_linspace', 'print_out_fs')
 
     def __init__(self, **kwargs):
         super(FeatureSelection, self).__init__(**kwargs)
         self.get_feat_group_X_y()
         cv_rep_strat = self.kfold_repeated_stratified()
         # FeatureData defaults
-        self.base_data_dir = None
+        # self.base_data_dir = None
         self.model_fs = Lasso()  # params below are specific to this model
         self.model_fs_name = type(self.model_fs).__name__
         self.model_fs_params_set = {'precompute': True,
