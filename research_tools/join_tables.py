@@ -340,9 +340,13 @@ class JoinTables(object):
                 be converted to datetime).
 
         Example:
-            >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
+            >>> import os
+            >>> import pandas as pd
+            >>> from research_tools import JoinTables
+
+            >>> base_dir_data = os.path.join(os.getcwd(), 'research_tools', 'tests', 'testdata')
             >>> fname_petiole = os.path.join(base_dir_data, 'tissue_petiole_NO3_ppm.csv')
-            >>> my_join = join_tables(base_dir_data)
+            >>> my_join = JoinTables(base_dir_data=base_dir_data)
             >>> df_pet_no3 = pd.read_csv(fname_petiole)
             >>> df_pet_no3.head(3)
               study  year  plot_id        date   tissue  measure         value
@@ -356,7 +360,6 @@ class JoinTables(object):
             0   NNI  2019      101 2019-06-25  Petiole  NO3_ppm  18142.397813   33
             1   NNI  2019      101 2019-07-09  Petiole  NO3_ppm   2728.023000   47
             2   NNI  2019      101 2019-07-23  Petiole  NO3_ppm   1588.190000   61
-
         '''
         df = self._check_requirements(df, 'dae')
 
@@ -379,9 +382,13 @@ class JoinTables(object):
                 be converted to datetime).
 
         Example:
-            >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
+            >>> import os
+            >>> import pandas as pd
+            >>> from research_tools import JoinTables
+
+            >>> base_dir_data = os.path.join(os.getcwd(), 'research_tools', 'tests', 'testdata')
             >>> fname_petiole = os.path.join(base_dir_data, 'tissue_petiole_NO3_ppm.csv')
-            >>> my_join = join_tables(base_dir_data)
+            >>> my_join = JoinTables(base_dir_data=base_dir_data)
             >>> df_pet_no3 = pd.read_csv(fname_petiole)
             >>> df_pet_no3.head(3)
               study  year  plot_id        date   tissue  measure         value
@@ -428,9 +435,13 @@ class JoinTables(object):
             #     If "kgha", the column name will be "rate_ntd_kgha"
 
         Example:
-            >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
+            >>> import os
+            >>> import pandas as pd
+            >>> from research_tools import JoinTables
+
+            >>> base_dir_data = os.path.join(os.getcwd(), 'research_tools', 'tests', 'testdata')
             >>> fname_petiole = os.path.join(base_dir_data, 'tissue_petiole_NO3_ppm.csv')
-            >>> my_join = join_tables(base_dir_data)
+            >>> my_join = JoinTables(base_dir_data=base_dir_data)
             >>> df_pet_no3 = pd.read_csv(fname_petiole)
             >>> df_pet_no3.head(3)
               study  year  plot_id        date   tissue  measure         value
@@ -440,6 +451,10 @@ class JoinTables(object):
 
             >>> df_pet_no3 = my_join.rate_ntd(df_pet_no3)
             >>> df_pet_no3.head(3)
+              study  year  plot_id        date   tissue  measure         value rate_ntd_kgha
+            0   NNI  2019      101  2019-06-25  Petiole  NO3_ppm  18142.397813       156.919
+            1   NNI  2019      101  2019-07-09  Petiole  NO3_ppm   2728.023000       156.919
+            2   NNI  2019      101  2019-07-23  Petiole  NO3_ppm   1588.190000       179.336
         '''
         df = self._check_requirements(df, f='rate_ntd')
         df_join = df.merge(self.df_exp, on=on)
