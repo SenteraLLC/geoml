@@ -54,7 +54,6 @@ class Training(FeatureSelection):
         # self._set_model_fs()
         self.fs_find_params(**kwargs)
 
-
         # Training defaults
         self.regressor = None
         self.regressor_name = None
@@ -127,6 +126,7 @@ class Training(FeatureSelection):
         self.df_tune = None
         self.df_test_full = None
         self.df_pred = None
+        self.df_pred_full = None
         self.df_test = None
 
     def _set_regressor(self):
@@ -380,15 +380,15 @@ class Training(FeatureSelection):
             data.extend([np.nan] * (len(self._get_df_test_cols()) - len(data)))
             df_test_full1 = pd.DataFrame(
                 data=[data], index=[df.index[0]], columns=self._get_df_test_cols())
-            return df_test_full1, None
+            return df_test_full1, None, None
 
         msg = ('<params_regressor> are not equal. (this is a bug)')
         assert self.regressor.get_params() == df['params_regressor'].values[0], msg
 
         self.regressor.fit(self.X_train_select, self.y_train)
 
-        _, train_neg_mae, train_neg_rmse, train_r2 = self._error(train_or_test='train')
-        y_pred, test_neg_mae, test_neg_rmse, test_r2 = self._error(train_or_test='test')
+        y_pred_train, train_neg_mae, train_neg_rmse, train_r2 = self._error(train_or_test='train')
+        y_pred_test, test_neg_mae, test_neg_rmse, test_r2 = self._error(train_or_test='test')
 
         self._fit_all_data()  # Fit using both train and test data
         data[-1] = deepcopy(self.regressor)
@@ -396,7 +396,7 @@ class Training(FeatureSelection):
         data.extend([train_neg_mae, test_neg_mae, train_neg_rmse, test_neg_rmse,
                      train_r2, test_r2])
         df_test_full1 = pd.DataFrame([data], index=[df.index[0]], columns=self._get_df_test_cols())
-        return df_test_full1, y_pred
+        return df_test_full1, y_pred_test, y_pred_train
 
 
         # estimator = df_tune_filtered2.iloc[0]['regressor']
@@ -514,6 +514,7 @@ class Training(FeatureSelection):
         df_tune = self.df_tune
         df_test_full = self.df_test_full
         df_pred = self.df_pred
+        df_pred_full = self.df_pred_full
         for idx in self.df_fs_params.index:
             X_train_select, X_test_select = self.fs_get_X_select(idx)
             n_feats = len(self.df_fs_params.iloc[idx]['feats_x_select'])
@@ -528,7 +529,7 @@ class Training(FeatureSelection):
                 df_tune = df_tune_rank.copy()
             else:
                 df_tune = df_tune.append(df_tune_rank)
-            df_test_full1, y_pred = self._get_test_results(df_tune_rank)
+            df_test_full1, y_pred_test, y_pred_train = self._get_test_results(df_tune_rank)
             if df_test_full is None:
                 df_test_full = df_test_full1.copy()
             else:
@@ -540,12 +541,14 @@ class Training(FeatureSelection):
 
             if df_pred is None:
                 df_pred = self.df_y[self.df_y['train_test'] == 'test'].copy()
+                df_pred_full = self.df_y.copy()
 
                 # col_idx = [self.df_y.columns, self.df_y.columns]
                 # df_pred.columns = pd.MultiIndex.from_arrays(col_idx, names=('full', 'filtered'))
 
-            if y_pred is not None:  # have to store y_pred while we have it
-                df_pred[uid] = y_pred
+            if y_pred_test is not None:  # have to store y_pred while we have it
+                df_pred[uid] = y_pred_test
+                df_pred_full[uid] = np.concatenate([y_pred_train, y_pred_test])
                 # df_pred[(uid, np.nan)] = y_pred
 
         # df_tune = df_tune.sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
@@ -553,6 +556,7 @@ class Training(FeatureSelection):
         self.df_tune = df_tune
         self.df_test_full = df_test_full
         self.df_pred = df_pred
+        self.df_pred_full = df_pred_full
         self._filter_test_results(scoring='test_neg_mae')
 
     # def set_regressor(self, feat_n=None, **kwargs):

@@ -1,117 +1,394 @@
-study,year,trt_id,trt_n,trt_var,trt_irr
-NNI,2019,1,N.1,Russet Burbank,IRR.1
-NNI,2019,2,N.2,Russet Burbank,IRR.1
-NNI,2019,3,N.3,Russet Burbank,IRR.1
-NNI,2019,4,N.4,Russet Burbank,IRR.1
-NNI,2019,5,N.5,Russet Burbank,IRR.1
-NNI,2019,6,N.6,Russet Burbank,IRR.1
-NNI,2019,7,N.7,Russet Burbank,IRR.1
-NNI,2019,8,N.8,Russet Burbank,IRR.1
-Sanjay,2019,1,N.A,MN13142,IRR.1
-Sanjay,2019,2,N.A,Russet Burbank,IRR.1
-Sanjay,2019,3,N.A,Umatilla,IRR.1
-Sanjay,2019,4,N.A,Lamoka,IRR.1
-Sanjay,2019,5,N.A,Clearwater,IRR.1
-Sanjay,2019,6,N.A,Russet Burbank,IRR.1
-Sanjay,2019,7,N.B,MN13142,IRR.1
-Sanjay,2019,8,N.B,Russet Burbank,IRR.1
-Sanjay,2019,9,N.B,Umatilla,IRR.1
-Sanjay,2019,10,N.B,Lamoka,IRR.1
-Sanjay,2019,11,N.B,Clearwater,IRR.1
-Sanjay,2019,12,N.B,Russet Burbank,IRR.1
-Sanjay,2019,13,N.C,MN13142,IRR.1
-Sanjay,2019,14,N.C,Russet Burbank,IRR.1
-Sanjay,2019,15,N.C,Umatilla,IRR.1
-Sanjay,2019,16,N.C,Lamoka,IRR.1
-Sanjay,2019,17,N.C,Clearwater,IRR.1
-Sanjay,2019,18,N.C,Russet Burbank,IRR.1
-Sanjay,2018,1,N.A,MN13142,IRR.1
-Sanjay,2018,2,N.A,Russet Burbank,IRR.1
-Sanjay,2018,3,N.A,Umatilla,IRR.1
-Sanjay,2018,4,N.A,Lamoka,IRR.1
-Sanjay,2018,5,N.A,Clearwater,IRR.1
-Sanjay,2018,6,N.A,Ivory Russet,IRR.1
-Sanjay,2018,7,N.B,MN13142,IRR.1
-Sanjay,2018,8,N.B,Russet Burbank,IRR.1
-Sanjay,2018,9,N.B,Umatilla,IRR.1
-Sanjay,2018,10,N.B,Lamoka,IRR.1
-Sanjay,2018,11,N.B,Clearwater,IRR.1
-Sanjay,2018,12,N.B,Ivory Russet,IRR.1
-Sanjay,2018,13,N.C,MN13142,IRR.1
-Sanjay,2018,14,N.C,Russet Burbank,IRR.1
-Sanjay,2018,15,N.C,Umatilla,IRR.1
-Sanjay,2018,16,N.C,Lamoka,IRR.1
-Sanjay,2018,17,N.C,Clearwater,IRR.1
-Sanjay,2018,18,N.C,Ivory Russet,IRR.1
-IxN,2017,1,N.1,Russet Burbank,IRR.1
-IxN,2017,2,N.1,Russet Burbank,IRR.2
-IxN,2017,3,N.2,Russet Burbank,IRR.1
-IxN,2017,4,N.2,Russet Burbank,IRR.2
-IxN,2017,5,N.3,Russet Burbank,IRR.1
-IxN,2017,6,N.3,Russet Burbank,IRR.2
-IxN,2017,7,N.4,Russet Burbank,IRR.1
-IxN,2017,8,N.4,Russet Burbank,IRR.2
-IxN,2017,9,N.5,Russet Burbank,IRR.1
-IxN,2017,10,N.5,Russet Burbank,IRR.2
-IxN,2017,11,N.6,Russet Burbank,IRR.1
-IxN,2017,12,N.6,Russet Burbank,IRR.2
-IxN,2016,1,N.1,Russet Burbank,IRR.1
-IxN,2016,2,N.1,Russet Burbank,IRR.2
-IxN,2016,3,N.2,Russet Burbank,IRR.1
-IxN,2016,4,N.2,Russet Burbank,IRR.2
-IxN,2016,5,N.3,Russet Burbank,IRR.1
-IxN,2016,6,N.3,Russet Burbank,IRR.2
-IxN,2016,7,N.4,Russet Burbank,IRR.1
-IxN,2016,8,N.4,Russet Burbank,IRR.2
-IxN,2016,9,N.5,Russet Burbank,IRR.1
-IxN,2016,10,N.5,Russet Burbank,IRR.2
-IxN,2016,11,N.6,Russet Burbank,IRR.1
-IxN,2016,12,N.6,Russet Burbank,IRR.2
-Chloro,2016,1,N.1,Russet Burbank,IRR.1
-Chloro,2016,2,N.1,Norland,IRR.1
-Chloro,2016,3,N.2,Russet Burbank,IRR.1
-Chloro,2016,4,N.2,Norland,IRR.1
-Chloro,2016,5,N.3,Russet Burbank,IRR.1
-Chloro,2016,6,N.3,Norland,IRR.1
-Chloro,2016,7,N.4,Russet Burbank,IRR.1
-Chloro,2016,8,N.4,Norland,IRR.1
-Refl,2011,1,N.1,Russet Burbank,IRR.1
-Refl,2011,2,N.1,Russet Burbank,IRR.2
-Refl,2011,3,N.1,Alpine Russet,IRR.1
-Refl,2011,4,N.1,Alpine Russet,IRR.2
-Refl,2011,5,N.2,Russet Burbank,IRR.1
-Refl,2011,6,N.2,Russet Burbank,IRR.2
-Refl,2011,7,N.2,Alpine Russet,IRR.1
-Refl,2011,8,N.2,Alpine Russet,IRR.2
-Refl,2011,9,N.3,Russet Burbank,IRR.1
-Refl,2011,10,N.3,Russet Burbank,IRR.2
-Refl,2011,11,N.3,Alpine Russet,IRR.1
-Refl,2011,12,N.3,Alpine Russet,IRR.2
-Refl,2011,13,N.4,Russet Burbank,IRR.1
-Refl,2011,14,N.4,Russet Burbank,IRR.2
-Refl,2011,15,N.4,Alpine Russet,IRR.1
-Refl,2011,16,N.4,Alpine Russet,IRR.2
-Refl,2011,17,N.5,Russet Burbank,IRR.1
-Refl,2011,18,N.5,Russet Burbank,IRR.2
-Refl,2011,19,N.5,Alpine Russet,IRR.1
-Refl,2011,20,N.5,Alpine Russet,IRR.2
-Refl,2010,1,N.1,Russet Burbank,IRR.1
-Refl,2010,2,N.1,Russet Burbank,IRR.2
-Refl,2010,3,N.1,Alpine Russet,IRR.1
-Refl,2010,4,N.1,Alpine Russet,IRR.2
-Refl,2010,5,N.2,Russet Burbank,IRR.1
-Refl,2010,6,N.2,Russet Burbank,IRR.2
-Refl,2010,7,N.2,Alpine Russet,IRR.1
-Refl,2010,8,N.2,Alpine Russet,IRR.2
-Refl,2010,9,N.3,Russet Burbank,IRR.1
-Refl,2010,10,N.3,Russet Burbank,IRR.2
-Refl,2010,11,N.3,Alpine Russet,IRR.1
-Refl,2010,12,N.3,Alpine Russet,IRR.2
-Refl,2010,13,N.4,Russet Burbank,IRR.1
-Refl,2010,14,N.4,Russet Burbank,IRR.2
-Refl,2010,15,N.4,Alpine Russet,IRR.1
-Refl,2010,16,N.4,Alpine Russet,IRR.2
-Refl,2010,17,N.5,Russet Burbank,IRR.1
-Refl,2010,18,N.5,Russet Burbank,IRR.2
-Refl,2010,19,N.5,Alpine Russet,IRR.1
-Refl,2010,20,N.5,Alpine Russet,IRR.2
+owner,study,year,trt_id,trt_n,trt_var,trt_irr,trt_fum
+rosen lab,esn-nni,2020,15,n.7,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,3,n.11,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,6,n.13,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,8,n.15,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,7,n.14,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,16,n.8,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,17,n.9,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,10,n.2,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,5,n.12,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,14,n.6,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,11,n.3,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,12,n.4,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,9,n.16,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,13,n.5,russet burbank,irr.1,fum.1
+rosen lab,esn-nni,2020,4,n.11.1,russet burbank,irr.1,fum.1
+rosen lab,nni,2019,6,n.6,russet burbank,irr.1,fum.1
+rosen lab,nni,2019,2,n.2,russet burbank,irr.1,fum.1
+rosen lab,nni,2019,5,n.5,russet burbank,irr.1,fum.1
+rosen lab,nni,2019,4,n.4,russet burbank,irr.1,fum.1
+rosen lab,nni,2019,3,n.3,russet burbank,irr.1,fum.1
+rosen lab,nni,2019,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,nni,2019,7,n.7,russet burbank,irr.1,fum.1
+rosen lab,nni,2019,8,n.8,russet burbank,irr.1,fum.1
+rosen lab,sanjay,2019,3,n.a,mn13142,irr.1,fum.1
+rosen lab,sanjay,2019,1,n.a,clearwater,irr.1,fum.1
+rosen lab,sanjay,2019,4,n.a,russet burbank,irr.1,fum.1
+rosen lab,sanjay,2019,5,n.a,umatilla,irr.1,fum.1
+rosen lab,sanjay,2019,2,n.a,lamoka,irr.1,fum.1
+rosen lab,sanjay,2019,14,n.c,russet burbank,irr.1,fum.1
+rosen lab,sanjay,2019,15,n.c,umatilla,irr.1,fum.1
+rosen lab,sanjay,2019,11,n.c,clearwater,irr.1,fum.1
+rosen lab,sanjay,2019,12,n.c,lamoka,irr.1,fum.1
+rosen lab,sanjay,2019,13,n.c,mn13142,irr.1,fum.1
+rosen lab,sanjay,2019,9,n.b,russet burbank,irr.1,fum.1
+rosen lab,sanjay,2019,7,n.b,lamoka,irr.1,fum.1
+rosen lab,sanjay,2019,10,n.b,umatilla,irr.1,fum.1
+rosen lab,sanjay,2019,8,n.b,mn13142,irr.1,fum.1
+rosen lab,sanjay,2019,6,n.b,clearwater,irr.1,fum.1
+rosen lab,esn,2019,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,esn,2019,5,n.5,russet burbank,irr.1,fum.1
+rosen lab,esn,2019,4,n.4,russet burbank,irr.1,fum.1
+rosen lab,esn,2019,3,n.3,russet burbank,irr.1,fum.1
+rosen lab,esn,2019,2,n.2,russet burbank,irr.1,fum.1
+rosen lab,esn,2019,6,n.6,russet burbank,irr.1,fum.1
+rosen lab,sanjay,2018,17,n.c,russet burbank,irr.1,fum.1
+rosen lab,sanjay,2018,13,n.c,clearwater,irr.1,fum.1
+rosen lab,sanjay,2018,18,n.c,umatilla,irr.1,fum.1
+rosen lab,sanjay,2018,15,n.c,lamoka,irr.1,fum.1
+rosen lab,sanjay,2018,16,n.c,mn13142,irr.1,fum.1
+rosen lab,sanjay,2018,14,n.c,ivory russet,irr.1,fum.1
+rosen lab,sanjay,2018,5,n.a,russet burbank,irr.1,fum.1
+rosen lab,sanjay,2018,1,n.a,clearwater,irr.1,fum.1
+rosen lab,sanjay,2018,3,n.a,lamoka,irr.1,fum.1
+rosen lab,sanjay,2018,2,n.a,ivory russet,irr.1,fum.1
+rosen lab,sanjay,2018,4,n.a,mn13142,irr.1,fum.1
+rosen lab,sanjay,2018,6,n.a,umatilla,irr.1,fum.1
+rosen lab,sanjay,2018,8,n.b,ivory russet,irr.1,fum.1
+rosen lab,sanjay,2018,9,n.b,lamoka,irr.1,fum.1
+rosen lab,sanjay,2018,7,n.b,clearwater,irr.1,fum.1
+rosen lab,sanjay,2018,12,n.b,umatilla,irr.1,fum.1
+rosen lab,sanjay,2018,10,n.b,mn13142,irr.1,fum.1
+rosen lab,sanjay,2018,11,n.b,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,8,n.2,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,3,n.11,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,10,n.4,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,12,n.6,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,4,n.12,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,9,n.3,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,5,n.13,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,15,n.9,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,14,n.8,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,7,n.15,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,11,n.5,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,6,n.14,russet burbank,irr.1,fum.1
+rosen lab,crf,2018,13,n.7,russet burbank,irr.1,fum.1
+rosen lab,ixn,2017,12,n.6,russet burbank,irr.2,fum.1
+rosen lab,ixn,2017,8,n.4,russet burbank,irr.2,fum.1
+rosen lab,ixn,2017,6,n.3,russet burbank,irr.2,fum.1
+rosen lab,ixn,2017,2,n.1,russet burbank,irr.2,fum.1
+rosen lab,ixn,2017,10,n.5,russet burbank,irr.2,fum.1
+rosen lab,ixn,2017,4,n.2,russet burbank,irr.2,fum.1
+rosen lab,ixn,2017,7,n.4,russet burbank,irr.1,fum.1
+rosen lab,ixn,2017,5,n.3,russet burbank,irr.1,fum.1
+rosen lab,ixn,2017,11,n.6,russet burbank,irr.1,fum.1
+rosen lab,ixn,2017,9,n.5,russet burbank,irr.1,fum.1
+rosen lab,ixn,2017,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,ixn,2017,3,n.2,russet burbank,irr.1,fum.1
+rosen lab,fumigation,2017,2,n.2,russet burbank,irr.1,fum.1
+rosen lab,fumigation,2017,3,n.3,russet burbank,irr.1,fum.1
+rosen lab,fumigation,2017,5,n.5,russet burbank,irr.1,fum.1
+rosen lab,fumigation,2017,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,fumigation,2017,4,n.4,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,5,n.13,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,11,n.5,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,13,n.7,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,3,n.11,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,6,n.14,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,9,n.3,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,12,n.6,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,4,n.12,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,14,n.8,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,8,n.2,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,10,n.4,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,15,n.9,russet burbank,irr.1,fum.1
+rosen lab,crf,2017,7,n.15,russet burbank,irr.1,fum.1
+rosen lab,ixn,2016,8,n.4,russet burbank,irr.2,fum.1
+rosen lab,ixn,2016,6,n.3,russet burbank,irr.2,fum.1
+rosen lab,ixn,2016,10,n.5,russet burbank,irr.2,fum.1
+rosen lab,ixn,2016,4,n.2,russet burbank,irr.2,fum.1
+rosen lab,ixn,2016,2,n.1,russet burbank,irr.2,fum.1
+rosen lab,ixn,2016,12,n.6,russet burbank,irr.2,fum.1
+rosen lab,ixn,2016,11,n.6,russet burbank,irr.1,fum.1
+rosen lab,ixn,2016,5,n.3,russet burbank,irr.1,fum.1
+rosen lab,ixn,2016,9,n.5,russet burbank,irr.1,fum.1
+rosen lab,ixn,2016,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,ixn,2016,3,n.2,russet burbank,irr.1,fum.1
+rosen lab,ixn,2016,7,n.4,russet burbank,irr.1,fum.1
+rosen lab,fumigation,2016,4,n.2,russet burbank,irr.1,fum.a
+rosen lab,fumigation,2016,10,n.4,russet burbank,irr.1,fum.a
+rosen lab,fumigation,2016,7,n.3,russet burbank,irr.1,fum.a
+rosen lab,fumigation,2016,1,n.1,russet burbank,irr.1,fum.a
+rosen lab,fumigation,2016,13,n.5,russet burbank,irr.1,fum.a
+rosen lab,fumigation,2016,14,n.5,russet burbank,irr.1,fum.b
+rosen lab,fumigation,2016,8,n.3,russet burbank,irr.1,fum.b
+rosen lab,fumigation,2016,11,n.4,russet burbank,irr.1,fum.b
+rosen lab,fumigation,2016,2,n.1,russet burbank,irr.1,fum.b
+rosen lab,fumigation,2016,5,n.2,russet burbank,irr.1,fum.b
+rosen lab,fumigation,2016,9,n.3,russet burbank,irr.1,fum.c
+rosen lab,fumigation,2016,6,n.2,russet burbank,irr.1,fum.c
+rosen lab,fumigation,2016,15,n.5,russet burbank,irr.1,fum.c
+rosen lab,fumigation,2016,3,n.1,russet burbank,irr.1,fum.c
+rosen lab,fumigation,2016,12,n.4,russet burbank,irr.1,fum.c
+rosen lab,chloro,2016,2,n.1,russet burbank,irr.1,fum.1
+rosen lab,chloro,2016,7,n.4,norland,irr.1,fum.1
+rosen lab,chloro,2016,8,n.4,russet burbank,irr.1,fum.1
+rosen lab,chloro,2016,5,n.3,norland,irr.1,fum.1
+rosen lab,chloro,2016,4,n.2,russet burbank,irr.1,fum.1
+rosen lab,chloro,2016,3,n.2,norland,irr.1,fum.1
+rosen lab,chloro,2016,6,n.3,russet burbank,irr.1,fum.1
+rosen lab,chloro,2016,1,n.1,norland,irr.1,fum.1
+rosen lab,vxn,2015,5,n.2,easton,irr.1,fum.1
+rosen lab,vxn,2015,7,n.3,dakota russet,irr.1,fum.1
+rosen lab,vxn,2015,6,n.2,russet burbank,irr.1,fum.1
+rosen lab,vxn,2015,4,n.2,dakota russet,irr.1,fum.1
+rosen lab,vxn,2015,11,n.4,easton,irr.1,fum.1
+rosen lab,vxn,2015,2,n.1,easton,irr.1,fum.1
+rosen lab,vxn,2015,9,n.3,russet burbank,irr.1,fum.1
+rosen lab,vxn,2015,16,n.x,russet burbank,irr.1,fum.1
+rosen lab,vxn,2015,3,n.1,russet burbank,irr.1,fum.1
+rosen lab,vxn,2015,15,n.5,russet burbank,irr.1,fum.1
+rosen lab,vxn,2015,13,n.5,dakota russet,irr.1,fum.1
+rosen lab,vxn,2015,12,n.4,russet burbank,irr.1,fum.1
+rosen lab,vxn,2015,10,n.4,dakota russet,irr.1,fum.1
+rosen lab,vxn,2015,8,n.3,easton,irr.1,fum.1
+rosen lab,vxn,2015,1,n.1,dakota russet,irr.1,fum.1
+rosen lab,vxn,2015,14,n.5,easton,irr.1,fum.1
+rosen lab,crf,2015,3,n.11,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,17,n.8,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,4,n.12,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,8,n.16,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,6,n.14,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,10,n.18,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,9,n.17,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,5,n.13,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,14,n.5,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,7,n.15,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,16,n.7,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,18,n.9,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,13,n.4,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,15,n.6,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,12,n.3,russet burbank,irr.1,fum.1
+rosen lab,crf,2015,11,n.2,russet burbank,irr.1,fum.1
+rosen lab,vxn,2014,14,n.5,easton,irr.1,fum.1
+rosen lab,vxn,2014,10,n.4,dakota russet,irr.1,fum.1
+rosen lab,vxn,2014,5,n.2,easton,irr.1,fum.1
+rosen lab,vxn,2014,3,n.1,russet burbank,irr.1,fum.1
+rosen lab,vxn,2014,11,n.4,easton,irr.1,fum.1
+rosen lab,vxn,2014,6,n.2,russet burbank,irr.1,fum.1
+rosen lab,vxn,2014,7,n.3,dakota russet,irr.1,fum.1
+rosen lab,vxn,2014,8,n.3,easton,irr.1,fum.1
+rosen lab,vxn,2014,2,n.1,easton,irr.1,fum.1
+rosen lab,vxn,2014,1,n.1,dakota russet,irr.1,fum.1
+rosen lab,vxn,2014,4,n.2,dakota russet,irr.1,fum.1
+rosen lab,vxn,2014,13,n.5,dakota russet,irr.1,fum.1
+rosen lab,vxn,2014,15,n.5,russet burbank,irr.1,fum.1
+rosen lab,vxn,2014,9,n.3,russet burbank,irr.1,fum.1
+rosen lab,vxn,2014,12,n.4,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,5,n.13,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,15,n.6,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,14,n.5,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,4,n.12,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,16,n.7,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,10,n.18,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,9,n.17,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,18,n.9,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,12,n.3,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,6,n.14,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,17,n.8,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,13,n.4,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,8,n.16,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,11,n.2,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,7,n.15,russet burbank,irr.1,fum.1
+rosen lab,crf,2014,3,n.11,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,15,n.6,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,18,n.9,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,12,n.3,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,13,n.4,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,9,n.17,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,10,n.18,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,6,n.14,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,14,n.5,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,7,n.15,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,8,n.16,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,3,n.11,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,11,n.2,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,17,n.8,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,4,n.12,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,16,n.7,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,5,n.13,russet burbank,irr.1,fum.1
+rosen lab,crf,2013,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,5,n.13,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,17,n.8,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,6,n.14,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,16,n.7,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,14,n.5,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,13,n.4,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,7,n.15,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,12,n.3,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,15,n.6,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,18,n.9,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,11,n.2,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,4,n.12,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,8,n.16,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,3,n.11,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,10,n.18,russet burbank,irr.1,fum.1
+rosen lab,crf,2012,9,n.17,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2012,26,n.na,NA,irr.1,fum.1
+rosen lab,acrylamide,2012,10,n.2,snowden,irr.1,fum.1
+rosen lab,acrylamide,2012,11,n.3,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2012,21,n.5,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2012,3,n.1,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2012,9,n.2,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2012,15,n.3,snowden,irr.1,fum.1
+rosen lab,acrylamide,2012,7,n.2,dakota trailblazer,irr.1,fum.1
+rosen lab,acrylamide,2012,4,n.1,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2012,14,n.3,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2012,23,n.5,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2012,16,n.4,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2012,19,n.4,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2012,24,n.5,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2012,25,n.5,snowden,irr.1,fum.1
+rosen lab,acrylamide,2012,22,n.5,dakota trailblazer,irr.1,fum.1
+rosen lab,acrylamide,2012,1,n.1,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2012,12,n.3,dakota trailblazer,irr.1,fum.1
+rosen lab,acrylamide,2012,17,n.4,dakota trailblazer,irr.1,fum.1
+rosen lab,acrylamide,2012,2,n.1,dakota trailblazer,irr.1,fum.1
+rosen lab,acrylamide,2012,6,n.2,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2012,18,n.4,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2012,13,n.3,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2012,20,n.4,snowden,irr.1,fum.1
+rosen lab,acrylamide,2012,8,n.2,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2012,5,n.1,snowden,irr.1,fum.1
+rosen lab,reflectance,2011,7,n.2,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2011,5,n.2,alpine,irr.1,fum.1
+rosen lab,reflectance,2011,13,n.4,alpine,irr.1,fum.1
+rosen lab,reflectance,2011,15,n.4,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2011,3,n.1,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2011,1,n.1,alpine,irr.1,fum.1
+rosen lab,reflectance,2011,9,n.3,alpine,irr.1,fum.1
+rosen lab,reflectance,2011,11,n.3,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2011,19,n.5,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2011,17,n.5,alpine,irr.1,fum.1
+rosen lab,reflectance,2011,2,n.1,alpine,irr.2,fum.1
+rosen lab,reflectance,2011,4,n.1,russet burbank,irr.2,fum.1
+rosen lab,reflectance,2011,6,n.2,alpine,irr.2,fum.1
+rosen lab,reflectance,2011,8,n.2,russet burbank,irr.2,fum.1
+rosen lab,reflectance,2011,12,n.3,russet burbank,irr.2,fum.1
+rosen lab,reflectance,2011,10,n.3,alpine,irr.2,fum.1
+rosen lab,reflectance,2011,20,n.5,russet burbank,irr.2,fum.1
+rosen lab,reflectance,2011,18,n.5,alpine,irr.2,fum.1
+rosen lab,reflectance,2011,14,n.4,alpine,irr.2,fum.1
+rosen lab,reflectance,2011,16,n.4,russet burbank,irr.2,fum.1
+rosen lab,crf,2011,12,n.3,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,9,n.17,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,17,n.8,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,4,n.12,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,7,n.15,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,14,n.5,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,6,n.14,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,13,n.4,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,15,n.6,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,18,n.9,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,5,n.13,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,8,n.16,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,3,n.11,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,11,n.2,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,16,n.7,russet burbank,irr.1,fum.1
+rosen lab,crf,2011,10,n.18,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2011,23,n.5,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2011,21,n.5,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2011,7,n.2,dakota trailblazer,irr.1,fum.1
+rosen lab,acrylamide,2011,17,n.4,dakota trailblazer,irr.1,fum.1
+rosen lab,acrylamide,2011,24,n.5,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2011,18,n.4,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2011,16,n.4,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2011,8,n.2,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2011,14,n.3,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2011,5,n.1,snowden,irr.1,fum.1
+rosen lab,acrylamide,2011,20,n.4,snowden,irr.1,fum.1
+rosen lab,acrylamide,2011,15,n.3,snowden,irr.1,fum.1
+rosen lab,acrylamide,2011,1,n.1,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2011,19,n.4,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2011,13,n.3,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2011,25,n.5,snowden,irr.1,fum.1
+rosen lab,acrylamide,2011,4,n.1,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2011,11,n.3,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2011,9,n.2,russet burbank,irr.1,fum.1
+rosen lab,acrylamide,2011,22,n.5,dakota trailblazer,irr.1,fum.1
+rosen lab,acrylamide,2011,10,n.2,snowden,irr.1,fum.1
+rosen lab,acrylamide,2011,3,n.1,ivory crisp,irr.1,fum.1
+rosen lab,acrylamide,2011,2,n.1,dakota trailblazer,irr.1,fum.1
+rosen lab,acrylamide,2011,6,n.2,alpine russet,irr.1,fum.1
+rosen lab,acrylamide,2011,12,n.3,dakota trailblazer,irr.1,fum.1
+rosen lab,reflectance,2010,19,n.5,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2010,17,n.5,alpine,irr.1,fum.1
+rosen lab,reflectance,2010,11,n.3,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2010,9,n.3,alpine,irr.1,fum.1
+rosen lab,reflectance,2010,7,n.2,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2010,5,n.2,alpine,irr.1,fum.1
+rosen lab,reflectance,2010,1,n.1,alpine,irr.1,fum.1
+rosen lab,reflectance,2010,3,n.1,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2010,13,n.4,alpine,irr.1,fum.1
+rosen lab,reflectance,2010,15,n.4,russet burbank,irr.1,fum.1
+rosen lab,reflectance,2010,2,n.1,alpine,irr.2,fum.1
+rosen lab,reflectance,2010,4,n.1,russet burbank,irr.2,fum.1
+rosen lab,reflectance,2010,14,n.4,alpine,irr.2,fum.1
+rosen lab,reflectance,2010,16,n.4,russet burbank,irr.2,fum.1
+rosen lab,reflectance,2010,20,n.5,russet burbank,irr.2,fum.1
+rosen lab,reflectance,2010,18,n.5,alpine,irr.2,fum.1
+rosen lab,reflectance,2010,8,n.2,russet burbank,irr.2,fum.1
+rosen lab,reflectance,2010,6,n.2,alpine,irr.2,fum.1
+rosen lab,reflectance,2010,10,n.3,alpine,irr.2,fum.1
+rosen lab,reflectance,2010,12,n.3,russet burbank,irr.2,fum.1
+rosen lab,esn-super u,2010,5,n.13,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,4,n.12,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,6,n.14,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,12,n.6,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,8,n.2,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,10,n.4,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,13,n.7,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,9,n.3,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,7,n.15,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,14,n.8,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,3,n.11,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,11,n.5,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,15,n.9,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,esn-super u,2010,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,3,n.2,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,4,n.3,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,5,n.4,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,6,n.5,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,7,n.6,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,8,n.7,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,9,n.8,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,10,n.9,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1992,2,n.10,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,1,n.1,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,3,n.2,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,4,n.3,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,5,n.4,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,6,n.5,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,7,n.6,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,8,n.7,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,9,n.8,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,10,n.9,russet burbank,irr.1,fum.1
+rosen lab,blcmr,1991,2,n.10,russet burbank,irr.1,fum.1

@@ -31,8 +31,9 @@ class FeatureData(object):
     data for its use in a supervised regression model.
     '''
     __allowed_params = (
-        'base_dir_data', 'fname_petiole', 'fname_total_n', 'fname_cropscan',
-        'random_seed', 'dir_results', 'group_feats', 'ground_truth',
+        'base_dir_data', 'fname_obs_tissue', 'fname_cropscan',
+        'random_seed', 'dir_results', 'group_feats',
+        'ground_truth_tissue', 'ground_truth_measure',
         'date_tolerance', 'test_size', 'stratify', 'impute_method', 'n_splits',
         'n_repeats', 'train_test', 'print_out_fd')
 
@@ -40,15 +41,17 @@ class FeatureData(object):
         # FeatureData defaults
         self.base_dir_data = None
         self.random_seed = None
-        self.fname_petiole = 'tissue_petiole_NO3_ppm.csv'
-        self.fname_total_n = 'tissue_wp_N_pct.csv'
-        self.fname_cropscan = 'cropscan.csv'
+        self.fname_obs_tissue = 'obs_tissue.csv'
+        self.fname_cropscan = 'rs_cropscan.csv'
+        self.fname_wx = 'calc_weather.csv'
         self.dir_results = None
         self.group_feats = {'dae': 'dae',
                             'rate_ntd': {'col_rate_n': 'rate_n_kgha',
                                          'col_out': 'rate_ntd_kgha'},
                             'cropscan_wl_range1': [400, 900]}
-        self.ground_truth = 'vine_n_pct'
+        # self.ground_truth = 'vine_n_pct'
+        self.ground_truth_tissue = 'vine'
+        self.ground_truth_measure = 'n_pct'
         self.date_tolerance = 3
         self.test_size = 0.4
         self.stratify = ['study', 'date']
@@ -111,10 +114,21 @@ class FeatureData(object):
         Sets any class attribute to ``None`` that will be created in one of the
         user functions
         '''
-        self.df_pet_no3 = None
-        self.df_vine_n_pct = None
+        self.df_obs_tissue = None
+        self.df_tuber_biomdry_Mgha = None
+        self.df_vine_biomdry_Mgha = None
+        self.df_wholeplant_biomdry_Mgha = None
+        self.df_tuber_biomfresh_Mgha = None
+        self.df_canopy_cover_pct = None
+        self.df_tuber_n_kgha = None
+        self.df_vine_n_kgha = None
+        self.df_wholeplant_n_kgha = None
         self.df_tuber_n_pct = None
+        self.df_vine_n_pct = None
+        self.df_wholeplant_n_pct = None
+        self.df_petiole_no3_ppm = None
         self.df_cs = None
+        self.df_wx = None
 
         self.df_X = None
         self.df_y = None
@@ -149,7 +163,7 @@ class FeatureData(object):
                     if (c.isnumeric() and int(c) > wl_range[0] and
                         int(c) < wl_range[1]):
                         labels_x.append(c)
-            elif 'cropscan_bands' in key:
+            elif 'cropscan_bands' in key or 'wx' in key:
                 labels_x.extend(group_feats[key])
             elif 'rate_ntd' in key:
                 labels_x.append(group_feats[key]['col_out'])
@@ -167,39 +181,79 @@ class FeatureData(object):
         if 'dap' in group_feats:
             df = self.join_info.dap(df)  # add DAP
         if 'rate_ntd' in group_feats:
-            value = group_feats['rate_ntd']['col_rate_n']
-            unit_str = value.rsplit('_', 1)[1]
-            df = self.join_info.rate_ntd(df, col_rate_n=value,
-                                         unit_str=unit_str)
-        for key in group_feats:
+            col_rate_n = group_feats['rate_ntd']['col_rate_n']
+            col_rate_ntd_out = group_feats['rate_ntd']['col_out']
+            # unit_str = value.rsplit('_', 1)[1]
+            df = self.join_info.rate_ntd(df, col_rate_n=col_rate_n,
+                 col_rate_ntd_out=col_rate_ntd_out)
+        if 'wx' in group_feats:
+            df = self.join_info.join_closest_date(  # join wx by closest date
+                df, self.df_wx, left_on='date', right_on='date',
+                tolerance=0, by=['owner', 'study', 'year'])
+
+        for key in group_feats:  # necessary because 'cropscan_wl_range1' must be differentiated
             if 'cropscan' in key:
                 df = self.join_info.join_closest_date(  # join cropscan by closest date
                     df, self.df_cs, left_on='date', right_on='date',
-                    tolerance=date_tolerance)
+                    tolerance=date_tolerance, by=['owner', 'study', 'year', 'plot_id'])
                 break
         return df
 
-    def _load_tables(self):
+    def _load_tables(self, tissue_col='tissue', measure_col='measure',
+                     value_col='value'):
         '''
         Loads the appropriate table based on the value passed for ``tissue``,
         then filters observations according to
         '''
-        fname_petiole = os.path.join(self.base_dir_data, self.fname_petiole)
-        df_pet_no3 = pd.read_csv(fname_petiole)
-        self.df_pet_no3 = df_pet_no3[pd.notnull(df_pet_no3['value'])]
+        print('loading tables....')
+        fname_obs_tissue = os.path.join(self.base_dir_data, self.fname_obs_tissue)
+        df_obs_tissue = pd.read_csv(fname_obs_tissue)
+        self.labels_y_id = [tissue_col, measure_col]
+        self.label_y = value_col
+        self.df_obs_tissue = df_obs_tissue[pd.notnull(df_obs_tissue[value_col])]
 
-        fname_total_n = os.path.join(self.base_dir_data, self.fname_total_n)
-        df_total_n = pd.read_csv(fname_total_n)
-        df_vine_n_pct = df_total_n[df_total_n['tissue'] == 'Vine']
-        self.df_vine_n_pct = df_vine_n_pct[pd.notnull(df_vine_n_pct['value'])]
-
-        df_tuber_n_pct = df_total_n[df_total_n['tissue'] == 'Tuber']
-        self.df_tuber_n_pct = df_tuber_n_pct[pd.notnull(df_tuber_n_pct['value'])]
+        # get all unique combinations of tissue and measure cols
+        tissue = df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[tissue_col].tolist()
+        measure = df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[measure_col].tolist()
+        for tissue, measure in zip(tissue, measure):
+            df = self.df_obs_tissue[(self.df_obs_tissue[measure_col] == measure) &
+                                    (self.df_obs_tissue[tissue_col] == tissue)]
+            if tissue == 'tuber' and measure == 'biomdry_Mgha':
+                self.df_tuber_biomdry_Mgha = df.copy()
+            elif tissue == 'vine' and measure == 'biomdry_Mgha':
+                self.df_vine_biomdry_Mgha = df.copy()
+            elif tissue == 'wholeplant' and measure == 'biomdry_Mgha':
+                self.df_wholeplant_biomdry_Mgha = df.copy()
+            elif tissue == 'tuber' and measure == 'biomfresh_Mgha':
+                self.df_tuber_biomfresh_Mgha = df.copy()
+            elif tissue == 'canopy' and measure == 'cover_pct':
+                self.df_canopy_cover_pct = df.copy()
+            elif tissue == 'tuber' and measure == 'n_kgha':
+                self.df_tuber_n_kgha = df.copy()
+            elif tissue == 'vine' and measure == 'n_kgha':
+                self.df_vine_n_kgha = df.copy()
+            elif tissue == 'wholeplant' and measure == 'n_kgha':
+                self.df_wholeplant_n_kgha = df.copy()
+            elif tissue == 'tuber' and measure == 'n_pct':
+                self.df_tuber_n_pct = df.copy()
+            elif tissue == 'vine' and measure == 'n_pct':
+                self.df_vine_n_pct = df.copy()
+            elif tissue == 'wholeplant' and measure == 'n_pct':
+                self.df_wholeplant_n_pct = df.copy()
+            elif tissue == 'petiole' and measure == 'no3_ppm':
+                self.df_petiole_no3_ppm = df.copy()
 
         fname_cropscan = os.path.join(self.base_dir_data, self.fname_cropscan)
-        df_cs = pd.read_csv(fname_cropscan)
-        self.df_cs = df_cs.groupby(['study', 'year', 'plot_id', 'date']
-                                   ).mean().reset_index()
+        if os.path.isfile(fname_cropscan):
+            df_cs = pd.read_csv(fname_cropscan)
+            self.df_cs = df_cs.groupby(['owner', 'study', 'year', 'plot_id', 'date']
+                                       ).mean().reset_index()
+
+        fname_wx = os.path.join(self.base_dir_data, self.fname_wx)
+        if os.path.isfile(fname_wx):
+            df_wx = pd.read_csv(fname_wx)
+            self.df_wx = df_wx.groupby(['owner', 'study', 'year', 'date']
+                                       ).mean().reset_index()
         # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
         # self.df_cs = df_cs[pd.notnull(df_cs['value'])]
 
@@ -232,31 +286,45 @@ class FeatureData(object):
             self.random_seed = int(self.random_seed)
         self._write_to_readme('Random seed: {0}'.format(self.random_seed))
 
-    def _get_response_df(self, ground_truth='vine_n_pct'):
+    def _get_response_df(self, tissue, measure,
+                         tissue_col='tissue', measure_col='measure'):
+                         # ground_truth='vine_n_pct'):
         '''
         Gets the relevant response dataframe
 
         Parameters:
-            ground_truth (``str``): Must be one of "vine_n_pct", "pet_no3_ppm",
-                or "tuber_n_pct"; dictates which table to access to retrieve
-                the relevant training data.
+            ground_truth_tissue (``str``): The tissue to use for the response
+                variable. Must be in "obs_tissue.csv", and dictates which table
+                to access to retrieve the relevant training data.
+            ground_truth_measure (``str``): The measure to use for the response
+                variable. Must be in "obs_tissue.csv"
+            tissue_col (``str``): The column name from "obs_tissue.csv" to look
+                for ``tissue``.
+            measure_col (``str``): The column name from "obs_tissue.csv" to
+                look for ``measure``.
         '''
-        avail_list = ["vine_n_pct", "pet_no3_ppm", "tuber_n_pct"]
-        msg = ('``ground_truth`` must be one of: {0}'.format(avail_list))
-        assert ground_truth in avail_list, msg
+        tissue_list = self.df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[tissue_col].tolist()
+        measure_list = self.df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[measure_col].tolist()
+        avail_list = ['_'.join(map(str, i)) for i in zip(tissue_list, measure_list)]
+        # avail_list = ["vine_n_pct", "pet_no3_ppm", "tuber_n_pct",
+        #               "biomass_kgha"]
+        msg = ('``tissue``  and ``measure`` must be '
+               'one of:\n{0}.\nPlease see "obs_tissue.csv" to be sure your '
+               'intended data are available.'
+               ''.format(list(zip(tissue_list, measure_list))))
+        assert '_'.join((tissue, measure)) in avail_list, msg
 
-        if ground_truth == 'vine_n_pct':
-            self.labels_y_id = ['tissue', 'measure']
-            self.label_y = 'value'
-            return self.df_vine_n_pct.copy(), self.labels_y_id, self.label_y
-        if ground_truth == 'pet_no3_ppm':
-            self.labels_y_id = ['tissue', 'measure']
-            self.label_y = 'value'
-            return self.df_pet_no3.copy(), self.labels_y_id, self.label_y
-        if ground_truth == 'tuber_n_pct':
-            self.labels_y_id = ['tissue', 'measure']
-            self.label_y = 'value'
-            return self.df_tuber_n_pct.copy(), self.labels_y_id, self.label_y
+        df = self.df_obs_tissue[(self.df_obs_tissue[measure_col] == measure) &
+                                (self.df_obs_tissue[tissue_col] == tissue)]
+        return df
+        # if ground_truth == 'vine_n_pct':
+        #     return self.df_vine_n_pct.copy(), self.labels_y_id, self.label_y
+        # if ground_truth == 'pet_no3_ppm':
+        #     return self.df_petiole_no3_ppm.copy(), self.labels_y_id, self.label_y
+        # if ground_truth == 'tuber_n_pct':
+        #     return self.df_tuber_n_pct.copy(), self.labels_y_id, self.label_y
+        # if ground_truth == 'biomass_kha':
+        #     return self.df_tuber_n_pct.copy(), self.labels_y_id, self.label_y
 
     def _stratify_set(self):
         '''
@@ -309,6 +377,8 @@ class FeatureData(object):
             imp = IterativeImputer(max_iter=10, random_state=self.random_seed)
         elif method == 'knn':
             imp = KNNImputer(n_neighbors=2, weights='uniform')
+        elif method == None:
+            return X
         X_out = imp.fit_transform(X)
         return X_out
 
@@ -322,11 +392,17 @@ class FeatureData(object):
 
         Parameters:
             df (``pd.DataFrame``): The input dataframe to retrieve data from.
+            impute_method (``str``): The sk-learn imputation method for missing
+                data. If ``None``, then any row with missing data is removed
+                from the dataset.
         '''
-        msg = ('``impute_method`` must be one of: ["iterative", "knn"]')
-        assert impute_method in ['iterative', 'knn'], msg
+        msg = ('``impute_method`` must be one of: ["iterative", "knn", None]')
+        assert impute_method in ['iterative', 'knn', None], msg
 
-        df = df[pd.notnull(df[self.label_y])]
+        if impute_method is None:
+            df = df.dropna()
+        else:
+            df = df[pd.notnull(df[self.label_y])]
         labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
 
         df_train = df[df['train_test'] == 'train']
@@ -344,7 +420,7 @@ class FeatureData(object):
         self.X_test = X_test
         self.y_train = y_train
         self.y_test = y_test
-        return X_train, X_test, y_train, y_test
+        return X_train, X_test, y_train, y_test, df
 
     def _save_df_X_y(self):
         '''
@@ -445,18 +521,19 @@ class FeatureData(object):
             # date_tolerance=date_tolerance, test_size=test_size,
             # stratify=stratify)
 
-        df, labels_y_id, label_y = self._get_response_df(self.ground_truth)
+        # df, labels_y_id, label_y = self._get_response_df(self.ground_truth)
+        df = self._get_response_df(self.ground_truth_tissue,
+                                   self.ground_truth_measure)
         df = self._join_group_feats(df, self.group_feats, self.date_tolerance)
         df = self._train_test_split_df(df)
 
-        X_train, X_test, y_train, y_test = self._get_X_and_y(
+        X_train, X_test, y_train, y_test, df = self._get_X_and_y(
             df, impute_method=self.impute_method)
 
-        labels_id = ['study', 'year', 'plot_id', 'date', 'train_test']
+        labels_id = ['owner', 'study', 'year', 'plot_id', 'date', 'train_test']
         self.df_X = df[labels_id + self.labels_x]
-        self.df_y = df[labels_id + labels_y_id + [label_y]]
+        self.df_y = df[labels_id + self.labels_y_id + [self.label_y]]
         self.labels_id = labels_id
-
         self._stratify_set()
 
         if self.dir_results is not None:

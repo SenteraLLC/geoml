@@ -1,429 +1,1585 @@
-study,year,plot_id,rep,trt_id
-NNI,2019,101,1,6
-NNI,2019,102,1,2
-NNI,2019,103,1,5
-NNI,2019,104,1,4
-NNI,2019,105,1,3
-NNI,2019,106,1,1
-NNI,2019,107,1,7
-NNI,2019,108,1,8
-NNI,2019,201,2,1
-NNI,2019,202,2,3
-NNI,2019,203,2,4
-NNI,2019,204,2,2
-NNI,2019,205,2,6
-NNI,2019,206,2,7
-NNI,2019,207,2,5
-NNI,2019,208,2,8
-NNI,2019,301,3,5
-NNI,2019,302,3,6
-NNI,2019,303,3,3
-NNI,2019,304,3,7
-NNI,2019,305,3,8
-NNI,2019,306,3,2
-NNI,2019,307,3,4
-NNI,2019,308,3,1
-NNI,2019,401,4,7
-NNI,2019,402,4,3
-NNI,2019,403,4,8
-NNI,2019,404,4,5
-NNI,2019,405,4,6
-NNI,2019,406,4,1
-NNI,2019,407,4,2
-NNI,2019,408,4,4
-Sanjay,2019,101,1,1
-Sanjay,2019,102,1,5
-Sanjay,2019,103,1,2
-Sanjay,2019,104,1,3
-Sanjay,2019,105,1,6
-Sanjay,2019,106,1,4
-Sanjay,2019,107,1,14
-Sanjay,2019,108,1,15
-Sanjay,2019,109,1,17
-Sanjay,2019,110,1,16
-Sanjay,2019,111,1,18
-Sanjay,2019,112,1,13
-Sanjay,2019,113,1,12
-Sanjay,2019,114,1,10
-Sanjay,2019,115,1,8
-Sanjay,2019,116,1,9
-Sanjay,2019,117,1,7
-Sanjay,2019,118,1,11
-Sanjay,2019,201,2,2
-Sanjay,2019,202,2,5
-Sanjay,2019,203,2,3
-Sanjay,2019,204,2,4
-Sanjay,2019,205,2,1
-Sanjay,2019,206,2,6
-Sanjay,2019,207,2,10
-Sanjay,2019,208,2,11
-Sanjay,2019,209,2,7
-Sanjay,2019,210,2,12
-Sanjay,2019,211,2,9
-Sanjay,2019,212,2,8
-Sanjay,2019,213,2,14
-Sanjay,2019,214,2,15
-Sanjay,2019,215,2,17
-Sanjay,2019,216,2,18
-Sanjay,2019,217,2,13
-Sanjay,2019,218,2,16
-Sanjay,2019,301,3,13
-Sanjay,2019,302,3,16
-Sanjay,2019,303,3,17
-Sanjay,2019,304,3,18
-Sanjay,2019,305,3,14
-Sanjay,2019,306,3,15
-Sanjay,2019,307,3,2
-Sanjay,2019,308,3,3
-Sanjay,2019,309,3,1
-Sanjay,2019,310,3,6
-Sanjay,2019,311,3,4
-Sanjay,2019,312,3,5
-Sanjay,2019,313,3,12
-Sanjay,2019,314,3,11
-Sanjay,2019,315,3,8
-Sanjay,2019,316,3,9
-Sanjay,2019,317,3,7
-Sanjay,2019,318,3,10
-Sanjay,2018,101,1,14
-Sanjay,2018,102,1,17
-Sanjay,2018,103,1,15
-Sanjay,2018,104,1,16
-Sanjay,2018,105,1,13
-Sanjay,2018,106,1,18
-Sanjay,2018,107,1,2
-Sanjay,2018,108,1,5
-Sanjay,2018,109,1,4
-Sanjay,2018,110,1,6
-Sanjay,2018,111,1,1
-Sanjay,2018,112,1,3
-Sanjay,2018,113,1,12
-Sanjay,2018,114,1,10
-Sanjay,2018,115,1,11
-Sanjay,2018,116,1,9
-Sanjay,2018,117,1,7
-Sanjay,2018,118,1,8
-Sanjay,2018,201,2,1
-Sanjay,2018,202,2,4
-Sanjay,2018,203,2,3
-Sanjay,2018,204,2,6
-Sanjay,2018,205,2,2
-Sanjay,2018,206,2,5
-Sanjay,2018,207,2,17
-Sanjay,2018,208,2,16
-Sanjay,2018,209,2,15
-Sanjay,2018,210,2,14
-Sanjay,2018,211,2,18
-Sanjay,2018,212,2,13
-Sanjay,2018,213,2,8
-Sanjay,2018,214,2,7
-Sanjay,2018,215,2,9
-Sanjay,2018,216,2,11
-Sanjay,2018,217,2,10
-Sanjay,2018,218,2,12
-Sanjay,2018,301,3,5
-Sanjay,2018,302,3,2
-Sanjay,2018,303,3,4
-Sanjay,2018,304,3,1
-Sanjay,2018,305,3,6
-Sanjay,2018,306,3,3
-Sanjay,2018,307,3,7
-Sanjay,2018,308,3,9
-Sanjay,2018,309,3,10
-Sanjay,2018,310,3,11
-Sanjay,2018,311,3,8
-Sanjay,2018,312,3,12
-Sanjay,2018,313,3,15
-Sanjay,2018,314,3,14
-Sanjay,2018,315,3,17
-Sanjay,2018,316,3,16
-Sanjay,2018,317,3,18
-Sanjay,2018,318,3,13
-IxN,2017,101,1,12
-IxN,2017,102,1,8
-IxN,2017,103,1,6
-IxN,2017,104,1,2
-IxN,2017,105,1,10
-IxN,2017,106,1,4
-IxN,2017,107,1,7
-IxN,2017,108,1,5
-IxN,2017,109,1,11
-IxN,2017,110,1,9
-IxN,2017,111,1,1
-IxN,2017,112,1,3
-IxN,2017,201,2,7
-IxN,2017,202,2,1
-IxN,2017,203,2,9
-IxN,2017,204,2,11
-IxN,2017,205,2,3
-IxN,2017,206,2,5
-IxN,2017,207,2,10
-IxN,2017,208,2,12
-IxN,2017,209,2,6
-IxN,2017,210,2,2
-IxN,2017,211,2,4
-IxN,2017,212,2,8
-IxN,2017,301,3,9
-IxN,2017,302,3,1
-IxN,2017,303,3,5
-IxN,2017,304,3,7
-IxN,2017,305,3,3
-IxN,2017,306,3,11
-IxN,2017,307,3,2
-IxN,2017,308,3,4
-IxN,2017,309,3,8
-IxN,2017,310,3,10
-IxN,2017,311,3,12
-IxN,2017,312,3,6
-IxN,2017,401,4,3
-IxN,2017,402,4,7
-IxN,2017,403,4,9
-IxN,2017,404,4,1
-IxN,2017,405,4,5
-IxN,2017,406,4,11
-IxN,2017,407,4,8
-IxN,2017,408,4,12
-IxN,2017,409,4,2
-IxN,2017,410,4,4
-IxN,2017,411,4,6
-IxN,2017,412,4,10
-IxN,2016,101,1,8
-IxN,2016,102,1,6
-IxN,2016,103,1,10
-IxN,2016,104,1,4
-IxN,2016,105,1,2
-IxN,2016,106,1,12
-IxN,2016,107,1,11
-IxN,2016,108,1,5
-IxN,2016,109,1,9
-IxN,2016,110,1,1
-IxN,2016,111,1,3
-IxN,2016,112,1,7
-IxN,2016,201,2,5
-IxN,2016,202,2,1
-IxN,2016,203,2,11
-IxN,2016,204,2,7
-IxN,2016,205,2,9
-IxN,2016,206,2,3
-IxN,2016,207,2,10
-IxN,2016,208,2,4
-IxN,2016,209,2,8
-IxN,2016,210,2,2
-IxN,2016,211,2,6
-IxN,2016,212,2,12
-IxN,2016,301,3,3
-IxN,2016,302,3,9
-IxN,2016,303,3,11
-IxN,2016,304,3,7
-IxN,2016,305,3,1
-IxN,2016,306,3,5
-IxN,2016,307,3,6
-IxN,2016,308,3,8
-IxN,2016,309,3,12
-IxN,2016,310,3,2
-IxN,2016,311,3,10
-IxN,2016,312,3,4
-IxN,2016,401,4,2
-IxN,2016,402,4,6
-IxN,2016,403,4,12
-IxN,2016,404,4,4
-IxN,2016,405,4,10
-IxN,2016,406,4,8
-IxN,2016,407,4,7
-IxN,2016,408,4,1
-IxN,2016,409,4,5
-IxN,2016,410,4,11
-IxN,2016,411,4,9
-IxN,2016,412,4,3
-Chloro,2016,101,1,1
-Chloro,2016,102,1,8
-Chloro,2016,103,1,7
-Chloro,2016,104,1,6
-Chloro,2016,105,1,3
-Chloro,2016,106,1,4
-Chloro,2016,107,1,5
-Chloro,2016,108,1,2
-Chloro,2016,201,2,6
-Chloro,2016,202,2,1
-Chloro,2016,203,2,4
-Chloro,2016,204,2,5
-Chloro,2016,205,2,8
-Chloro,2016,206,2,3
-Chloro,2016,207,2,2
-Chloro,2016,208,2,7
-Chloro,2016,301,3,6
-Chloro,2016,302,3,3
-Chloro,2016,303,3,2
-Chloro,2016,304,3,5
-Chloro,2016,305,3,4
-Chloro,2016,306,3,7
-Chloro,2016,307,3,8
-Chloro,2016,308,3,1
-Chloro,2016,401,4,7
-Chloro,2016,402,4,6
-Chloro,2016,403,4,1
-Chloro,2016,404,4,2
-Chloro,2016,405,4,5
-Chloro,2016,406,4,4
-Chloro,2016,407,4,3
-Chloro,2016,408,4,8
-Refl,2011,101,1,5
-Refl,2011,102,1,7
-Refl,2011,103,1,15
-Refl,2011,104,1,13
-Refl,2011,105,1,1
-Refl,2011,106,1,3
-Refl,2011,107,1,11
-Refl,2011,108,1,9
-Refl,2011,109,1,17
-Refl,2011,110,1,19
-Refl,2011,111,1,4
-Refl,2011,112,1,2
-Refl,2011,113,1,8
-Refl,2011,114,1,6
-Refl,2011,115,1,10
-Refl,2011,116,1,12
-Refl,2011,117,1,18
-Refl,2011,118,1,20
-Refl,2011,119,1,16
-Refl,2011,120,1,14
-Refl,2011,201,2,18
-Refl,2011,202,2,20
-Refl,2011,203,2,14
-Refl,2011,204,2,16
-Refl,2011,205,2,12
-Refl,2011,206,2,10
-Refl,2011,207,2,8
-Refl,2011,208,2,6
-Refl,2011,209,2,4
-Refl,2011,210,2,2
-Refl,2011,211,2,19
-Refl,2011,212,2,17
-Refl,2011,213,2,7
-Refl,2011,214,2,5
-Refl,2011,215,2,9
-Refl,2011,216,2,11
-Refl,2011,217,2,13
-Refl,2011,218,2,15
-Refl,2011,219,2,3
-Refl,2011,220,2,1
-Refl,2011,301,3,16
-Refl,2011,302,3,14
-Refl,2011,303,3,2
-Refl,2011,304,3,4
-Refl,2011,305,3,8
-Refl,2011,306,3,6
-Refl,2011,307,3,10
-Refl,2011,308,3,12
-Refl,2011,309,3,20
-Refl,2011,310,3,18
-Refl,2011,311,3,11
-Refl,2011,312,3,9
-Refl,2011,313,3,17
-Refl,2011,314,3,19
-Refl,2011,315,3,15
-Refl,2011,316,3,13
-Refl,2011,317,3,5
-Refl,2011,318,3,7
-Refl,2011,319,3,1
-Refl,2011,320,3,3
-Refl,2011,401,4,9
-Refl,2011,402,4,11
-Refl,2011,403,4,15
-Refl,2011,404,4,13
-Refl,2011,405,4,7
-Refl,2011,406,4,5
-Refl,2011,407,4,1
-Refl,2011,408,4,3
-Refl,2011,409,4,19
-Refl,2011,410,4,17
-Refl,2011,411,4,2
-Refl,2011,412,4,4
-Refl,2011,413,4,18
-Refl,2011,414,4,20
-Refl,2011,415,4,8
-Refl,2011,416,4,6
-Refl,2011,417,4,12
-Refl,2011,418,4,10
-Refl,2011,419,4,14
-Refl,2011,420,4,16
-Refl,2010,101,1,17
-Refl,2010,102,1,19
-Refl,2010,103,1,9
-Refl,2010,104,1,11
-Refl,2010,105,1,5
-Refl,2010,106,1,7
-Refl,2010,107,1,3
-Refl,2010,108,1,1
-Refl,2010,109,1,15
-Refl,2010,110,1,13
-Refl,2010,111,1,4
-Refl,2010,112,1,2
-Refl,2010,113,1,16
-Refl,2010,114,1,14
-Refl,2010,115,1,18
-Refl,2010,116,1,20
-Refl,2010,117,1,6
-Refl,2010,118,1,8
-Refl,2010,119,1,12
-Refl,2010,120,1,10
-Refl,2010,201,2,6
-Refl,2010,202,2,8
-Refl,2010,203,2,16
-Refl,2010,204,2,14
-Refl,2010,205,2,10
-Refl,2010,206,2,12
-Refl,2010,207,2,18
-Refl,2010,208,2,20
-Refl,2010,209,2,2
-Refl,2010,210,2,4
-Refl,2010,211,2,3
-Refl,2010,212,2,1
-Refl,2010,213,2,5
-Refl,2010,214,2,7
-Refl,2010,215,2,15
-Refl,2010,216,2,13
-Refl,2010,217,2,9
-Refl,2010,218,2,11
-Refl,2010,219,2,19
-Refl,2010,220,2,17
-Refl,2010,301,3,9
-Refl,2010,302,3,11
-Refl,2010,303,3,17
-Refl,2010,304,3,19
-Refl,2010,305,3,7
-Refl,2010,306,3,5
-Refl,2010,307,3,1
-Refl,2010,308,3,3
-Refl,2010,309,3,15
-Refl,2010,310,3,13
-Refl,2010,311,3,10
-Refl,2010,312,3,12
-Refl,2010,313,3,14
-Refl,2010,314,3,16
-Refl,2010,315,3,8
-Refl,2010,316,3,6
-Refl,2010,317,3,4
-Refl,2010,318,3,2
-Refl,2010,319,3,18
-Refl,2010,320,3,20
-Refl,2010,401,4,2
-Refl,2010,402,4,4
-Refl,2010,403,4,14
-Refl,2010,404,4,16
-Refl,2010,405,4,20
-Refl,2010,406,4,18
-Refl,2010,407,4,12
-Refl,2010,408,4,10
-Refl,2010,409,4,6
-Refl,2010,410,4,8
-Refl,2010,411,4,19
-Refl,2010,412,4,17
-Refl,2010,413,4,7
-Refl,2010,414,4,5
-Refl,2010,415,4,9
-Refl,2010,416,4,11
-Refl,2010,417,4,13
-Refl,2010,418,4,15
-Refl,2010,419,4,1
-Refl,2010,420,4,3
+owner,study,year,plot_id,trt_id
+rosen lab,esn-nni,2020,101,15
+rosen lab,esn-nni,2020,102,2
+rosen lab,esn-nni,2020,103,3
+rosen lab,esn-nni,2020,104,6
+rosen lab,esn-nni,2020,105,1
+rosen lab,esn-nni,2020,106,8
+rosen lab,esn-nni,2020,107,7
+rosen lab,esn-nni,2020,108,16
+rosen lab,esn-nni,2020,109,17
+rosen lab,esn-nni,2020,110,10
+rosen lab,esn-nni,2020,111,5
+rosen lab,esn-nni,2020,112,14
+rosen lab,esn-nni,2020,113,11
+rosen lab,esn-nni,2020,114,12
+rosen lab,esn-nni,2020,115,9
+rosen lab,esn-nni,2020,116,13
+rosen lab,esn-nni,2020,201,3
+rosen lab,esn-nni,2020,202,7
+rosen lab,esn-nni,2020,203,1
+rosen lab,esn-nni,2020,204,16
+rosen lab,esn-nni,2020,205,8
+rosen lab,esn-nni,2020,206,2
+rosen lab,esn-nni,2020,207,13
+rosen lab,esn-nni,2020,208,5
+rosen lab,esn-nni,2020,209,17
+rosen lab,esn-nni,2020,210,9
+rosen lab,esn-nni,2020,211,10
+rosen lab,esn-nni,2020,212,12
+rosen lab,esn-nni,2020,213,15
+rosen lab,esn-nni,2020,214,14
+rosen lab,esn-nni,2020,215,6
+rosen lab,esn-nni,2020,216,11
+rosen lab,esn-nni,2020,301,5
+rosen lab,esn-nni,2020,302,10
+rosen lab,esn-nni,2020,303,4
+rosen lab,esn-nni,2020,304,2
+rosen lab,esn-nni,2020,305,15
+rosen lab,esn-nni,2020,306,14
+rosen lab,esn-nni,2020,307,12
+rosen lab,esn-nni,2020,308,9
+rosen lab,esn-nni,2020,309,1
+rosen lab,esn-nni,2020,310,13
+rosen lab,esn-nni,2020,311,6
+rosen lab,esn-nni,2020,312,16
+rosen lab,esn-nni,2020,313,8
+rosen lab,esn-nni,2020,314,17
+rosen lab,esn-nni,2020,315,7
+rosen lab,esn-nni,2020,316,11
+rosen lab,esn-nni,2020,401,12
+rosen lab,esn-nni,2020,402,14
+rosen lab,esn-nni,2020,403,2
+rosen lab,esn-nni,2020,404,5
+rosen lab,esn-nni,2020,405,13
+rosen lab,esn-nni,2020,406,15
+rosen lab,esn-nni,2020,407,1
+rosen lab,esn-nni,2020,408,10
+rosen lab,esn-nni,2020,409,6
+rosen lab,esn-nni,2020,410,7
+rosen lab,esn-nni,2020,411,16
+rosen lab,esn-nni,2020,412,11
+rosen lab,esn-nni,2020,413,17
+rosen lab,esn-nni,2020,414,8
+rosen lab,esn-nni,2020,415,3
+rosen lab,esn-nni,2020,416,9
+rosen lab,nni,2019,101,6
+rosen lab,nni,2019,102,2
+rosen lab,nni,2019,103,5
+rosen lab,nni,2019,104,4
+rosen lab,nni,2019,105,3
+rosen lab,nni,2019,106,1
+rosen lab,nni,2019,107,7
+rosen lab,nni,2019,108,8
+rosen lab,nni,2019,201,1
+rosen lab,nni,2019,202,3
+rosen lab,nni,2019,203,4
+rosen lab,nni,2019,204,2
+rosen lab,nni,2019,205,6
+rosen lab,nni,2019,206,7
+rosen lab,nni,2019,207,5
+rosen lab,nni,2019,208,8
+rosen lab,nni,2019,301,5
+rosen lab,nni,2019,302,6
+rosen lab,nni,2019,303,3
+rosen lab,nni,2019,304,7
+rosen lab,nni,2019,305,8
+rosen lab,nni,2019,306,2
+rosen lab,nni,2019,307,4
+rosen lab,nni,2019,308,1
+rosen lab,nni,2019,401,7
+rosen lab,nni,2019,402,3
+rosen lab,nni,2019,403,8
+rosen lab,nni,2019,404,5
+rosen lab,nni,2019,405,6
+rosen lab,nni,2019,406,1
+rosen lab,nni,2019,407,2
+rosen lab,nni,2019,408,4
+rosen lab,sanjay,2019,101,3
+rosen lab,sanjay,2019,102,1
+rosen lab,sanjay,2019,103,4
+rosen lab,sanjay,2019,104,5
+rosen lab,sanjay,2019,105,4
+rosen lab,sanjay,2019,106,2
+rosen lab,sanjay,2019,107,14
+rosen lab,sanjay,2019,108,15
+rosen lab,sanjay,2019,109,11
+rosen lab,sanjay,2019,110,12
+rosen lab,sanjay,2019,111,14
+rosen lab,sanjay,2019,112,13
+rosen lab,sanjay,2019,113,9
+rosen lab,sanjay,2019,114,7
+rosen lab,sanjay,2019,115,9
+rosen lab,sanjay,2019,116,10
+rosen lab,sanjay,2019,117,8
+rosen lab,sanjay,2019,118,6
+rosen lab,sanjay,2019,201,4
+rosen lab,sanjay,2019,202,1
+rosen lab,sanjay,2019,203,5
+rosen lab,sanjay,2019,204,2
+rosen lab,sanjay,2019,205,3
+rosen lab,sanjay,2019,206,4
+rosen lab,sanjay,2019,207,7
+rosen lab,sanjay,2019,208,6
+rosen lab,sanjay,2019,209,8
+rosen lab,sanjay,2019,210,9
+rosen lab,sanjay,2019,211,10
+rosen lab,sanjay,2019,212,9
+rosen lab,sanjay,2019,213,14
+rosen lab,sanjay,2019,214,15
+rosen lab,sanjay,2019,215,11
+rosen lab,sanjay,2019,216,14
+rosen lab,sanjay,2019,217,13
+rosen lab,sanjay,2019,218,12
+rosen lab,sanjay,2019,301,13
+rosen lab,sanjay,2019,302,12
+rosen lab,sanjay,2019,303,11
+rosen lab,sanjay,2019,304,14
+rosen lab,sanjay,2019,305,14
+rosen lab,sanjay,2019,306,15
+rosen lab,sanjay,2019,307,4
+rosen lab,sanjay,2019,308,5
+rosen lab,sanjay,2019,309,3
+rosen lab,sanjay,2019,310,4
+rosen lab,sanjay,2019,311,2
+rosen lab,sanjay,2019,312,1
+rosen lab,sanjay,2019,313,9
+rosen lab,sanjay,2019,314,6
+rosen lab,sanjay,2019,315,9
+rosen lab,sanjay,2019,316,10
+rosen lab,sanjay,2019,317,8
+rosen lab,sanjay,2019,318,7
+rosen lab,esn,2019,101,1
+rosen lab,esn,2019,102,5
+rosen lab,esn,2019,103,4
+rosen lab,esn,2019,104,3
+rosen lab,esn,2019,105,2
+rosen lab,esn,2019,106,6
+rosen lab,esn,2019,201,2
+rosen lab,esn,2019,202,1
+rosen lab,esn,2019,203,5
+rosen lab,esn,2019,204,6
+rosen lab,esn,2019,205,4
+rosen lab,esn,2019,206,3
+rosen lab,esn,2019,301,5
+rosen lab,esn,2019,302,6
+rosen lab,esn,2019,303,2
+rosen lab,esn,2019,304,4
+rosen lab,esn,2019,305,1
+rosen lab,esn,2019,306,3
+rosen lab,esn,2019,401,6
+rosen lab,esn,2019,402,3
+rosen lab,esn,2019,403,2
+rosen lab,esn,2019,404,4
+rosen lab,esn,2019,405,1
+rosen lab,esn,2019,406,5
+rosen lab,sanjay,2018,101,17
+rosen lab,sanjay,2018,102,13
+rosen lab,sanjay,2018,103,18
+rosen lab,sanjay,2018,104,15
+rosen lab,sanjay,2018,105,16
+rosen lab,sanjay,2018,106,14
+rosen lab,sanjay,2018,107,5
+rosen lab,sanjay,2018,108,1
+rosen lab,sanjay,2018,109,3
+rosen lab,sanjay,2018,110,2
+rosen lab,sanjay,2018,111,4
+rosen lab,sanjay,2018,112,6
+rosen lab,sanjay,2018,113,8
+rosen lab,sanjay,2018,114,9
+rosen lab,sanjay,2018,115,7
+rosen lab,sanjay,2018,116,12
+rosen lab,sanjay,2018,117,10
+rosen lab,sanjay,2018,118,11
+rosen lab,sanjay,2018,201,4
+rosen lab,sanjay,2018,202,3
+rosen lab,sanjay,2018,203,6
+rosen lab,sanjay,2018,204,2
+rosen lab,sanjay,2018,205,5
+rosen lab,sanjay,2018,206,1
+rosen lab,sanjay,2018,207,13
+rosen lab,sanjay,2018,208,15
+rosen lab,sanjay,2018,209,18
+rosen lab,sanjay,2018,210,17
+rosen lab,sanjay,2018,211,14
+rosen lab,sanjay,2018,212,16
+rosen lab,sanjay,2018,213,11
+rosen lab,sanjay,2018,214,10
+rosen lab,sanjay,2018,215,12
+rosen lab,sanjay,2018,216,7
+rosen lab,sanjay,2018,217,9
+rosen lab,sanjay,2018,218,8
+rosen lab,sanjay,2018,301,1
+rosen lab,sanjay,2018,302,5
+rosen lab,sanjay,2018,303,3
+rosen lab,sanjay,2018,304,4
+rosen lab,sanjay,2018,305,2
+rosen lab,sanjay,2018,306,6
+rosen lab,sanjay,2018,307,10
+rosen lab,sanjay,2018,308,12
+rosen lab,sanjay,2018,309,9
+rosen lab,sanjay,2018,310,7
+rosen lab,sanjay,2018,311,11
+rosen lab,sanjay,2018,312,8
+rosen lab,sanjay,2018,313,18
+rosen lab,sanjay,2018,314,17
+rosen lab,sanjay,2018,315,13
+rosen lab,sanjay,2018,316,15
+rosen lab,sanjay,2018,317,14
+rosen lab,sanjay,2018,318,16
+rosen lab,crf,2018,101,8
+rosen lab,crf,2018,102,3
+rosen lab,crf,2018,103,10
+rosen lab,crf,2018,104,12
+rosen lab,crf,2018,105,1
+rosen lab,crf,2018,106,4
+rosen lab,crf,2018,107,2
+rosen lab,crf,2018,108,9
+rosen lab,crf,2018,109,5
+rosen lab,crf,2018,110,15
+rosen lab,crf,2018,111,14
+rosen lab,crf,2018,112,7
+rosen lab,crf,2018,113,11
+rosen lab,crf,2018,114,6
+rosen lab,crf,2018,115,13
+rosen lab,crf,2018,201,1
+rosen lab,crf,2018,202,13
+rosen lab,crf,2018,203,10
+rosen lab,crf,2018,204,14
+rosen lab,crf,2018,205,5
+rosen lab,crf,2018,206,2
+rosen lab,crf,2018,207,7
+rosen lab,crf,2018,208,15
+rosen lab,crf,2018,209,8
+rosen lab,crf,2018,210,12
+rosen lab,crf,2018,211,4
+rosen lab,crf,2018,212,6
+rosen lab,crf,2018,213,11
+rosen lab,crf,2018,214,9
+rosen lab,crf,2018,215,3
+rosen lab,crf,2018,301,7
+rosen lab,crf,2018,302,5
+rosen lab,crf,2018,303,14
+rosen lab,crf,2018,304,15
+rosen lab,crf,2018,305,1
+rosen lab,crf,2018,306,8
+rosen lab,crf,2018,307,4
+rosen lab,crf,2018,308,13
+rosen lab,crf,2018,309,12
+rosen lab,crf,2018,310,6
+rosen lab,crf,2018,311,3
+rosen lab,crf,2018,312,11
+rosen lab,crf,2018,313,10
+rosen lab,crf,2018,314,2
+rosen lab,crf,2018,315,9
+rosen lab,crf,2018,401,13
+rosen lab,crf,2018,402,5
+rosen lab,crf,2018,403,2
+rosen lab,crf,2018,404,12
+rosen lab,crf,2018,405,14
+rosen lab,crf,2018,406,4
+rosen lab,crf,2018,407,8
+rosen lab,crf,2018,408,3
+rosen lab,crf,2018,409,15
+rosen lab,crf,2018,410,1
+rosen lab,crf,2018,411,6
+rosen lab,crf,2018,412,11
+rosen lab,crf,2018,413,7
+rosen lab,crf,2018,414,9
+rosen lab,crf,2018,415,10
+rosen lab,ixn,2017,101,12
+rosen lab,ixn,2017,102,8
+rosen lab,ixn,2017,103,6
+rosen lab,ixn,2017,104,2
+rosen lab,ixn,2017,105,10
+rosen lab,ixn,2017,106,4
+rosen lab,ixn,2017,107,7
+rosen lab,ixn,2017,108,5
+rosen lab,ixn,2017,109,11
+rosen lab,ixn,2017,110,9
+rosen lab,ixn,2017,111,1
+rosen lab,ixn,2017,112,3
+rosen lab,ixn,2017,201,7
+rosen lab,ixn,2017,202,1
+rosen lab,ixn,2017,203,9
+rosen lab,ixn,2017,204,11
+rosen lab,ixn,2017,205,3
+rosen lab,ixn,2017,206,5
+rosen lab,ixn,2017,207,10
+rosen lab,ixn,2017,208,12
+rosen lab,ixn,2017,209,6
+rosen lab,ixn,2017,210,2
+rosen lab,ixn,2017,211,4
+rosen lab,ixn,2017,212,8
+rosen lab,ixn,2017,301,9
+rosen lab,ixn,2017,302,1
+rosen lab,ixn,2017,303,5
+rosen lab,ixn,2017,304,7
+rosen lab,ixn,2017,305,3
+rosen lab,ixn,2017,306,11
+rosen lab,ixn,2017,307,2
+rosen lab,ixn,2017,308,4
+rosen lab,ixn,2017,309,8
+rosen lab,ixn,2017,310,10
+rosen lab,ixn,2017,311,12
+rosen lab,ixn,2017,312,6
+rosen lab,ixn,2017,401,3
+rosen lab,ixn,2017,402,7
+rosen lab,ixn,2017,403,9
+rosen lab,ixn,2017,404,1
+rosen lab,ixn,2017,405,5
+rosen lab,ixn,2017,406,11
+rosen lab,ixn,2017,407,8
+rosen lab,ixn,2017,408,12
+rosen lab,ixn,2017,409,2
+rosen lab,ixn,2017,410,4
+rosen lab,ixn,2017,411,6
+rosen lab,ixn,2017,412,10
+rosen lab,fumigation,2017,101,2
+rosen lab,fumigation,2017,102,2
+rosen lab,fumigation,2017,103,3
+rosen lab,fumigation,2017,104,5
+rosen lab,fumigation,2017,105,5
+rosen lab,fumigation,2017,106,2
+rosen lab,fumigation,2017,107,1
+rosen lab,fumigation,2017,108,3
+rosen lab,fumigation,2017,109,1
+rosen lab,fumigation,2017,110,3
+rosen lab,fumigation,2017,111,4
+rosen lab,fumigation,2017,112,5
+rosen lab,fumigation,2017,113,4
+rosen lab,fumigation,2017,114,1
+rosen lab,fumigation,2017,115,4
+rosen lab,fumigation,2017,201,4
+rosen lab,fumigation,2017,202,2
+rosen lab,fumigation,2017,203,5
+rosen lab,fumigation,2017,204,1
+rosen lab,fumigation,2017,205,3
+rosen lab,fumigation,2017,206,2
+rosen lab,fumigation,2017,207,2
+rosen lab,fumigation,2017,208,1
+rosen lab,fumigation,2017,209,3
+rosen lab,fumigation,2017,210,5
+rosen lab,fumigation,2017,211,5
+rosen lab,fumigation,2017,212,1
+rosen lab,fumigation,2017,213,3
+rosen lab,fumigation,2017,214,4
+rosen lab,fumigation,2017,215,4
+rosen lab,fumigation,2017,301,4
+rosen lab,fumigation,2017,302,3
+rosen lab,fumigation,2017,303,4
+rosen lab,fumigation,2017,304,5
+rosen lab,fumigation,2017,305,5
+rosen lab,fumigation,2017,306,3
+rosen lab,fumigation,2017,307,2
+rosen lab,fumigation,2017,308,1
+rosen lab,fumigation,2017,309,1
+rosen lab,fumigation,2017,310,3
+rosen lab,fumigation,2017,311,4
+rosen lab,fumigation,2017,312,2
+rosen lab,fumigation,2017,313,1
+rosen lab,fumigation,2017,314,2
+rosen lab,fumigation,2017,315,5
+rosen lab,fumigation,2017,401,5
+rosen lab,fumigation,2017,402,4
+rosen lab,fumigation,2017,403,5
+rosen lab,fumigation,2017,404,4
+rosen lab,fumigation,2017,405,5
+rosen lab,fumigation,2017,406,3
+rosen lab,fumigation,2017,407,3
+rosen lab,fumigation,2017,408,2
+rosen lab,fumigation,2017,409,4
+rosen lab,fumigation,2017,410,2
+rosen lab,fumigation,2017,411,1
+rosen lab,fumigation,2017,412,2
+rosen lab,fumigation,2017,413,1
+rosen lab,fumigation,2017,414,3
+rosen lab,fumigation,2017,415,1
+rosen lab,crf,2017,101,5
+rosen lab,crf,2017,102,11
+rosen lab,crf,2017,103,13
+rosen lab,crf,2017,104,3
+rosen lab,crf,2017,105,6
+rosen lab,crf,2017,106,9
+rosen lab,crf,2017,107,12
+rosen lab,crf,2017,108,4
+rosen lab,crf,2017,109,14
+rosen lab,crf,2017,110,1
+rosen lab,crf,2017,111,2
+rosen lab,crf,2017,112,8
+rosen lab,crf,2017,113,10
+rosen lab,crf,2017,114,15
+rosen lab,crf,2017,115,7
+rosen lab,crf,2017,201,10
+rosen lab,crf,2017,202,4
+rosen lab,crf,2017,203,12
+rosen lab,crf,2017,204,2
+rosen lab,crf,2017,205,9
+rosen lab,crf,2017,206,5
+rosen lab,crf,2017,207,8
+rosen lab,crf,2017,208,3
+rosen lab,crf,2017,209,11
+rosen lab,crf,2017,210,13
+rosen lab,crf,2017,211,14
+rosen lab,crf,2017,212,6
+rosen lab,crf,2017,213,7
+rosen lab,crf,2017,214,1
+rosen lab,crf,2017,215,15
+rosen lab,crf,2017,301,8
+rosen lab,crf,2017,302,11
+rosen lab,crf,2017,303,3
+rosen lab,crf,2017,304,12
+rosen lab,crf,2017,305,7
+rosen lab,crf,2017,306,9
+rosen lab,crf,2017,307,4
+rosen lab,crf,2017,308,15
+rosen lab,crf,2017,309,5
+rosen lab,crf,2017,310,2
+rosen lab,crf,2017,311,6
+rosen lab,crf,2017,312,10
+rosen lab,crf,2017,313,1
+rosen lab,crf,2017,314,13
+rosen lab,crf,2017,315,14
+rosen lab,crf,2017,401,6
+rosen lab,crf,2017,402,3
+rosen lab,crf,2017,403,2
+rosen lab,crf,2017,404,14
+rosen lab,crf,2017,405,7
+rosen lab,crf,2017,406,13
+rosen lab,crf,2017,407,12
+rosen lab,crf,2017,408,1
+rosen lab,crf,2017,409,4
+rosen lab,crf,2017,410,10
+rosen lab,crf,2017,411,11
+rosen lab,crf,2017,412,9
+rosen lab,crf,2017,413,15
+rosen lab,crf,2017,414,5
+rosen lab,crf,2017,415,8
+rosen lab,ixn,2016,101,8
+rosen lab,ixn,2016,102,6
+rosen lab,ixn,2016,103,10
+rosen lab,ixn,2016,104,4
+rosen lab,ixn,2016,105,2
+rosen lab,ixn,2016,106,12
+rosen lab,ixn,2016,107,11
+rosen lab,ixn,2016,108,5
+rosen lab,ixn,2016,109,9
+rosen lab,ixn,2016,110,1
+rosen lab,ixn,2016,111,3
+rosen lab,ixn,2016,112,7
+rosen lab,ixn,2016,201,5
+rosen lab,ixn,2016,202,1
+rosen lab,ixn,2016,203,11
+rosen lab,ixn,2016,204,7
+rosen lab,ixn,2016,205,9
+rosen lab,ixn,2016,206,3
+rosen lab,ixn,2016,207,10
+rosen lab,ixn,2016,208,4
+rosen lab,ixn,2016,209,8
+rosen lab,ixn,2016,210,2
+rosen lab,ixn,2016,211,6
+rosen lab,ixn,2016,212,12
+rosen lab,ixn,2016,301,3
+rosen lab,ixn,2016,302,9
+rosen lab,ixn,2016,303,11
+rosen lab,ixn,2016,304,7
+rosen lab,ixn,2016,305,1
+rosen lab,ixn,2016,306,5
+rosen lab,ixn,2016,307,6
+rosen lab,ixn,2016,308,8
+rosen lab,ixn,2016,309,12
+rosen lab,ixn,2016,310,2
+rosen lab,ixn,2016,311,10
+rosen lab,ixn,2016,312,4
+rosen lab,ixn,2016,401,2
+rosen lab,ixn,2016,402,6
+rosen lab,ixn,2016,403,12
+rosen lab,ixn,2016,404,4
+rosen lab,ixn,2016,405,10
+rosen lab,ixn,2016,406,8
+rosen lab,ixn,2016,407,7
+rosen lab,ixn,2016,408,1
+rosen lab,ixn,2016,409,5
+rosen lab,ixn,2016,410,11
+rosen lab,ixn,2016,411,9
+rosen lab,ixn,2016,412,3
+rosen lab,fumigation,2016,101,4
+rosen lab,fumigation,2016,104,10
+rosen lab,fumigation,2016,107,7
+rosen lab,fumigation,2016,110,1
+rosen lab,fumigation,2016,113,13
+rosen lab,fumigation,2016,102,14
+rosen lab,fumigation,2016,105,8
+rosen lab,fumigation,2016,108,11
+rosen lab,fumigation,2016,111,2
+rosen lab,fumigation,2016,114,5
+rosen lab,fumigation,2016,103,9
+rosen lab,fumigation,2016,106,6
+rosen lab,fumigation,2016,109,15
+rosen lab,fumigation,2016,112,3
+rosen lab,fumigation,2016,115,12
+rosen lab,fumigation,2016,201,5
+rosen lab,fumigation,2016,204,11
+rosen lab,fumigation,2016,207,14
+rosen lab,fumigation,2016,210,2
+rosen lab,fumigation,2016,213,8
+rosen lab,fumigation,2016,202,3
+rosen lab,fumigation,2016,205,12
+rosen lab,fumigation,2016,208,15
+rosen lab,fumigation,2016,211,6
+rosen lab,fumigation,2016,214,9
+rosen lab,fumigation,2016,203,7
+rosen lab,fumigation,2016,206,10
+rosen lab,fumigation,2016,209,4
+rosen lab,fumigation,2016,212,1
+rosen lab,fumigation,2016,215,13
+rosen lab,fumigation,2016,301,11
+rosen lab,fumigation,2016,304,2
+rosen lab,fumigation,2016,307,5
+rosen lab,fumigation,2016,310,14
+rosen lab,fumigation,2016,313,8
+rosen lab,fumigation,2016,302,13
+rosen lab,fumigation,2016,305,10
+rosen lab,fumigation,2016,308,4
+rosen lab,fumigation,2016,311,1
+rosen lab,fumigation,2016,314,7
+rosen lab,fumigation,2016,303,6
+rosen lab,fumigation,2016,306,3
+rosen lab,fumigation,2016,309,9
+rosen lab,fumigation,2016,312,15
+rosen lab,fumigation,2016,315,12
+rosen lab,fumigation,2016,401,5
+rosen lab,fumigation,2016,404,8
+rosen lab,fumigation,2016,407,14
+rosen lab,fumigation,2016,410,11
+rosen lab,fumigation,2016,413,2
+rosen lab,fumigation,2016,402,12
+rosen lab,fumigation,2016,405,3
+rosen lab,fumigation,2016,408,6
+rosen lab,fumigation,2016,411,15
+rosen lab,fumigation,2016,414,9
+rosen lab,fumigation,2016,403,7
+rosen lab,fumigation,2016,406,4
+rosen lab,fumigation,2016,409,1
+rosen lab,fumigation,2016,412,13
+rosen lab,fumigation,2016,415,10
+rosen lab,chloro,2016,101,2
+rosen lab,chloro,2016,102,7
+rosen lab,chloro,2016,103,8
+rosen lab,chloro,2016,104,5
+rosen lab,chloro,2016,105,4
+rosen lab,chloro,2016,106,3
+rosen lab,chloro,2016,107,6
+rosen lab,chloro,2016,108,1
+rosen lab,chloro,2016,201,5
+rosen lab,chloro,2016,202,2
+rosen lab,chloro,2016,203,3
+rosen lab,chloro,2016,204,6
+rosen lab,chloro,2016,205,7
+rosen lab,chloro,2016,206,4
+rosen lab,chloro,2016,207,1
+rosen lab,chloro,2016,208,8
+rosen lab,chloro,2016,301,5
+rosen lab,chloro,2016,302,4
+rosen lab,chloro,2016,303,1
+rosen lab,chloro,2016,304,6
+rosen lab,chloro,2016,305,3
+rosen lab,chloro,2016,306,8
+rosen lab,chloro,2016,307,7
+rosen lab,chloro,2016,308,2
+rosen lab,chloro,2016,401,8
+rosen lab,chloro,2016,402,5
+rosen lab,chloro,2016,403,2
+rosen lab,chloro,2016,404,1
+rosen lab,chloro,2016,405,6
+rosen lab,chloro,2016,406,3
+rosen lab,chloro,2016,407,4
+rosen lab,chloro,2016,408,7
+rosen lab,vxn,2015,101,5
+rosen lab,vxn,2015,102,7
+rosen lab,vxn,2015,103,6
+rosen lab,vxn,2015,104,4
+rosen lab,vxn,2015,105,11
+rosen lab,vxn,2015,106,2
+rosen lab,vxn,2015,107,9
+rosen lab,vxn,2015,108,16
+rosen lab,vxn,2015,109,3
+rosen lab,vxn,2015,110,15
+rosen lab,vxn,2015,111,13
+rosen lab,vxn,2015,112,12
+rosen lab,vxn,2015,113,10
+rosen lab,vxn,2015,114,8
+rosen lab,vxn,2015,115,1
+rosen lab,vxn,2015,116,14
+rosen lab,vxn,2015,201,7
+rosen lab,vxn,2015,202,1
+rosen lab,vxn,2015,203,12
+rosen lab,vxn,2015,204,2
+rosen lab,vxn,2015,205,6
+rosen lab,vxn,2015,206,14
+rosen lab,vxn,2015,207,4
+rosen lab,vxn,2015,208,5
+rosen lab,vxn,2015,209,13
+rosen lab,vxn,2015,210,8
+rosen lab,vxn,2015,211,11
+rosen lab,vxn,2015,212,3
+rosen lab,vxn,2015,213,9
+rosen lab,vxn,2015,214,16
+rosen lab,vxn,2015,215,15
+rosen lab,vxn,2015,216,10
+rosen lab,vxn,2015,301,1
+rosen lab,vxn,2015,302,14
+rosen lab,vxn,2015,303,4
+rosen lab,vxn,2015,304,11
+rosen lab,vxn,2015,305,10
+rosen lab,vxn,2015,306,13
+rosen lab,vxn,2015,307,15
+rosen lab,vxn,2015,308,3
+rosen lab,vxn,2015,309,2
+rosen lab,vxn,2015,310,16
+rosen lab,vxn,2015,311,12
+rosen lab,vxn,2015,312,8
+rosen lab,vxn,2015,313,9
+rosen lab,vxn,2015,314,5
+rosen lab,vxn,2015,315,6
+rosen lab,vxn,2015,316,7
+rosen lab,vxn,2015,401,4
+rosen lab,vxn,2015,402,2
+rosen lab,vxn,2015,403,8
+rosen lab,vxn,2015,404,9
+rosen lab,vxn,2015,405,3
+rosen lab,vxn,2015,406,1
+rosen lab,vxn,2015,407,6
+rosen lab,vxn,2015,408,11
+rosen lab,vxn,2015,409,12
+rosen lab,vxn,2015,410,13
+rosen lab,vxn,2015,411,14
+rosen lab,vxn,2015,412,7
+rosen lab,vxn,2015,413,15
+rosen lab,vxn,2015,414,10
+rosen lab,vxn,2015,415,16
+rosen lab,vxn,2015,416,5
+rosen lab,crf,2015,101,3
+rosen lab,crf,2015,102,17
+rosen lab,crf,2015,103,4
+rosen lab,crf,2015,104,2
+rosen lab,crf,2015,105,8
+rosen lab,crf,2015,106,6
+rosen lab,crf,2015,107,10
+rosen lab,crf,2015,108,9
+rosen lab,crf,2015,109,5
+rosen lab,crf,2015,110,14
+rosen lab,crf,2015,111,7
+rosen lab,crf,2015,112,16
+rosen lab,crf,2015,113,18
+rosen lab,crf,2015,114,13
+rosen lab,crf,2015,115,15
+rosen lab,crf,2015,116,1
+rosen lab,crf,2015,117,12
+rosen lab,crf,2015,118,11
+rosen lab,crf,2015,201,2
+rosen lab,crf,2015,202,3
+rosen lab,crf,2015,203,1
+rosen lab,crf,2015,204,14
+rosen lab,crf,2015,205,9
+rosen lab,crf,2015,206,7
+rosen lab,crf,2015,207,11
+rosen lab,crf,2015,208,17
+rosen lab,crf,2015,209,10
+rosen lab,crf,2015,210,18
+rosen lab,crf,2015,211,4
+rosen lab,crf,2015,212,5
+rosen lab,crf,2015,213,15
+rosen lab,crf,2015,214,8
+rosen lab,crf,2015,215,13
+rosen lab,crf,2015,216,12
+rosen lab,crf,2015,217,16
+rosen lab,crf,2015,218,6
+rosen lab,crf,2015,301,2
+rosen lab,crf,2015,302,11
+rosen lab,crf,2015,303,16
+rosen lab,crf,2015,304,13
+rosen lab,crf,2015,305,17
+rosen lab,crf,2015,306,14
+rosen lab,crf,2015,307,18
+rosen lab,crf,2015,308,5
+rosen lab,crf,2015,309,7
+rosen lab,crf,2015,310,8
+rosen lab,crf,2015,311,4
+rosen lab,crf,2015,312,9
+rosen lab,crf,2015,313,10
+rosen lab,crf,2015,314,6
+rosen lab,crf,2015,315,15
+rosen lab,crf,2015,316,12
+rosen lab,crf,2015,317,3
+rosen lab,crf,2015,318,1
+rosen lab,crf,2015,401,5
+rosen lab,crf,2015,402,13
+rosen lab,crf,2015,403,11
+rosen lab,crf,2015,404,10
+rosen lab,crf,2015,405,15
+rosen lab,crf,2015,406,14
+rosen lab,crf,2015,407,2
+rosen lab,crf,2015,408,18
+rosen lab,crf,2015,409,8
+rosen lab,crf,2015,410,6
+rosen lab,crf,2015,411,7
+rosen lab,crf,2015,412,12
+rosen lab,crf,2015,413,9
+rosen lab,crf,2015,414,3
+rosen lab,crf,2015,415,16
+rosen lab,crf,2015,416,1
+rosen lab,crf,2015,417,17
+rosen lab,crf,2015,418,4
+rosen lab,vxn,2014,101,14
+rosen lab,vxn,2014,102,10
+rosen lab,vxn,2014,103,5
+rosen lab,vxn,2014,104,3
+rosen lab,vxn,2014,105,11
+rosen lab,vxn,2014,106,6
+rosen lab,vxn,2014,107,7
+rosen lab,vxn,2014,108,8
+rosen lab,vxn,2014,109,2
+rosen lab,vxn,2014,110,3
+rosen lab,vxn,2014,111,1
+rosen lab,vxn,2014,112,4
+rosen lab,vxn,2014,113,13
+rosen lab,vxn,2014,114,15
+rosen lab,vxn,2014,115,9
+rosen lab,vxn,2014,116,12
+rosen lab,vxn,2014,201,4
+rosen lab,vxn,2014,202,13
+rosen lab,vxn,2014,203,6
+rosen lab,vxn,2014,204,9
+rosen lab,vxn,2014,205,2
+rosen lab,vxn,2014,206,15
+rosen lab,vxn,2014,207,1
+rosen lab,vxn,2014,208,10
+rosen lab,vxn,2014,209,12
+rosen lab,vxn,2014,210,3
+rosen lab,vxn,2014,211,8
+rosen lab,vxn,2014,212,7
+rosen lab,vxn,2014,213,3
+rosen lab,vxn,2014,214,5
+rosen lab,vxn,2014,215,14
+rosen lab,vxn,2014,216,11
+rosen lab,vxn,2014,301,9
+rosen lab,vxn,2014,302,2
+rosen lab,vxn,2014,303,7
+rosen lab,vxn,2014,304,13
+rosen lab,vxn,2014,305,1
+rosen lab,vxn,2014,306,10
+rosen lab,vxn,2014,307,5
+rosen lab,vxn,2014,308,3
+rosen lab,vxn,2014,309,12
+rosen lab,vxn,2014,310,4
+rosen lab,vxn,2014,311,6
+rosen lab,vxn,2014,312,15
+rosen lab,vxn,2014,313,3
+rosen lab,vxn,2014,314,14
+rosen lab,vxn,2014,315,11
+rosen lab,vxn,2014,316,8
+rosen lab,vxn,2014,401,9
+rosen lab,vxn,2014,402,6
+rosen lab,vxn,2014,403,10
+rosen lab,vxn,2014,404,3
+rosen lab,vxn,2014,405,5
+rosen lab,vxn,2014,406,2
+rosen lab,vxn,2014,407,14
+rosen lab,vxn,2014,408,12
+rosen lab,vxn,2014,409,1
+rosen lab,vxn,2014,410,13
+rosen lab,vxn,2014,411,15
+rosen lab,vxn,2014,412,3
+rosen lab,vxn,2014,413,4
+rosen lab,vxn,2014,414,8
+rosen lab,vxn,2014,415,7
+rosen lab,vxn,2014,416,11
+rosen lab,crf,2014,101,5
+rosen lab,crf,2014,102,2
+rosen lab,crf,2014,103,15
+rosen lab,crf,2014,104,14
+rosen lab,crf,2014,105,4
+rosen lab,crf,2014,106,16
+rosen lab,crf,2014,107,10
+rosen lab,crf,2014,108,9
+rosen lab,crf,2014,109,18
+rosen lab,crf,2014,110,12
+rosen lab,crf,2014,111,6
+rosen lab,crf,2014,112,17
+rosen lab,crf,2014,113,13
+rosen lab,crf,2014,114,1
+rosen lab,crf,2014,115,8
+rosen lab,crf,2014,116,11
+rosen lab,crf,2014,117,7
+rosen lab,crf,2014,118,3
+rosen lab,crf,2014,201,15
+rosen lab,crf,2014,202,18
+rosen lab,crf,2014,203,3
+rosen lab,crf,2014,204,5
+rosen lab,crf,2014,205,10
+rosen lab,crf,2014,206,8
+rosen lab,crf,2014,207,16
+rosen lab,crf,2014,208,12
+rosen lab,crf,2014,209,4
+rosen lab,crf,2014,210,13
+rosen lab,crf,2014,211,11
+rosen lab,crf,2014,212,9
+rosen lab,crf,2014,213,6
+rosen lab,crf,2014,214,2
+rosen lab,crf,2014,215,7
+rosen lab,crf,2014,216,17
+rosen lab,crf,2014,217,14
+rosen lab,crf,2014,218,1
+rosen lab,crf,2014,301,11
+rosen lab,crf,2014,302,14
+rosen lab,crf,2014,303,8
+rosen lab,crf,2014,304,1
+rosen lab,crf,2014,305,7
+rosen lab,crf,2014,306,9
+rosen lab,crf,2014,307,4
+rosen lab,crf,2014,308,10
+rosen lab,crf,2014,309,12
+rosen lab,crf,2014,310,18
+rosen lab,crf,2014,311,2
+rosen lab,crf,2014,312,15
+rosen lab,crf,2014,313,13
+rosen lab,crf,2014,314,16
+rosen lab,crf,2014,315,17
+rosen lab,crf,2014,316,3
+rosen lab,crf,2014,317,6
+rosen lab,crf,2014,318,5
+rosen lab,crf,2014,401,15
+rosen lab,crf,2014,402,4
+rosen lab,crf,2014,403,16
+rosen lab,crf,2014,404,18
+rosen lab,crf,2014,405,10
+rosen lab,crf,2014,406,3
+rosen lab,crf,2014,407,8
+rosen lab,crf,2014,408,17
+rosen lab,crf,2014,409,7
+rosen lab,crf,2014,410,2
+rosen lab,crf,2014,411,6
+rosen lab,crf,2014,412,13
+rosen lab,crf,2014,413,5
+rosen lab,crf,2014,414,14
+rosen lab,crf,2014,415,1
+rosen lab,crf,2014,416,12
+rosen lab,crf,2014,417,11
+rosen lab,crf,2014,418,9
+rosen lab,crf,2013,101,15
+rosen lab,crf,2013,102,18
+rosen lab,crf,2013,103,12
+rosen lab,crf,2013,104,2
+rosen lab,crf,2013,105,13
+rosen lab,crf,2013,106,9
+rosen lab,crf,2013,107,10
+rosen lab,crf,2013,108,6
+rosen lab,crf,2013,109,14
+rosen lab,crf,2013,110,7
+rosen lab,crf,2013,111,8
+rosen lab,crf,2013,112,3
+rosen lab,crf,2013,113,11
+rosen lab,crf,2013,114,17
+rosen lab,crf,2013,115,4
+rosen lab,crf,2013,116,16
+rosen lab,crf,2013,117,5
+rosen lab,crf,2013,118,1
+rosen lab,crf,2013,201,3
+rosen lab,crf,2013,202,13
+rosen lab,crf,2013,203,7
+rosen lab,crf,2013,204,2
+rosen lab,crf,2013,205,1
+rosen lab,crf,2013,206,8
+rosen lab,crf,2013,207,10
+rosen lab,crf,2013,208,5
+rosen lab,crf,2013,209,15
+rosen lab,crf,2013,210,16
+rosen lab,crf,2013,211,17
+rosen lab,crf,2013,212,14
+rosen lab,crf,2013,213,18
+rosen lab,crf,2013,214,4
+rosen lab,crf,2013,215,11
+rosen lab,crf,2013,216,12
+rosen lab,crf,2013,217,9
+rosen lab,crf,2013,218,6
+rosen lab,crf,2013,301,8
+rosen lab,crf,2013,302,10
+rosen lab,crf,2013,303,18
+rosen lab,crf,2013,304,2
+rosen lab,crf,2013,305,11
+rosen lab,crf,2013,306,12
+rosen lab,crf,2013,307,14
+rosen lab,crf,2013,308,5
+rosen lab,crf,2013,309,6
+rosen lab,crf,2013,310,9
+rosen lab,crf,2013,311,7
+rosen lab,crf,2013,312,1
+rosen lab,crf,2013,313,4
+rosen lab,crf,2013,314,13
+rosen lab,crf,2013,315,3
+rosen lab,crf,2013,316,16
+rosen lab,crf,2013,317,15
+rosen lab,crf,2013,318,17
+rosen lab,crf,2013,401,15
+rosen lab,crf,2013,402,11
+rosen lab,crf,2013,403,1
+rosen lab,crf,2013,404,13
+rosen lab,crf,2013,405,6
+rosen lab,crf,2013,406,3
+rosen lab,crf,2013,407,17
+rosen lab,crf,2013,408,14
+rosen lab,crf,2013,409,7
+rosen lab,crf,2013,410,16
+rosen lab,crf,2013,411,8
+rosen lab,crf,2013,412,18
+rosen lab,crf,2013,413,5
+rosen lab,crf,2013,414,2
+rosen lab,crf,2013,415,4
+rosen lab,crf,2013,416,12
+rosen lab,crf,2013,417,10
+rosen lab,crf,2013,418,9
+rosen lab,crf,2012,101,5
+rosen lab,crf,2012,102,17
+rosen lab,crf,2012,103,6
+rosen lab,crf,2012,104,1
+rosen lab,crf,2012,105,16
+rosen lab,crf,2012,106,14
+rosen lab,crf,2012,107,13
+rosen lab,crf,2012,108,7
+rosen lab,crf,2012,109,12
+rosen lab,crf,2012,110,15
+rosen lab,crf,2012,111,18
+rosen lab,crf,2012,112,11
+rosen lab,crf,2012,113,4
+rosen lab,crf,2012,114,2
+rosen lab,crf,2012,115,8
+rosen lab,crf,2012,116,3
+rosen lab,crf,2012,117,10
+rosen lab,crf,2012,118,9
+rosen lab,crf,2012,201,8
+rosen lab,crf,2012,202,13
+rosen lab,crf,2012,203,14
+rosen lab,crf,2012,204,10
+rosen lab,crf,2012,205,15
+rosen lab,crf,2012,206,9
+rosen lab,crf,2012,207,7
+rosen lab,crf,2012,208,6
+rosen lab,crf,2012,209,17
+rosen lab,crf,2012,210,11
+rosen lab,crf,2012,211,5
+rosen lab,crf,2012,212,4
+rosen lab,crf,2012,213,2
+rosen lab,crf,2012,214,16
+rosen lab,crf,2012,215,3
+rosen lab,crf,2012,216,18
+rosen lab,crf,2012,217,1
+rosen lab,crf,2012,218,12
+rosen lab,crf,2012,301,15
+rosen lab,crf,2012,302,3
+rosen lab,crf,2012,303,17
+rosen lab,crf,2012,304,10
+rosen lab,crf,2012,305,7
+rosen lab,crf,2012,306,5
+rosen lab,crf,2012,307,8
+rosen lab,crf,2012,308,16
+rosen lab,crf,2012,309,6
+rosen lab,crf,2012,310,4
+rosen lab,crf,2012,311,18
+rosen lab,crf,2012,312,14
+rosen lab,crf,2012,313,2
+rosen lab,crf,2012,314,11
+rosen lab,crf,2012,315,9
+rosen lab,crf,2012,316,12
+rosen lab,crf,2012,317,1
+rosen lab,crf,2012,318,13
+rosen lab,crf,2012,401,15
+rosen lab,crf,2012,402,13
+rosen lab,crf,2012,403,17
+rosen lab,crf,2012,404,7
+rosen lab,crf,2012,405,10
+rosen lab,crf,2012,406,12
+rosen lab,crf,2012,407,1
+rosen lab,crf,2012,408,6
+rosen lab,crf,2012,409,8
+rosen lab,crf,2012,410,3
+rosen lab,crf,2012,411,11
+rosen lab,crf,2012,412,18
+rosen lab,crf,2012,413,9
+rosen lab,crf,2012,414,16
+rosen lab,crf,2012,415,5
+rosen lab,crf,2012,416,2
+rosen lab,crf,2012,417,4
+rosen lab,crf,2012,418,14
+rosen lab,acrylamide,2012,224,26
+rosen lab,acrylamide,2012,225,26
+rosen lab,acrylamide,2012,101,10
+rosen lab,acrylamide,2012,102,11
+rosen lab,acrylamide,2012,103,21
+rosen lab,acrylamide,2012,104,3
+rosen lab,acrylamide,2012,105,9
+rosen lab,acrylamide,2012,106,15
+rosen lab,acrylamide,2012,107,7
+rosen lab,acrylamide,2012,108,4
+rosen lab,acrylamide,2012,109,14
+rosen lab,acrylamide,2012,110,23
+rosen lab,acrylamide,2012,111,16
+rosen lab,acrylamide,2012,112,19
+rosen lab,acrylamide,2012,113,24
+rosen lab,acrylamide,2012,114,25
+rosen lab,acrylamide,2012,115,22
+rosen lab,acrylamide,2012,116,1
+rosen lab,acrylamide,2012,117,12
+rosen lab,acrylamide,2012,118,17
+rosen lab,acrylamide,2012,119,2
+rosen lab,acrylamide,2012,120,6
+rosen lab,acrylamide,2012,121,18
+rosen lab,acrylamide,2012,122,13
+rosen lab,acrylamide,2012,123,20
+rosen lab,acrylamide,2012,124,8
+rosen lab,acrylamide,2012,125,5
+rosen lab,acrylamide,2012,201,20
+rosen lab,acrylamide,2012,202,2
+rosen lab,acrylamide,2012,203,1
+rosen lab,acrylamide,2012,204,3
+rosen lab,acrylamide,2012,205,6
+rosen lab,acrylamide,2012,206,14
+rosen lab,acrylamide,2012,207,4
+rosen lab,acrylamide,2012,208,10
+rosen lab,acrylamide,2012,209,11
+rosen lab,acrylamide,2012,210,5
+rosen lab,acrylamide,2012,211,21
+rosen lab,acrylamide,2012,212,12
+rosen lab,acrylamide,2012,213,13
+rosen lab,acrylamide,2012,214,7
+rosen lab,acrylamide,2012,215,17
+rosen lab,acrylamide,2012,216,23
+rosen lab,acrylamide,2012,217,25
+rosen lab,acrylamide,2012,218,16
+rosen lab,acrylamide,2012,219,14
+rosen lab,acrylamide,2012,220,22
+rosen lab,acrylamide,2012,221,19
+rosen lab,acrylamide,2012,222,15
+rosen lab,acrylamide,2012,223,8
+rosen lab,acrylamide,2012,301,10
+rosen lab,acrylamide,2012,302,12
+rosen lab,acrylamide,2012,303,3
+rosen lab,acrylamide,2012,304,16
+rosen lab,acrylamide,2012,305,17
+rosen lab,acrylamide,2012,306,9
+rosen lab,acrylamide,2012,307,22
+rosen lab,acrylamide,2012,308,5
+rosen lab,acrylamide,2012,309,24
+rosen lab,acrylamide,2012,310,19
+rosen lab,acrylamide,2012,311,20
+rosen lab,acrylamide,2012,312,2
+rosen lab,acrylamide,2012,313,7
+rosen lab,acrylamide,2012,314,14
+rosen lab,acrylamide,2012,315,4
+rosen lab,acrylamide,2012,316,8
+rosen lab,acrylamide,2012,317,21
+rosen lab,acrylamide,2012,318,11
+rosen lab,acrylamide,2012,319,6
+rosen lab,acrylamide,2012,320,23
+rosen lab,acrylamide,2012,321,15
+rosen lab,acrylamide,2012,322,18
+rosen lab,acrylamide,2012,323,1
+rosen lab,acrylamide,2012,324,25
+rosen lab,acrylamide,2012,325,13
+rosen lab,acrylamide,2012,401,3
+rosen lab,acrylamide,2012,402,24
+rosen lab,acrylamide,2012,403,22
+rosen lab,acrylamide,2012,404,12
+rosen lab,acrylamide,2012,405,10
+rosen lab,acrylamide,2012,406,18
+rosen lab,acrylamide,2012,407,11
+rosen lab,acrylamide,2012,408,1
+rosen lab,acrylamide,2012,409,7
+rosen lab,acrylamide,2012,410,4
+rosen lab,acrylamide,2012,411,5
+rosen lab,acrylamide,2012,412,2
+rosen lab,acrylamide,2012,413,9
+rosen lab,acrylamide,2012,414,6
+rosen lab,acrylamide,2012,415,15
+rosen lab,acrylamide,2012,416,19
+rosen lab,acrylamide,2012,417,25
+rosen lab,acrylamide,2012,418,13
+rosen lab,acrylamide,2012,419,21
+rosen lab,acrylamide,2012,420,16
+rosen lab,acrylamide,2012,421,20
+rosen lab,acrylamide,2012,422,14
+rosen lab,acrylamide,2012,423,8
+rosen lab,acrylamide,2012,424,23
+rosen lab,acrylamide,2012,425,17
+rosen lab,reflectance,2011,101,7
+rosen lab,reflectance,2011,102,5
+rosen lab,reflectance,2011,103,13
+rosen lab,reflectance,2011,104,15
+rosen lab,reflectance,2011,105,3
+rosen lab,reflectance,2011,106,1
+rosen lab,reflectance,2011,107,9
+rosen lab,reflectance,2011,108,11
+rosen lab,reflectance,2011,109,19
+rosen lab,reflectance,2011,110,17
+rosen lab,reflectance,2011,111,2
+rosen lab,reflectance,2011,112,4
+rosen lab,reflectance,2011,113,6
+rosen lab,reflectance,2011,114,8
+rosen lab,reflectance,2011,115,12
+rosen lab,reflectance,2011,116,10
+rosen lab,reflectance,2011,117,20
+rosen lab,reflectance,2011,118,18
+rosen lab,reflectance,2011,119,14
+rosen lab,reflectance,2011,120,16
+rosen lab,reflectance,2011,201,20
+rosen lab,reflectance,2011,202,18
+rosen lab,reflectance,2011,203,16
+rosen lab,reflectance,2011,204,14
+rosen lab,reflectance,2011,205,10
+rosen lab,reflectance,2011,206,12
+rosen lab,reflectance,2011,207,6
+rosen lab,reflectance,2011,208,8
+rosen lab,reflectance,2011,209,2
+rosen lab,reflectance,2011,210,4
+rosen lab,reflectance,2011,211,17
+rosen lab,reflectance,2011,212,19
+rosen lab,reflectance,2011,213,5
+rosen lab,reflectance,2011,214,7
+rosen lab,reflectance,2011,215,11
+rosen lab,reflectance,2011,216,9
+rosen lab,reflectance,2011,217,15
+rosen lab,reflectance,2011,218,13
+rosen lab,reflectance,2011,219,1
+rosen lab,reflectance,2011,220,3
+rosen lab,reflectance,2011,301,14
+rosen lab,reflectance,2011,302,16
+rosen lab,reflectance,2011,303,4
+rosen lab,reflectance,2011,304,2
+rosen lab,reflectance,2011,305,6
+rosen lab,reflectance,2011,306,8
+rosen lab,reflectance,2011,307,12
+rosen lab,reflectance,2011,308,10
+rosen lab,reflectance,2011,309,18
+rosen lab,reflectance,2011,310,20
+rosen lab,reflectance,2011,311,9
+rosen lab,reflectance,2011,312,11
+rosen lab,reflectance,2011,313,19
+rosen lab,reflectance,2011,314,17
+rosen lab,reflectance,2011,315,13
+rosen lab,reflectance,2011,316,15
+rosen lab,reflectance,2011,317,7
+rosen lab,reflectance,2011,318,5
+rosen lab,reflectance,2011,319,3
+rosen lab,reflectance,2011,320,1
+rosen lab,reflectance,2011,401,11
+rosen lab,reflectance,2011,402,9
+rosen lab,reflectance,2011,403,13
+rosen lab,reflectance,2011,404,15
+rosen lab,reflectance,2011,405,5
+rosen lab,reflectance,2011,406,7
+rosen lab,reflectance,2011,407,3
+rosen lab,reflectance,2011,408,1
+rosen lab,reflectance,2011,409,17
+rosen lab,reflectance,2011,410,19
+rosen lab,reflectance,2011,411,4
+rosen lab,reflectance,2011,412,2
+rosen lab,reflectance,2011,413,20
+rosen lab,reflectance,2011,414,18
+rosen lab,reflectance,2011,415,6
+rosen lab,reflectance,2011,416,8
+rosen lab,reflectance,2011,417,10
+rosen lab,reflectance,2011,418,12
+rosen lab,reflectance,2011,419,16
+rosen lab,reflectance,2011,420,14
+rosen lab,crf,2011,101,12
+rosen lab,crf,2011,102,9
+rosen lab,crf,2011,103,17
+rosen lab,crf,2011,104,4
+rosen lab,crf,2011,105,2
+rosen lab,crf,2011,106,7
+rosen lab,crf,2011,107,14
+rosen lab,crf,2011,108,6
+rosen lab,crf,2011,109,13
+rosen lab,crf,2011,110,15
+rosen lab,crf,2011,111,18
+rosen lab,crf,2011,112,5
+rosen lab,crf,2011,113,8
+rosen lab,crf,2011,114,3
+rosen lab,crf,2011,115,1
+rosen lab,crf,2011,116,11
+rosen lab,crf,2011,117,16
+rosen lab,crf,2011,118,10
+rosen lab,crf,2011,201,2
+rosen lab,crf,2011,202,11
+rosen lab,crf,2011,203,15
+rosen lab,crf,2011,204,1
+rosen lab,crf,2011,205,3
+rosen lab,crf,2011,206,12
+rosen lab,crf,2011,207,4
+rosen lab,crf,2011,208,16
+rosen lab,crf,2011,209,18
+rosen lab,crf,2011,210,7
+rosen lab,crf,2011,211,10
+rosen lab,crf,2011,212,17
+rosen lab,crf,2011,213,5
+rosen lab,crf,2011,214,8
+rosen lab,crf,2011,215,13
+rosen lab,crf,2011,216,6
+rosen lab,crf,2011,217,9
+rosen lab,crf,2011,218,14
+rosen lab,crf,2011,301,4
+rosen lab,crf,2011,302,8
+rosen lab,crf,2011,303,11
+rosen lab,crf,2011,304,16
+rosen lab,crf,2011,305,5
+rosen lab,crf,2011,306,14
+rosen lab,crf,2011,307,15
+rosen lab,crf,2011,308,12
+rosen lab,crf,2011,309,18
+rosen lab,crf,2011,310,2
+rosen lab,crf,2011,311,13
+rosen lab,crf,2011,312,7
+rosen lab,crf,2011,313,6
+rosen lab,crf,2011,314,1
+rosen lab,crf,2011,315,9
+rosen lab,crf,2011,316,10
+rosen lab,crf,2011,317,3
+rosen lab,crf,2011,318,17
+rosen lab,crf,2011,401,16
+rosen lab,crf,2011,402,14
+rosen lab,crf,2011,403,11
+rosen lab,crf,2011,404,13
+rosen lab,crf,2011,405,5
+rosen lab,crf,2011,406,17
+rosen lab,crf,2011,407,15
+rosen lab,crf,2011,408,8
+rosen lab,crf,2011,409,1
+rosen lab,crf,2011,410,2
+rosen lab,crf,2011,411,7
+rosen lab,crf,2011,412,18
+rosen lab,crf,2011,413,9
+rosen lab,crf,2011,414,6
+rosen lab,crf,2011,415,4
+rosen lab,crf,2011,416,3
+rosen lab,crf,2011,417,10
+rosen lab,crf,2011,418,12
+rosen lab,acrylamide,2011,101,23
+rosen lab,acrylamide,2011,102,21
+rosen lab,acrylamide,2011,103,7
+rosen lab,acrylamide,2011,104,17
+rosen lab,acrylamide,2011,105,24
+rosen lab,acrylamide,2011,106,18
+rosen lab,acrylamide,2011,107,16
+rosen lab,acrylamide,2011,108,8
+rosen lab,acrylamide,2011,109,14
+rosen lab,acrylamide,2011,110,5
+rosen lab,acrylamide,2011,111,20
+rosen lab,acrylamide,2011,112,15
+rosen lab,acrylamide,2011,113,1
+rosen lab,acrylamide,2011,114,19
+rosen lab,acrylamide,2011,115,13
+rosen lab,acrylamide,2011,116,25
+rosen lab,acrylamide,2011,117,4
+rosen lab,acrylamide,2011,118,11
+rosen lab,acrylamide,2011,119,9
+rosen lab,acrylamide,2011,120,22
+rosen lab,acrylamide,2011,121,10
+rosen lab,acrylamide,2011,122,3
+rosen lab,acrylamide,2011,123,2
+rosen lab,acrylamide,2011,124,6
+rosen lab,acrylamide,2011,125,12
+rosen lab,acrylamide,2011,201,8
+rosen lab,acrylamide,2011,202,23
+rosen lab,acrylamide,2011,203,25
+rosen lab,acrylamide,2011,204,14
+rosen lab,acrylamide,2011,205,3
+rosen lab,acrylamide,2011,206,5
+rosen lab,acrylamide,2011,207,1
+rosen lab,acrylamide,2011,208,24
+rosen lab,acrylamide,2011,209,10
+rosen lab,acrylamide,2011,210,18
+rosen lab,acrylamide,2011,211,19
+rosen lab,acrylamide,2011,212,9
+rosen lab,acrylamide,2011,213,16
+rosen lab,acrylamide,2011,214,20
+rosen lab,acrylamide,2011,215,7
+rosen lab,acrylamide,2011,216,17
+rosen lab,acrylamide,2011,217,21
+rosen lab,acrylamide,2011,218,11
+rosen lab,acrylamide,2011,219,22
+rosen lab,acrylamide,2011,220,4
+rosen lab,acrylamide,2011,221,12
+rosen lab,acrylamide,2011,222,13
+rosen lab,acrylamide,2011,223,6
+rosen lab,acrylamide,2011,224,15
+rosen lab,acrylamide,2011,225,2
+rosen lab,acrylamide,2011,301,22
+rosen lab,acrylamide,2011,302,23
+rosen lab,acrylamide,2011,303,9
+rosen lab,acrylamide,2011,304,16
+rosen lab,acrylamide,2011,305,2
+rosen lab,acrylamide,2011,306,19
+rosen lab,acrylamide,2011,307,13
+rosen lab,acrylamide,2011,308,8
+rosen lab,acrylamide,2011,309,14
+rosen lab,acrylamide,2011,310,7
+rosen lab,acrylamide,2011,311,10
+rosen lab,acrylamide,2011,312,11
+rosen lab,acrylamide,2011,313,24
+rosen lab,acrylamide,2011,314,21
+rosen lab,acrylamide,2011,315,25
+rosen lab,acrylamide,2011,316,18
+rosen lab,acrylamide,2011,317,6
+rosen lab,acrylamide,2011,318,20
+rosen lab,acrylamide,2011,319,5
+rosen lab,acrylamide,2011,320,4
+rosen lab,acrylamide,2011,321,1
+rosen lab,acrylamide,2011,322,15
+rosen lab,acrylamide,2011,323,12
+rosen lab,acrylamide,2011,324,17
+rosen lab,acrylamide,2011,325,3
+rosen lab,acrylamide,2011,401,23
+rosen lab,acrylamide,2011,402,1
+rosen lab,acrylamide,2011,403,22
+rosen lab,acrylamide,2011,404,4
+rosen lab,acrylamide,2011,405,13
+rosen lab,acrylamide,2011,406,11
+rosen lab,acrylamide,2011,407,18
+rosen lab,acrylamide,2011,408,21
+rosen lab,acrylamide,2011,409,10
+rosen lab,acrylamide,2011,410,12
+rosen lab,acrylamide,2011,411,16
+rosen lab,acrylamide,2011,412,25
+rosen lab,acrylamide,2011,413,2
+rosen lab,acrylamide,2011,414,7
+rosen lab,acrylamide,2011,415,20
+rosen lab,acrylamide,2011,416,24
+rosen lab,acrylamide,2011,417,14
+rosen lab,acrylamide,2011,418,19
+rosen lab,acrylamide,2011,419,5
+rosen lab,acrylamide,2011,420,9
+rosen lab,acrylamide,2011,421,17
+rosen lab,acrylamide,2011,422,6
+rosen lab,acrylamide,2011,423,3
+rosen lab,acrylamide,2011,424,8
+rosen lab,acrylamide,2011,425,15
+rosen lab,reflectance,2010,101,19
+rosen lab,reflectance,2010,102,17
+rosen lab,reflectance,2010,103,11
+rosen lab,reflectance,2010,104,9
+rosen lab,reflectance,2010,105,7
+rosen lab,reflectance,2010,106,5
+rosen lab,reflectance,2010,107,1
+rosen lab,reflectance,2010,108,3
+rosen lab,reflectance,2010,109,13
+rosen lab,reflectance,2010,110,15
+rosen lab,reflectance,2010,111,2
+rosen lab,reflectance,2010,112,4
+rosen lab,reflectance,2010,113,14
+rosen lab,reflectance,2010,114,16
+rosen lab,reflectance,2010,115,20
+rosen lab,reflectance,2010,116,18
+rosen lab,reflectance,2010,117,8
+rosen lab,reflectance,2010,118,6
+rosen lab,reflectance,2010,119,10
+rosen lab,reflectance,2010,120,12
+rosen lab,reflectance,2010,201,8
+rosen lab,reflectance,2010,202,6
+rosen lab,reflectance,2010,203,14
+rosen lab,reflectance,2010,204,16
+rosen lab,reflectance,2010,205,12
+rosen lab,reflectance,2010,206,10
+rosen lab,reflectance,2010,207,20
+rosen lab,reflectance,2010,208,18
+rosen lab,reflectance,2010,209,4
+rosen lab,reflectance,2010,210,2
+rosen lab,reflectance,2010,211,1
+rosen lab,reflectance,2010,212,3
+rosen lab,reflectance,2010,213,7
+rosen lab,reflectance,2010,214,5
+rosen lab,reflectance,2010,215,13
+rosen lab,reflectance,2010,216,15
+rosen lab,reflectance,2010,217,11
+rosen lab,reflectance,2010,218,9
+rosen lab,reflectance,2010,219,17
+rosen lab,reflectance,2010,220,19
+rosen lab,reflectance,2010,301,11
+rosen lab,reflectance,2010,302,9
+rosen lab,reflectance,2010,303,19
+rosen lab,reflectance,2010,304,17
+rosen lab,reflectance,2010,305,5
+rosen lab,reflectance,2010,306,7
+rosen lab,reflectance,2010,307,3
+rosen lab,reflectance,2010,308,1
+rosen lab,reflectance,2010,309,13
+rosen lab,reflectance,2010,310,15
+rosen lab,reflectance,2010,311,12
+rosen lab,reflectance,2010,312,10
+rosen lab,reflectance,2010,313,16
+rosen lab,reflectance,2010,314,14
+rosen lab,reflectance,2010,315,6
+rosen lab,reflectance,2010,316,8
+rosen lab,reflectance,2010,317,2
+rosen lab,reflectance,2010,318,4
+rosen lab,reflectance,2010,319,20
+rosen lab,reflectance,2010,320,18
+rosen lab,reflectance,2010,401,4
+rosen lab,reflectance,2010,402,2
+rosen lab,reflectance,2010,403,16
+rosen lab,reflectance,2010,404,14
+rosen lab,reflectance,2010,405,18
+rosen lab,reflectance,2010,406,20
+rosen lab,reflectance,2010,407,10
+rosen lab,reflectance,2010,408,12
+rosen lab,reflectance,2010,409,8
+rosen lab,reflectance,2010,410,6
+rosen lab,reflectance,2010,411,17
+rosen lab,reflectance,2010,412,19
+rosen lab,reflectance,2010,413,5
+rosen lab,reflectance,2010,414,7
+rosen lab,reflectance,2010,415,11
+rosen lab,reflectance,2010,416,9
+rosen lab,reflectance,2010,417,15
+rosen lab,reflectance,2010,418,13
+rosen lab,reflectance,2010,419,3
+rosen lab,reflectance,2010,420,1
+rosen lab,esn-super u,2010,101,5
+rosen lab,esn-super u,2010,102,4
+rosen lab,esn-super u,2010,103,6
+rosen lab,esn-super u,2010,104,12
+rosen lab,esn-super u,2010,105,8
+rosen lab,esn-super u,2010,106,10
+rosen lab,esn-super u,2010,107,13
+rosen lab,esn-super u,2010,108,9
+rosen lab,esn-super u,2010,109,7
+rosen lab,esn-super u,2010,110,14
+rosen lab,esn-super u,2010,111,3
+rosen lab,esn-super u,2010,112,11
+rosen lab,esn-super u,2010,113,15
+rosen lab,esn-super u,2010,114,1
+rosen lab,esn-super u,2010,115,2
+rosen lab,esn-super u,2010,201,6
+rosen lab,esn-super u,2010,202,3
+rosen lab,esn-super u,2010,203,10
+rosen lab,esn-super u,2010,204,12
+rosen lab,esn-super u,2010,205,4
+rosen lab,esn-super u,2010,206,2
+rosen lab,esn-super u,2010,207,5
+rosen lab,esn-super u,2010,208,1
+rosen lab,esn-super u,2010,209,13
+rosen lab,esn-super u,2010,210,11
+rosen lab,esn-super u,2010,211,14
+rosen lab,esn-super u,2010,212,9
+rosen lab,esn-super u,2010,213,7
+rosen lab,esn-super u,2010,214,15
+rosen lab,esn-super u,2010,215,8
+rosen lab,esn-super u,2010,301,2
+rosen lab,esn-super u,2010,302,7
+rosen lab,esn-super u,2010,303,14
+rosen lab,esn-super u,2010,304,3
+rosen lab,esn-super u,2010,305,9
+rosen lab,esn-super u,2010,306,4
+rosen lab,esn-super u,2010,307,5
+rosen lab,esn-super u,2010,308,15
+rosen lab,esn-super u,2010,309,11
+rosen lab,esn-super u,2010,310,13
+rosen lab,esn-super u,2010,311,6
+rosen lab,esn-super u,2010,312,10
+rosen lab,esn-super u,2010,313,1
+rosen lab,esn-super u,2010,314,8
+rosen lab,esn-super u,2010,315,12
+rosen lab,esn-super u,2010,401,7
+rosen lab,esn-super u,2010,402,2
+rosen lab,esn-super u,2010,403,6
+rosen lab,esn-super u,2010,404,14
+rosen lab,esn-super u,2010,405,5
+rosen lab,esn-super u,2010,406,8
+rosen lab,esn-super u,2010,407,11
+rosen lab,esn-super u,2010,408,12
+rosen lab,esn-super u,2010,409,15
+rosen lab,esn-super u,2010,410,3
+rosen lab,esn-super u,2010,411,9
+rosen lab,esn-super u,2010,412,1
+rosen lab,esn-super u,2010,413,4
+rosen lab,esn-super u,2010,414,13
+rosen lab,esn-super u,2010,415,10
+rosen lab,blcmr,1992,101,1
+rosen lab,blcmr,1992,102,3
+rosen lab,blcmr,1992,103,4
+rosen lab,blcmr,1992,104,5
+rosen lab,blcmr,1992,105,6
+rosen lab,blcmr,1992,106,7
+rosen lab,blcmr,1992,107,8
+rosen lab,blcmr,1992,108,9
+rosen lab,blcmr,1992,109,10
+rosen lab,blcmr,1992,110,2
+rosen lab,blcmr,1992,201,1
+rosen lab,blcmr,1992,202,3
+rosen lab,blcmr,1992,203,4
+rosen lab,blcmr,1992,204,5
+rosen lab,blcmr,1992,205,6
+rosen lab,blcmr,1992,206,7
+rosen lab,blcmr,1992,207,8
+rosen lab,blcmr,1992,208,9
+rosen lab,blcmr,1992,209,10
+rosen lab,blcmr,1992,210,2
+rosen lab,blcmr,1992,301,1
+rosen lab,blcmr,1992,302,3
+rosen lab,blcmr,1992,303,4
+rosen lab,blcmr,1992,304,5
+rosen lab,blcmr,1992,305,6
+rosen lab,blcmr,1992,306,7
+rosen lab,blcmr,1992,307,8
+rosen lab,blcmr,1992,308,9
+rosen lab,blcmr,1992,309,10
+rosen lab,blcmr,1992,310,2
+rosen lab,blcmr,1992,401,1
+rosen lab,blcmr,1992,402,3
+rosen lab,blcmr,1992,403,4
+rosen lab,blcmr,1992,404,5
+rosen lab,blcmr,1992,405,6
+rosen lab,blcmr,1992,406,7
+rosen lab,blcmr,1992,407,8
+rosen lab,blcmr,1992,408,9
+rosen lab,blcmr,1992,409,10
+rosen lab,blcmr,1992,410,2
+rosen lab,blcmr,1991,101,1
+rosen lab,blcmr,1991,102,3
+rosen lab,blcmr,1991,103,4
+rosen lab,blcmr,1991,104,5
+rosen lab,blcmr,1991,105,6
+rosen lab,blcmr,1991,106,7
+rosen lab,blcmr,1991,107,8
+rosen lab,blcmr,1991,108,9
+rosen lab,blcmr,1991,109,10
+rosen lab,blcmr,1991,110,2
+rosen lab,blcmr,1991,201,1
+rosen lab,blcmr,1991,202,3
+rosen lab,blcmr,1991,203,4
+rosen lab,blcmr,1991,204,5
+rosen lab,blcmr,1991,205,6
+rosen lab,blcmr,1991,206,7
+rosen lab,blcmr,1991,207,8
+rosen lab,blcmr,1991,208,9
+rosen lab,blcmr,1991,209,10
+rosen lab,blcmr,1991,210,2
+rosen lab,blcmr,1991,301,1
+rosen lab,blcmr,1991,302,3
+rosen lab,blcmr,1991,303,4
+rosen lab,blcmr,1991,304,5
+rosen lab,blcmr,1991,305,6
+rosen lab,blcmr,1991,306,7
+rosen lab,blcmr,1991,307,8
+rosen lab,blcmr,1991,308,9
+rosen lab,blcmr,1991,309,10
+rosen lab,blcmr,1991,310,2
+rosen lab,blcmr,1991,401,1
+rosen lab,blcmr,1991,402,3
+rosen lab,blcmr,1991,403,4
+rosen lab,blcmr,1991,404,5
+rosen lab,blcmr,1991,405,6
+rosen lab,blcmr,1991,406,7
+rosen lab,blcmr,1991,407,8
+rosen lab,blcmr,1991,408,9
+rosen lab,blcmr,1991,409,10
+rosen lab,blcmr,1991,410,2

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Apr 20 13:10:47 2020
+Created on Fri Jun  5 10:49:40 2020
 
 TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
 Insight Sensing Corporation. All rights reserved.
@@ -18,13 +18,13 @@ from research_tools import FeatureData
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_fd_basic_args():
     base_dir_data = config.config_dict['FeatureData']['base_dir_data']
     # base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
     return base_dir_data
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_fd_init_fixture():
     base_dir_data = config.config_dict['FeatureData']['base_dir_data']
     # base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
@@ -33,21 +33,21 @@ def test_fd_init_fixture():
         random_seed=0)
     return feat_data_cs
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_fd_init_config_dict_simple_fixture():
     test_dir = os.path.dirname(os.path.abspath(__file__))
     config_dict_fd = {
         'base_dir_data': os.path.join(test_dir, 'testdata'),
         'random_seed': 999,
-        'fname_petiole': 'tissue_petiole_NO3_ppm.csv',
-        'fname_total_n': 'tissue_wp_N_pct.csv',
-        'fname_cropscan': 'cropscan.csv',
+        'fname_obs_tissue': 'obs_tissue.csv',
+        'fname_cropscan': 'rs_cropscan.csv',
         'dir_results': None,
         'group_feats': config.cs_test2,
-        'ground_truth': 'vine_n_pct',
+        'ground_truth_tissue': 'vine',
+        'ground_truth_measure': 'n_pct',
         'date_tolerance': 3,
         'test_size': 0.4,
-        'stratify': ['study', 'date'],
+        'stratify': ['owner', 'study', 'date'],
         'impute_method': 'iterative',
         'n_splits': 4,
         'n_repeats': 3,
@@ -57,7 +57,7 @@ def test_fd_init_config_dict_simple_fixture():
         config_dict=config_dict_fd, random_seed=0)
     return feat_data_cs
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def test_fd_dir_results_fixture(tmp_path):
     test_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir_data = os.path.join(test_dir, 'testdata')
@@ -67,7 +67,7 @@ def test_fd_dir_results_fixture(tmp_path):
         random_seed=0, dir_results=dir_results)
     return feat_data_cs
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_fd_get_feat_group_X_y_fixture():
     test_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir_data = os.path.join(test_dir, 'testdata')
@@ -76,11 +76,12 @@ def test_fd_get_feat_group_X_y_fixture():
         random_seed=0)
     group_feats = config.cs_test2
     feat_data_cs.get_feat_group_X_y(
-        group_feats=group_feats, ground_truth='vine_n_pct', date_tolerance=3,
-        test_size=0.4, stratify=['study', 'date'], impute_method='iterative')
+        group_feats=group_feats, ground_truth_tissue='vine',
+        ground_truth_measure='n_pct', date_tolerance=3,
+        test_size=0.4, stratify=['owner', 'study', 'date'], impute_method='iterative')
     return feat_data_cs
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def test_fd_get_feat_group_X_y_dir_results_fixture(tmp_path):
     test_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir_data = os.path.join(test_dir, 'testdata')
@@ -90,66 +91,66 @@ def test_fd_get_feat_group_X_y_dir_results_fixture(tmp_path):
         random_seed=0, dir_results=dir_results)
     group_feats = config.cs_test2
     feat_data_cs.get_feat_group_X_y(
-        group_feats=group_feats, ground_truth='vine_n_pct', date_tolerance=3,
-        test_size=0.4, stratify=['study', 'date'], impute_method='iterative')
+        group_feats=group_feats, ground_truth_tissue='vine',
+        ground_truth_measure='n_pct', date_tolerance=3,
+        test_size=0.4, stratify=['owner', 'study', 'date'], impute_method='iterative')
     return feat_data_cs
 
 
 class Test_feature_data_exist_df:
     def test_df_pet_no3(self, test_fd_init_fixture):
         feat_data_cs = test_fd_init_fixture
-        cols_require = ['study', 'year', 'plot_id', 'date', 'tissue', 'measure',
+        cols_require = ['owner', 'study', 'year', 'plot_id', 'date', 'tissue', 'measure',
                         'value']
-        assert set(cols_require).issubset(feat_data_cs.df_pet_no3.columns)
-        assert len(feat_data_cs.df_pet_no3) > 1000
+        assert set(cols_require).issubset(feat_data_cs.df_petiole_no3_ppm.columns)
+        assert len(feat_data_cs.df_petiole_no3_ppm) > 1000
 
     def test_df_vine_n_pct(self, test_fd_init_fixture):
         feat_data_cs = test_fd_init_fixture
-        cols_require = ['study', 'year', 'plot_id', 'date', 'tissue', 'measure',
+        cols_require = ['owner', 'study', 'year', 'plot_id', 'date', 'tissue', 'measure',
                         'value']
         assert set(cols_require).issubset(feat_data_cs.df_vine_n_pct.columns)
-        assert len(feat_data_cs.df_vine_n_pct) > 500
+        assert len(feat_data_cs.df_vine_n_pct) > 300
 
     def test_df_tuber_n_pct(self, test_fd_init_fixture):
         feat_data_cs = test_fd_init_fixture
-        cols_require = ['study', 'year', 'plot_id', 'date', 'tissue', 'measure',
+        cols_require = ['owner', 'study', 'year', 'plot_id', 'date', 'tissue', 'measure',
                         'value']
         assert set(cols_require).issubset(feat_data_cs.df_tuber_n_pct.columns)
-        assert len(feat_data_cs.df_tuber_n_pct) > 500
+        assert len(feat_data_cs.df_tuber_n_pct) > 300
 
     def test_df_cs(self, test_fd_init_fixture):
         feat_data_cs = test_fd_init_fixture
-        cols_require = ['study', 'year', 'plot_id', 'date']
+        cols_require = ['owner', 'study', 'year', 'plot_id', 'date']
         assert set(cols_require).issubset(feat_data_cs.df_cs.columns)
         assert len(feat_data_cs.df_cs.columns) > 8
         assert len(feat_data_cs.df_cs) > 3
 
-
 class Test_feature_data_exist_simple_df:
     def test_simple_df_pet_no3(self, test_fd_init_config_dict_simple_fixture):
         feat_data_cs = test_fd_init_config_dict_simple_fixture
-        cols_require = ['study', 'year', 'plot_id', 'date', 'tissue', 'measure',
+        cols_require = ['owner', 'study', 'year', 'plot_id', 'date', 'tissue', 'measure',
                         'value']
-        assert set(cols_require).issubset(feat_data_cs.df_pet_no3.columns)
-        assert len(feat_data_cs.df_pet_no3) > 1000
+        assert set(cols_require).issubset(feat_data_cs.df_petiole_no3_ppm.columns)
+        assert len(feat_data_cs.df_petiole_no3_ppm) > 1000
 
     def test_simple_df_vine_n_pct(self, test_fd_init_config_dict_simple_fixture):
         feat_data_cs = test_fd_init_config_dict_simple_fixture
-        cols_require = ['study', 'year', 'plot_id', 'date', 'tissue', 'measure',
+        cols_require = ['owner', 'study', 'year', 'plot_id', 'date', 'tissue', 'measure',
                         'value']
         assert set(cols_require).issubset(feat_data_cs.df_vine_n_pct.columns)
-        assert len(feat_data_cs.df_vine_n_pct) > 500
+        assert len(feat_data_cs.df_vine_n_pct) > 300
 
     def test_simple_df_tuber_n_pct(self, test_fd_init_config_dict_simple_fixture):
         feat_data_cs = test_fd_init_config_dict_simple_fixture
-        cols_require = ['study', 'year', 'plot_id', 'date', 'tissue', 'measure',
+        cols_require = ['owner', 'study', 'year', 'plot_id', 'date', 'tissue', 'measure',
                         'value']
         assert set(cols_require).issubset(feat_data_cs.df_tuber_n_pct.columns)
-        assert len(feat_data_cs.df_tuber_n_pct) > 500
+        assert len(feat_data_cs.df_tuber_n_pct) > 300
 
     def test_simple_df_cs(self, test_fd_init_config_dict_simple_fixture):
         feat_data_cs = test_fd_init_config_dict_simple_fixture
-        cols_require = ['study', 'year', 'plot_id', 'date']
+        cols_require = ['owner', 'study', 'year', 'plot_id', 'date']
         assert set(cols_require).issubset(feat_data_cs.df_cs.columns)
         assert len(feat_data_cs.df_cs.columns) > 8
         assert len(feat_data_cs.df_cs) > 3
@@ -164,7 +165,8 @@ class Test_feature_data_self:
 
     def test_ground_truth(self, test_fd_get_feat_group_X_y_fixture):
         feat_data_cs = test_fd_get_feat_group_X_y_fixture
-        assert feat_data_cs.ground_truth == 'vine_n_pct'
+        assert feat_data_cs.ground_truth_tissue=='vine'
+        assert feat_data_cs.ground_truth_measure=='n_pct'
 
     def test_date_tolerance(self, test_fd_get_feat_group_X_y_fixture):
         feat_data_cs = test_fd_get_feat_group_X_y_fixture
@@ -176,7 +178,7 @@ class Test_feature_data_self:
 
     def test_stratify(self, test_fd_get_feat_group_X_y_fixture):
         feat_data_cs = test_fd_get_feat_group_X_y_fixture
-        assert feat_data_cs.stratify == ['study', 'date']
+        assert feat_data_cs.stratify == ['owner', 'study', 'date']
 
 
 class Test_feature_data_self_other_X_and_y:
@@ -186,7 +188,7 @@ class Test_feature_data_self_other_X_and_y:
         group_feats = config.cs_test1
         feat_data_cs.get_feat_group_X_y(group_feats=group_feats)
         cs_bands_expected = ['460', '510', '560', '610', '660', '680', '710',
-                             '720', '740', '760', '810', '870', '900']
+                              '720', '740', '760', '810', '870', '900']
         assert feat_data_cs.group_feats['dap'] == 'dap'
         assert feat_data_cs.group_feats['rate_ntd'] == {'col_rate_n': 'rate_n_kgha', 'col_out': 'rate_ntd_kgha'}
         assert feat_data_cs.group_feats['cropscan_bands'] == cs_bands_expected
@@ -197,15 +199,17 @@ class Test_feature_data_self_other_X_and_y:
         feat_data_cs = test_fd_init_fixture
         group_feats = config.cs_test1
         feat_data_cs.get_feat_group_X_y(group_feats=group_feats,
-                                        ground_truth='pet_no3_ppm')
-        assert 'Petiole' in feat_data_cs.df_y['tissue'].unique()
+                                        ground_truth_tissue='petiole',
+                                        ground_truth_measure='no3_ppm')
+        assert 'petiole' in feat_data_cs.df_y['tissue'].unique()
 
     def test_get_y_tuber_n_pct(self, test_fd_init_fixture):
         feat_data_cs = test_fd_init_fixture
         group_feats = config.cs_test1
         feat_data_cs.get_feat_group_X_y(group_feats=group_feats,
-                                        ground_truth='tuber_n_pct')
-        assert 'Tuber' in feat_data_cs.df_y['tissue'].unique()
+                                        ground_truth_tissue='tuber',
+                                        ground_truth_measure='n_pct')
+        assert 'tuber' in feat_data_cs.df_y['tissue'].unique()
 
 
 class Test_feature_data_X_and_y:
@@ -229,21 +233,22 @@ class Test_feature_data_X_and_y:
         feat_data_cs = test_fd_init_fixture
         group_feats = config.cs_test2
         feat_data_cs.get_feat_group_X_y(
-            group_feats=group_feats, ground_truth='vine_n_pct', date_tolerance=3,
-            test_size=0.4, stratify=['study', 'date'], impute_method='knn')
+            group_feats=group_feats, ground_truth_tissue='vine',
+            ground_truth_measure='n_pct', date_tolerance=3,
+            test_size=0.4, stratify=['owner', 'study', 'date'], impute_method='knn')
         assert feat_data_cs.impute_method == 'knn'
 
 
 class Test_feature_data_labels:
     def test_labels_id(self, test_fd_get_feat_group_X_y_fixture):
         feat_data_cs = test_fd_get_feat_group_X_y_fixture
-        labels_id = ['study', 'year', 'plot_id', 'date', 'train_test']
+        labels_id = ['owner', 'study', 'year', 'plot_id', 'date', 'train_test']
         assert feat_data_cs.labels_id == labels_id
 
     def test_labels_x(self, test_fd_get_feat_group_X_y_fixture):
         feat_data_cs = test_fd_get_feat_group_X_y_fixture
         labels_x = ['dae', 'rate_ntd_kgha', '460', '510', '560', '610', '660',
-                     '680', '710', '720', '740', '760', '810', '870']
+                      '680', '710', '720', '740', '760', '810', '870']
         assert feat_data_cs.labels_x == labels_x
 
     def test_labels_y_id(self, test_fd_get_feat_group_X_y_fixture):
@@ -337,7 +342,7 @@ class Test_feature_data_cv_rep_strat:
             break
         n_strats1 = sorted(np.unique(train_fold))
         n_strats2 = sorted(feat_data_cs.df_X.groupby(feat_data_cs.stratify
-                                                     ).ngroup().unique())
+                                                      ).ngroup().unique())
         assert n_strats1 == n_strats2
 
     def test_cv_rep_strat_n_unique_strats_val(
@@ -351,7 +356,7 @@ class Test_feature_data_cv_rep_strat:
             break
         n_strats1 = sorted(np.unique(val_fold))
         n_strats2 = sorted(feat_data_cs.df_X.groupby(feat_data_cs.stratify
-                                                     ).ngroup().unique())
+                                                      ).ngroup().unique())
         assert n_strats1 == n_strats2
 
 
@@ -427,7 +432,7 @@ class Test_feature_data_set_kwargs:
 
     def test_set_kwargs_kfold_repeated_stratified_override_train_test(self):
         feat_data_cs = FeatureData(config_dict=config.config_dict,
-                                   train_test='train')
+                                    train_test='train')
         feat_data_cs.get_feat_group_X_y(group_feats=config.cs_test2)
         cv_rep_strat = feat_data_cs.kfold_repeated_stratified(train_test='test')
         assert feat_data_cs.train_test == 'test'

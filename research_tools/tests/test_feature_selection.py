@@ -18,27 +18,27 @@ from research_tools.tests import config
 from research_tools import FeatureSelection
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_fs_lasso_init_fixture():
     my_config = deepcopy(config.config_dict)
     myfs = FeatureSelection(config_dict=my_config, print_out_fs=False)
     return myfs
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_fs_pls_init_fixture():
     my_config = deepcopy(config.config_dict)
     myfs = FeatureSelection(config_dict=my_config, model_fs=PLSRegression(),
                             model_fs_params_set=None)
     return myfs
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_feature_selection_find_params_fixture():
     my_config = deepcopy(config.config_dict)
     myfs = FeatureSelection(config_dict=my_config, print_out_fs=False)
     myfs.fs_find_params()
     return myfs
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_feature_selection_get_X_select_fixture():
     my_config = deepcopy(config.config_dict)
     myfs = FeatureSelection(config_dict=my_config, print_out_fs=False)
@@ -66,32 +66,34 @@ class Test_feature_selection_self:
 
     def test_model_fs_params_adjust_min(self, test_fs_lasso_init_fixture):
         myfs = test_fs_lasso_init_fixture
-        assert myfs.model_fs_params_adjust_min == {'alpha': 1}
+        assert myfs.model_fs_params_adjust_min == config.config_dict['FeatureSelection']['model_fs_params_adjust_min']
 
     def test_model_fs_params_adjust_max(self, test_fs_lasso_init_fixture):
         myfs = test_fs_lasso_init_fixture
-        assert myfs.model_fs_params_adjust_max == {'alpha': 1e-3}
+        assert myfs.model_fs_params_adjust_max == config.config_dict['FeatureSelection']['model_fs_params_adjust_max']
 
     def test_n_feats(self, test_fs_lasso_init_fixture):
         myfs = test_fs_lasso_init_fixture
-        assert myfs.n_feats == 5
+        assert myfs.n_feats == config.config_dict['FeatureSelection']['n_feats']
 
     def test_n_linspace(self, test_fs_lasso_init_fixture):
         myfs = test_fs_lasso_init_fixture
-        assert myfs.n_linspace == 100
+        assert myfs.n_linspace == config.config_dict['FeatureSelection']['n_linspace']
 
-    def test_exit_on_stagnant_n(self, test_fs_lasso_init_fixture):
-        myfs = test_fs_lasso_init_fixture
-        assert myfs.exit_on_stagnant_n == 5
+    # def test_exit_on_stagnant_n(self, test_fs_lasso_init_fixture):
+    #     myfs = test_fs_lasso_init_fixture
+    #     assert myfs.exit_on_stagnant_n == config.config_dict['FeatureSelection']['exit_on_stagnant_n']
 
-    def test_step_pct(self, test_fs_lasso_init_fixture):
-        myfs = test_fs_lasso_init_fixture
-        assert myfs.step_pct == 0.1
+    # def test_step_pct(self, test_fs_lasso_init_fixture):
+    #     myfs = test_fs_lasso_init_fixture
+    #     assert myfs.step_pct == config.config_dict['FeatureSelection']['step_pct']
 
 
 class Test_feature_selection_find_params:
     def test_find_params_n_feats(self, test_feature_selection_find_params_fixture):
         myfs = test_feature_selection_find_params_fixture
+        n_feats = 14
+        myfs.fs_find_params(n_feats=n_feats, print_out_fs=False)
         df = myfs.df_fs_params
         n_feats = df['feat_n'].max()
         msg = ('May fail if convergence is not reached. Try adjusting '
@@ -106,7 +108,7 @@ class Test_feature_selection_find_params:
         msg = ('May fail if convergence is not reached. Try adjusting '
                '<model_fs_params_set>, <n_feats>, <n_linspace>, '
                '<exit_on_stagnant_n>, or <step_pct>.')
-        assert myfs.n_feats in myfs.df_fs_params['feat_n'], msg
+        assert myfs.n_feats in myfs.df_fs_params['feat_n'].to_list(), msg
         assert myfs.n_feats == n_feats
 
     def test_find_params_n_feats_6(self, test_fs_lasso_init_fixture):
@@ -116,7 +118,7 @@ class Test_feature_selection_find_params:
         msg = ('May fail if convergence is not reached. Try adjusting '
                '<model_fs_params_set>, <n_feats>, <n_linspace>, '
                '<exit_on_stagnant_n>, or <step_pct>.')
-        assert myfs.n_feats in myfs.df_fs_params['feat_n'], msg
+        assert myfs.n_feats in myfs.df_fs_params['feat_n'].to_list(), msg
         assert myfs.n_feats == n_feats
 
     def test_find_params_n_feats_8(self, test_fs_lasso_init_fixture):
@@ -126,7 +128,7 @@ class Test_feature_selection_find_params:
         msg = ('May fail if convergence is not reached. Try adjusting '
                '<model_fs_params_set>, <n_feats>, <n_linspace>, '
                '<exit_on_stagnant_n>, or <step_pct>.')
-        assert myfs.n_feats in myfs.df_fs_params['feat_n'], msg
+        assert myfs.n_feats in myfs.df_fs_params['feat_n'].to_list(), msg
         assert myfs.n_feats == n_feats
 
     def test_find_params_n_feats_10(self, test_fs_lasso_init_fixture):
@@ -136,7 +138,7 @@ class Test_feature_selection_find_params:
         msg = ('May fail if convergence is not reached. Try adjusting '
                '<model_fs_params_set>, <n_feats>, <n_linspace>, '
                '<exit_on_stagnant_n>, or <step_pct>.')
-        assert myfs.n_feats in myfs.df_fs_params['feat_n'], msg
+        assert myfs.n_feats in myfs.df_fs_params['feat_n'].to_list(), msg
         assert myfs.n_feats == n_feats
 
     def test_find_params_n_feats_0(self, test_fs_lasso_init_fixture):
@@ -204,23 +206,23 @@ class Test_feature_selection_find_features_max_edges:
     For better code coverage, these tests try to execute edge code of the
     find_features_max() function
     '''
-    def test_exit_on_stagnant_n(self, test_fs_lasso_init_fixture):
-        myfs = test_fs_lasso_init_fixture
-        myfs.fs_find_params(n_feats=6, step_pct=0.05, exit_on_stagnant_n=2, print_out_fs=False)
-        df = myfs.df_fs_params
-        n_feats = df['feat_n'].max()
-        assert myfs.n_feats >= n_feats
+    # def test_exit_on_stagnant_n(self, test_fs_lasso_init_fixture):
+    #     myfs = test_fs_lasso_init_fixture
+    #     myfs.fs_find_params(n_feats=6, step_pct=0.05, exit_on_stagnant_n=2, print_out_fs=False)
+    #     df = myfs.df_fs_params
+    #     n_feats = df['feat_n'].max()
+    #     assert myfs.n_feats >= n_feats
 
-    def test_overshoot_n_feats(self, test_fs_lasso_init_fixture):
-        '''
-        These settings should overshoot n_feats; if it fails, try adjusting the
-        arguments to fs_find_params().
-        '''
-        myfs = test_fs_lasso_init_fixture
-        myfs.fs_find_params(n_feats=10, step_pct=0.02, exit_on_stagnant_n=6, print_out_fs=False)
-        df = myfs.df_fs_params
-        n_feats = df['feat_n'].max()
-        assert n_feats > myfs.n_feats
+    # def test_overshoot_n_feats(self, test_fs_lasso_init_fixture):
+    #     '''
+    #     These settings should overshoot n_feats; if it fails, try adjusting the
+    #     arguments to fs_find_params().
+    #     '''
+    #     myfs = test_fs_lasso_init_fixture
+    #     myfs.fs_find_params(n_feats=10, print_out_fs=False)
+    #     df = myfs.df_fs_params
+    #     n_feats = df['feat_n'].max()
+    #     assert n_feats > myfs.n_feats
 
 
 class Test_feature_selection_find_features_min_edges:
@@ -234,7 +236,7 @@ class Test_feature_selection_find_features_min_edges:
         right away.
         '''
         myfs = test_fs_lasso_init_fixture
-        myfs.fs_find_params(model_fs_params_adjust_min={'alpha': 100}, print_out_fs=False)
+        myfs.fs_find_params(model_fs_params_adjust_min={'alpha': 200}, n_feats=5, print_out_fs=False)
         df = myfs.df_fs_params
         n_feats = df['feat_n'].max()
-        assert myfs.n_feats == n_feats
+        assert n_feats >= myfs.n_feats

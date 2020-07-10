@@ -36,16 +36,18 @@ class JoinTables(object):
         self.base_dir_data = None
 
         self.cols_require = {
-            'df_dates': ['study', 'year', 'date_plant', 'date_emerge'],
-            'df_exp': ['study', 'year', 'plot_id', 'rep', 'trt_id'],
-            'df_trt': ['study', 'year', 'trt_id', 'trt_n', 'trt_var', 'trt_irr'],
-            'df_n_apps': ['study', 'year', 'trt_n', 'date_applied', 'source_n', 'rate_n_kgha'],
-            'df_n_crf': ['study', 'year', 'date_applied', 'source_n', 'b0', 'b1', 'b2'],
+            'df_dates': ['owner', 'study', 'year', 'date_plant', 'date_emerge'],
+            # 'df_exp': ['owner', 'study', 'year', 'plot_id', 'rep', 'trt_id'],
+            'df_exp': ['owner', 'study', 'year', 'plot_id', 'trt_id'],
+            'df_trt': ['owner', 'study', 'year', 'trt_id', 'trt_n', 'trt_var', 'trt_irr'],
+            'df_n_apps': ['owner', 'study', 'year', 'trt_n', 'date_applied', 'source_n', 'rate_n_kgha'],
+            'df_n_crf': ['owner', 'study', 'year', 'date_applied', 'source_n', 'b0', 'b1', 'b2', 'b2'],
+            'df_wx': ['owner', 'study', 'year', 'date'],
 
-            'default': ['study', 'year', 'plot_id'],
-            'dae': ['study', 'year', 'plot_id', 'date'],
-            'dap': ['study', 'year', 'plot_id', 'date'],
-            'rate_ntd': ['study', 'year', 'plot_id', 'date']
+            'default': ['owner', 'study', 'year', 'plot_id'],
+            'dae': ['owner', 'study', 'year', 'plot_id', 'date'],
+            'dap': ['owner', 'study', 'year', 'plot_id', 'date'],
+            'rate_ntd': ['owner', 'study', 'year', 'plot_id', 'date']
             }
         self.msg_require = {
             'df_dates': (
@@ -68,6 +70,10 @@ class JoinTables(object):
                 'The following columns are required in ``df_n_crf``: {0}. '
                 'Please check that each of these column names are in '
                 '"df_n_crf.columns".'.format(self.cols_require['df_n_crf'])),
+            'df_wx': (
+                'The following columns are required in ``df_wx``: {0}. '
+                'Please check that each of these column names are in '
+                '"df_wx.columns".'.format(self.cols_require['df_wx'])),
 
             'default': ('The following columns are required in ``df``: {0}. '
                      'Please check that each of these column names are in '
@@ -138,10 +144,10 @@ class JoinTables(object):
         '''
         msg = ('There can NOT be duplicate rows of the metadata in the ``df`` '
                'passed to ``join_tables.rate_ntd()``. Please filter ``df`` so '
-               'so there are not duplicate metadata rows.\n\nHint: is ``df`` '
+               'there are not duplicate metadata rows.\n\nHint: is ``df`` '
                'in a long format with multiple types of data (e.g., vine N '
                'and tuber N)?\n..or does ``df`` contain subsamples?')
-        cols = ['study', 'year', 'plot_id', 'date']
+        cols = ['owner', 'study', 'year', 'plot_id', 'date']
         if df.groupby(cols).size()[0].max() > 1:
             raise AttributeError(msg)
 
@@ -170,13 +176,14 @@ class JoinTables(object):
             raise AttributeError(msg)
 
         if 'date' in cols_require:  # must be a string containing only "date"
-            df['date'] = pd.to_datetime(df['date'], format=date_format)
+            # df['date'] = pd.to_datetime(df['date'], format=date_format)
+            df.loc[:, 'date'] = pd.to_datetime(df.loc[:, 'date'], format=date_format)
         if 'date_plant' in cols_require:
-            df['date_plant'] = pd.to_datetime(df['date_plant'], format=date_format)
+            df.loc[:, 'date_plant'] = pd.to_datetime(df.loc[:, 'date_plant'], format=date_format)
         if 'date_emerge' in cols_require:
-            df['date_emerge'] = pd.to_datetime(df['date_emerge'], format=date_format)
+            df.loc[:, 'date_emerge'] = pd.to_datetime(df.loc[:, 'date_emerge'], format=date_format)
         if 'date_applied' in cols_require:
-            df['date_applied'] = pd.to_datetime(df['date_applied'])
+            df.loc[:, 'date_applied'] = pd.to_datetime(df.loc[:, 'date_applied'])
 
         if f == 'rate_ntd':
             self._cr_rate_ntd(df)
@@ -184,7 +191,7 @@ class JoinTables(object):
         return df
 
     def _check_requirements_custom(
-            self, df, date_cols=['date'], by=['study', 'year', 'plot_id'],
+            self, df, date_cols=['date'], by=['owner', 'study', 'year', 'plot_id'],
             date_format='%Y-%m-%d'):
         '''
         Checks that ``df`` has all of the correct columns and that they contain
@@ -212,7 +219,7 @@ class JoinTables(object):
         n_dt = len(df.select_dtypes(include=[np.datetime64]).columns)
         if n_dt < len(date_cols):
             for d in date_cols:
-                df[d] = pd.to_datetime(df[d], format=date_format)
+                df[d] = pd.to_datetime(df.loc[:, d], format=date_format)
         return df
 
         # TODO: check each of the column data types if they must be particular (e.g., datetime)
@@ -241,6 +248,10 @@ class JoinTables(object):
         df_n_crf = self._check_requirements(df_n_crf, f='df_n_crf', date_format=date_format)
         self.df_n_crf = df_n_crf
 
+        df_wx = pd.read_csv(self.fnames['wx'])
+        df_wx = self._check_requirements(df_wx, f='df_wx', date_format=date_format)
+        self.df_wx = df_wx
+
     def load_tables(self, **kwargs):
         '''
         Loads all of the tables required to take full advantage of the rest of
@@ -259,7 +270,8 @@ class JoinTables(object):
                 'experiments': os.path.join(self.base_dir_data, 'metadata_exp.csv'),
                 'treatments': os.path.join(self.base_dir_data, 'metadata_trt.csv'),
                 'n_apps': os.path.join(self.base_dir_data, 'metadata_trt_n.csv'),
-                'n_crf': os.path.join(self.base_dir_data, 'metadata_trt_n_crf.csv')}
+                'n_crf': os.path.join(self.base_dir_data, 'metadata_trt_n_crf.csv'),
+                'wx': os.path.join(self.base_dir_data, 'calc_weather.csv')}
                 # 'petiole_no3': os.path.join(self.base_dir_data, 'tissue_petiole_NO3_ppm.csv'),
                 # 'total_n': os.path.join(self.base_dir_data, 'tissue_wp_N_pct.csv')}
             self._read_dfs()
@@ -270,7 +282,7 @@ class JoinTables(object):
 
     def join_closest_date(
             self, df_left, df_right, left_on='date', right_on='date',
-            tolerance=3, by=['study', 'year', 'plot_id'], direction='nearest'):
+            tolerance=0, by=['owner', 'study', 'year', 'plot_id'], direction='nearest'):
         '''
         Joins ``df_left`` to ``df_right`` by the closest date (after first
         joining by the ``by`` columns).
@@ -307,14 +319,17 @@ class JoinTables(object):
             tolerance=pd.Timedelta(tolerance, unit='D'), direction=direction)
 
         idx_delta = df_join.columns.get_loc(left_on2)
-        df_join.insert(idx_delta+1, 'date_delta', None)
-        df_join['date_delta'] = (df_join[left_on2]-df_join[right_on2]).astype('timedelta64[D]')
-        df_join = df_join[pd.notnull(df_join['date_delta'])]
+        if tolerance == 0:
+            df_join.dropna(inplace=True)
+        elif tolerance > 0:
+            df_join.insert(idx_delta+1, 'date_delta', None)
+            df_join['date_delta'] = (df_join[left_on2]-df_join[right_on2]).astype('timedelta64[D]')
+            df_join = df_join[pd.notnull(df_join['date_delta'])]
         df_join = df_join.rename(columns={left_on2:left_on})
         df_join = df_join.drop(right_on2, 1)
         return df_join
 
-    def dae(self, df):
+    def dae(self, df, on=['owner', 'study', 'year']):
         '''
         Adds a days after emergence (DAE) column to df
 
@@ -345,15 +360,15 @@ class JoinTables(object):
         '''
         df = self._check_requirements(df, 'dae')
 
-        df_join = df.merge(self.df_dates, on=['study', 'year'],
+        df_join = df.merge(self.df_dates, on=on,
                            validate='many_to_one')
         # df_join['dap'] = (df_join['date']-df_join['date_plant']).dt.days
         df_join['dae'] = (df_join['date']-df_join['date_emerge']).dt.days
-        df_out = df_join[['study', 'year', 'plot_id', 'date', 'dae']]
-        df_out = df.merge(df_out, on=['study', 'year', 'plot_id', 'date'])
+        df_out = df_join[['owner', 'study', 'year', 'plot_id', 'date', 'dae']]
+        df_out = df.merge(df_out, on=['owner', 'study', 'year', 'plot_id', 'date'])
         return df_out
 
-    def dap(self, df):
+    def dap(self, df, on=['owner', 'study', 'year']):
         '''
         Adds a days after planting (DAP) column to df
 
@@ -382,14 +397,16 @@ class JoinTables(object):
             2   NNI  2019      101 2019-07-23  Petiole  NO3_ppm   1588.190000   82
         '''
         df = self._check_requirements(df, 'dap')
-        df_join = df.merge(self.df_dates, on=['study', 'year'],
+        df_join = df.merge(self.df_dates, on=on,
                            validate='many_to_one')
         df_join['dap'] = (df_join['date']-df_join['date_plant']).dt.days
-        df_out = df_join[['study', 'year', 'plot_id', 'date', 'dap']]
-        df_out = df.merge(df_out, on=['study', 'year', 'plot_id', 'date'])
+        df_out = df_join[['owner', 'study', 'year', 'plot_id', 'date', 'dap']]
+        df_out = df.merge(df_out, on=['owner', 'study', 'year', 'plot_id', 'date'])
         return df_out
 
-    def rate_ntd(self, df, col_rate_n='rate_n_kgha', unit_str='kgha'):
+    def rate_ntd(self, df, col_rate_n='rate_n_kgha',
+                 col_rate_ntd_out='rate_ntd_kgha',
+                 on=['owner', 'study', 'year', 'plot_id']):
         '''
         Adds a column "rate_ntd" indicating the amount of N applied up to the
         date in the df['date'] column (not inclusive).
@@ -407,8 +424,8 @@ class JoinTables(object):
                 be converted to datetime).
             col_rate_n (``str``): the column name in ``df`` that contains N
                 rates
-            unit_str (``str``): A string to be appended to the new column name.
-                If "kgha", the column name will be "rate_ntd_kgha"
+            # unit_str (``str``): A string to be appended to the new column name.
+            #     If "kgha", the column name will be "rate_ntd_kgha"
 
         Example:
             >>> base_dir_data = 'I:/Shared drives/NSF STTR Phase I – Potato Remote Sensing/Historical Data/Rosen Lab/Small Plot Data/Data'
@@ -424,24 +441,23 @@ class JoinTables(object):
             >>> df_pet_no3 = my_join.rate_ntd(df_pet_no3)
             >>> df_pet_no3.head(3)
         '''
-        df = self._check_requirements(df, 'rate_ntd')
-        df_join = df.merge(self.df_exp, on=['study', 'year', 'plot_id'])
+        df = self._check_requirements(df, f='rate_ntd')
+        df_join = df.merge(self.df_exp, on=on)
         df_join = df_join.merge(
-            self.df_trt[['study', 'year', 'trt_id', 'trt_n']],
-            on=['study', 'year', 'trt_id'])
+            self.df_trt[['owner', 'study', 'year', 'trt_id', 'trt_n']],
+            on=['owner', 'study', 'year', 'trt_id'])
         df_join = df_join.merge(
-            self.df_n_apps[['study', 'year', 'trt_n', 'date_applied', col_rate_n]],
-            on=['study', 'year', 'trt_n'], validate='many_to_many')
+            self.df_n_apps[['owner', 'study', 'year', 'trt_n', 'date_applied', col_rate_n]],
+            on=['owner', 'study', 'year', 'trt_n'], validate='many_to_many')
 
         # remove all rows where date_applied is after date
         df_join = df_join[df_join['date'] >= df_join['date_applied']]
         # TODO: open up to dfs that do not contain "tissue" and "measure", such as cropscan data
         # This is required in the first place because there are potentially
         # multiple types of observations (e.g., vine N and tuber N)
-        cols_sum = ['study','year', 'plot_id', 'date']
+        cols_sum = ['owner', 'study','year', 'plot_id', 'date']
         df_sum = df_join.groupby(cols_sum)[col_rate_n].sum().reset_index()
 
-        col_name = 'rate_ntd_' + str(unit_str)
-        df_sum.rename(columns={col_rate_n: col_name}, inplace=True)
-        df_out = df.merge(df_sum, on=['study', 'year', 'plot_id', 'date'])
+        df_sum.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+        df_out = df.merge(df_sum, on=['owner', 'study', 'year', 'plot_id', 'date'])
         return df_out

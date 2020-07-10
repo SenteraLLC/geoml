@@ -34,21 +34,154 @@ cs_test2 = {
                  'col_out': 'rate_ntd_kgha'},
     'cropscan_wl_range1': [400, 900]}
 
+cs_test3 = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    # 'cropscan_bands': ['710', '740', '760', '810'],
+    'cropscan_wl_range1': [400, 900],
+    'wx': ['precip_cumsum_plant_to_date', 'gdd_cumsum_plant_to_date',
+           'precip_diff_cumsum_plant_to_date', 'gdd_diff_cumsum_plant_to_date']}
+    # 'wx': ['gdd_cumsum_plant_to_date', 'precip_cumsum_plant_to_date',
+    #        'et_rs_cumsum_plant_to_date', 'solar_rad_cumsum_plant_to_date',
+    #        'gdd_diff_cumsum_plant_to_date', 'precip_diff_cumsum_plant_to_date',
+    #        'et_rs_diff_cumsum_plant_to_date',
+    #        'solar_rad_diff_cumsum_plant_to_date']}
+
+summer_2020 = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'cropscan_wl_range1': [400, 900],
+    'wx': ['gdd_cumsum_plant_to_date', 'precip_cumsum_plant_to_date',
+            'et_rs_cumsum_plant_to_date', 'solar_rad_cumsum_plant_to_date',
+            'gdd_diff_cumsum_plant_to_date', 'precip_diff_cumsum_plant_to_date',
+            'et_rs_diff_cumsum_plant_to_date',
+            'solar_rad_diff_cumsum_plant_to_date',
+            'temp_diff_cummean_plant_to_date',
+            'temp_diff_diff_cummean_plant_to_date',
+           # 'gdd_cumsum_emerge_to_date',
+           # 'precip_cumsum_emerge_to_date', 'et_rs_cumsum_emerge_to_date',
+           # 'solar_rad_cumsum_emerge_to_date', 'gdd_diff_cumsum_emerge_to_date',
+           # 'precip_diff_cumsum_emerge_to_date', 'et_rs_diff_cumsum_emerge_to_date',
+           # 'solar_rad_diff_cumsum_emerge_to_date',
+           # 'temp_diff_cummean_emerge_to_date',
+           # 'temp_diff_diff_cummean_emerge_to_date',
+           # 'gdd_cumsum_last7',
+           # 'precip_cumsum_last7', 'et_rs_cumsum_last7', 'solar_rad_cumsum_last7',
+           # 'gdd_diff_cumsum_last7', 'precip_diff_cumsum_last7',
+           # 'et_rs_diff_cumsum_last7', 'solar_rad_diff_cumsum_last7',
+           # 'temp_diff_cummean_last7',
+           # 'temp_diff_diff_cummean_last7',
+            'gdd_cumsum_last14', 'precip_cumsum_last14', 'et_rs_cumsum_last14',
+            'solar_rad_cumsum_last14'
+            'gdd_diff_cumsum_last14',
+            'precip_diff_cumsum_last14', 'et_rs_diff_cumsum_last14',
+            'solar_rad_diff_cumsum_last14', 'temp_diff_cummean_last14',
+            'temp_diff_diff_cummean_last14'
+           # 'gdd_cumsum_last28', 'precip_cumsum_last28',
+           # 'et_rs_cumsum_last28', 'solar_rad_cumsum_last28',
+           # 'gdd_diff_cumsum_last28', 'precip_diff_cumsum_last28',
+           # 'et_rs_diff_cumsum_last28', 'solar_rad_diff_cumsum_last28',
+           # 'temp_diff_cummean_last28', 'temp_diff_diff_cummean_last28'
+            ]}
+
+nni1_diff = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'cropscan_wl_range1': [400, 900],
+    'wx': ['gdd_cumsum_plant_to_date',
+           'gdd_diff_cumsum_plant_to_date']}
+
+nni2_diff = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'cropscan_wl_range1': [400, 900],
+    'wx': ['gdd_cumsum_plant_to_date',
+           'gdd_diff_cumsum_plant_to_date',  # 1st
+           'precip_cumsum_plant_to_date', 'et_rs_cumsum_plant_to_date',
+           'precip_diff_cumsum_plant_to_date', 'et_rs_diff_cumsum_plant_to_date']}
+
+nni3_diff = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'cropscan_wl_range1': [400, 900],
+    'wx': ['gdd_cumsum_plant_to_date',
+           'gdd_diff_cumsum_plant_to_date',  # 1st
+           'precip_cumsum_plant_to_date', 'et_rs_cumsum_plant_to_date',
+           'precip_diff_cumsum_plant_to_date', 'et_rs_diff_cumsum_plant_to_date',  # 2nd
+           'ipar_cumsum_plant_to_date', 'temp_diff_cummean_bulk_to_date', 'et_rs_cumsum_bulk_to_date', 'solar_rad_cumsum_bulk_to_date',
+           'ipar_diff_cumsum_plant_to_date', 'temp_diff_diff_cummean_bulk_to_date', 'et_rs_diff_cumsum_bulk_to_date', 'solar_rad_diff_cumsum_bulk_to_date']}
+
+biomass1_diff = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date',
+           'gdd_diff_cumsum_plant_to_date', 'ipar_diff_cumsum_plant_to_date']}
+
+biomass2_diff = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date',
+           'gdd_diff_cumsum_plant_to_date', 'ipar_diff_cumsum_plant_to_date',  # 1st
+           'temp_diff_cummean_bulk_to_date', 'et_rs_cumsum_bulk_to_date', 'solar_rad_cumsum_bulk_to_date',
+           'temp_diff_diff_cummean_bulk_to_date', 'et_rs_diff_cumsum_bulk_to_date', 'solar_rad_diff_cumsum_bulk_to_date']}
+
+biomass3_diff = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date',
+           'gdd_diff_cumsum_plant_to_date', 'ipar_diff_cumsum_plant_to_date',  # 1st
+           'temp_diff_cummean_bulk_to_date', 'et_rs_cumsum_bulk_to_date', 'solar_rad_cumsum_bulk_to_date',
+           'temp_diff_diff_cummean_bulk_to_date', 'et_rs_diff_cumsum_bulk_to_date', 'solar_rad_diff_cumsum_bulk_to_date',  # 2nd
+           'precip_cumsum_plant_to_date', 'et_rs_cumsum_plant_to_date',
+           'precip_diff_cumsum_plant_to_date', 'et_rs_diff_cumsum_plant_to_date'],
+    'cropscan_wl_range1': [400, 900]}
+
+biomass1 = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date']}
+
+biomass2 = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date',  # 1st
+           'temp_diff_cummean_bulk_to_date', 'et_rs_cumsum_bulk_to_date', 'solar_rad_cumsum_bulk_to_date']}
+
+biomass3 = {
+    'dae': 'dae',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date',  # 1st
+           'temp_diff_cummean_bulk_to_date', 'et_rs_cumsum_bulk_to_date', 'solar_rad_cumsum_bulk_to_date',  # 2nd
+           'precip_cumsum_plant_to_date', 'et_rs_cumsum_plant_to_date'],
+    'cropscan_wl_range1': [400, 900]}
+
 config_dict = {
     'JoinTables': {
         'base_dir_data': os.path.join(test_dir, 'testdata')},
     'FeatureData': {
         'base_dir_data': os.path.join(test_dir, 'testdata'),
         'random_seed': 999,
-        'fname_petiole': 'tissue_petiole_NO3_ppm.csv',
-        'fname_total_n': 'tissue_wp_N_pct.csv',
-        'fname_cropscan': 'cropscan.csv',
+        'fname_obs_tissue': 'obs_tissue.csv',
+        'fname_cropscan': 'rs_cropscan.csv',
+        'fname_wx': 'calc_weather.csv',
         'dir_results': None,
         'group_feats': cs_test2,
-        'ground_truth': 'vine_n_pct',  # 'vine_n_pct', 'pet_no3_ppm'
+        'ground_truth_tissue': 'petiole',  # must coincide with obs_tissue.csv "tissue" column
+        'ground_truth_measure': 'no3_ppm',  # must coincide with obs_tissue.csv "measure" column
         'date_tolerance': 3,
         'test_size': 0.4,
-        'stratify': ['study', 'date'],
+        'stratify': ['owner', 'study', 'date'],
         'impute_method': 'iterative',
         'n_splits': 4,
         'n_repeats': 3,
@@ -59,11 +192,10 @@ config_dict = {
         'model_fs_params_set': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
         'model_fs_params_adjust_min': {'alpha': 1},  # these are initial values to begin
         'model_fs_params_adjust_max': {'alpha': 1e-3},  # the search for the range of parameters
-        'n_feats': 5,
-        'n_linspace': 100,
-        # 'method_alpha_min': 'full',
-        'exit_on_stagnant_n': 5,
-        'step_pct': 0.1,
+        'n_feats': 12,
+        'n_linspace': 150,
+        # 'exit_on_stagnant_n': 5,
+        # 'step_pct': 0.1,
         'print_out_fs': False},
     'Training': {
         'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=True, method='yeo-johnson', standardize=True)),
