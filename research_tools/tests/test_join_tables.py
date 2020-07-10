@@ -18,17 +18,18 @@ from research_tools.tests import config
 from research_tools.tests import data
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_data_fixture():
     # data_dir = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
     my_join = JoinTables(config_dict=config.config_dict)
     # data = testdata(my_join.base_dir_data)
-    return data.df_pet_no3, data.df_vine_n, data.df_cs, my_join
+    return data.df_petiole_no3_ppm, data.df_vine_n_pct, data.df_cs, my_join
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_data_fixture_pseudo():
     df = pd.DataFrame.from_dict({
-        'study': ['Refl'],
+        'owner': ['rosen lab'],
+        'study': ['refl'],
         'year': [2010],
         'plot_id': [101]})
     df_left = df.copy()
@@ -40,32 +41,32 @@ def test_data_fixture_pseudo():
 class Test_join_tables_exist:
     def test_dates(self, test_data_fixture):
         _, _, _, my_join = test_data_fixture
-        cols_require = ['study','year', 'date_plant', 'date_emerge']
+        cols_require = ['owner', 'study','year', 'date_plant', 'date_emerge']
         assert set(cols_require).issubset(my_join.df_dates.columns)
         assert len(my_join.df_dates) > 3
 
     def test_exp(self, test_data_fixture):
         _, _, _, my_join = test_data_fixture
-        cols_require = ['study','year', 'plot_id', 'rep', 'trt_id']
+        cols_require = ['owner', 'study','year', 'plot_id', 'trt_id']
         assert set(cols_require).issubset(my_join.df_exp.columns)
         assert len(my_join.df_exp) > 3
 
     def test_trt(self, test_data_fixture):
         _, _, _, my_join = test_data_fixture
-        cols_require = ['study','year', 'trt_id', 'trt_n', 'trt_var', 'trt_irr']
+        cols_require = ['owner', 'study','year', 'trt_id', 'trt_n', 'trt_var', 'trt_irr']
         assert set(cols_require).issubset(my_join.df_trt.columns)
         assert len(my_join.df_trt) > 3
 
     def test_n_apps(self, test_data_fixture):
         _, _, _, my_join = test_data_fixture
-        cols_require = ['study','year', 'trt_n', 'date_applied', 'source_n',
+        cols_require = ['owner', 'study','year', 'trt_n', 'date_applied', 'source_n',
                         'rate_n_kgha']
         assert set(cols_require).issubset(my_join.df_n_apps.columns)
         assert len(my_join.df_n_apps) > 3
 
     def test_n_crf(self, test_data_fixture):
         _, _, _, my_join = test_data_fixture
-        cols_require = ['study','year', 'date_applied', 'source_n', 'b0', 'b1',
+        cols_require = ['owner', 'study','year', 'date_applied', 'source_n', 'b0', 'b1',
                         'b2']
         assert set(cols_require).issubset(my_join.df_n_crf.columns)
         assert len(my_join.df_n_crf) > 3
@@ -73,32 +74,34 @@ class Test_join_tables_exist:
 
 class Test_join_tables_dap_dae:
     def test_dap_column(self, test_data_fixture):
-        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
-        assert 'dap' in my_join.dap(df_pet_no3).columns
+        df_petiole_no3_ppm, df_vine_n_pct, df_cs, my_join = test_data_fixture
+        assert 'dap' in my_join.dap(df_petiole_no3_ppm).columns
 
     def test_dae_column(self, test_data_fixture):
-        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
-        assert 'dae' in my_join.dae(df_pet_no3).columns
+        df_petiole_no3_ppm, df_vine_n_pct, df_cs, my_join = test_data_fixture
+        assert 'dae' in my_join.dae(data.df_petiole_no3_ppm).columns
 
     def test_join_closest_date_column(self, test_data_fixture):
-        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
+        df_petiole_no3_ppm, df_vine_n_pct, df_cs, my_join = test_data_fixture
         assert 'date_delta' in  my_join.join_closest_date(
-            df_pet_no3, df_cs, left_on='date', right_on='date', tolerance=3).columns
+            df_petiole_no3_ppm, df_cs, left_on='date', right_on='date', tolerance=3).columns
 
     def test_dap_calc_correct(self, test_data_fixture):
-        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
-        df = pd.DataFrame.from_dict({'study': ['NNI'],
-                                    'year': [2019],
-                                    'plot_id': [101],
-                                    'date': ['2019-06-25']})
+        df_petiole_no3_ppm, df_vine_n_pct, df_cs, my_join = test_data_fixture
+        df = pd.DataFrame.from_dict({'owner': ['rosen lab'],
+                                     'study': ['nni'],
+                                     'year': [2019],
+                                     'plot_id': [101],
+                                     'date': ['2019-06-25']})
         assert my_join.dap(df)['dap'][0] == 54
 
     def test_dae_calc_correct(self, test_data_fixture):
-        df_pet_no3, df_vine_n, df_cs, my_join = test_data_fixture
-        df = pd.DataFrame.from_dict({'study': ['NNI'],
-                                    'year': [2019],
-                                    'plot_id': [101],
-                                    'date': ['2019-06-25']})
+        df_petiole_no3_ppm, df_vine_n_pct, df_cs, my_join = test_data_fixture
+        df = pd.DataFrame.from_dict({'owner': ['rosen lab'],
+                                     'study': ['nni'],
+                                     'year': [2019],
+                                     'plot_id': [101],
+                                     'date': ['2019-06-25']})
         assert my_join.dae(df)['dae'][0] == 33
 
 

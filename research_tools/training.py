@@ -37,12 +37,12 @@ class Training(FeatureSelection):
     and cross validated, and can be safely distributed to predict new
     observations. Care must be taken to ensure information about input features
     is tracked (not only the number of features, but specifications) so new
-    data can be preocessed to be ingested by the estimator to make new
+    data can be processed to be ingested by the estimator to make new
     predictions.
     '''
     __allowed_params = (
-        'regressor', 'regressor_params', 'param_grid', 'n_jobs_tune',
-        'scoring', 'refit', 'rank_scoring', 'print_out_train',
+        'base_data_dir', 'regressor', 'regressor_params', 'param_grid',
+        'n_jobs_tune', 'scoring', 'refit', 'rank_scoring', 'print_out_train',
         'base_dir_results')
 
     def __init__(self, **kwargs):
@@ -53,7 +53,6 @@ class Training(FeatureSelection):
         # self._set_attributes_fs()
         # self._set_model_fs()
         self.fs_find_params(**kwargs)
-
 
         # Training defaults
         self.regressor = None
@@ -68,12 +67,12 @@ class Training(FeatureSelection):
         self.print_out_train = False
         # self.base_dir_results = None
 
-        self._set_params_from_kwargs_tune(**kwargs)
-        self._set_attributes_tune()
+        self._set_params_from_kwargs_train(**kwargs)
+        self._set_attributes_train()
         # self._set_regressor()
 
 
-    def _set_params_from_dict_tune(self, config_dict):
+    def _set_params_from_dict_train(self, config_dict):
         '''
         Sets any of the parameters in ``config_dict`` to self as long as they
         are in the ``__allowed_params`` list
@@ -88,7 +87,7 @@ class Training(FeatureSelection):
             if k in self.__class__.__allowed_params:
                 setattr(self, k, v)
 
-    def _set_params_from_kwargs_tune(self, **kwargs):
+    def _set_params_from_kwargs_train(self, **kwargs):
         '''
         Sets any of the passed kwargs to self as long as long as they are in
         the ``__allowed_params`` list. Notice that if 'config_dict' is passed,
@@ -96,7 +95,7 @@ class Training(FeatureSelection):
         passed to ``Training`` more explicitly.
         '''
         if 'config_dict' in kwargs:
-            self._set_params_from_dict_tune(kwargs.get('config_dict'))
+            self._set_params_from_dict_train(kwargs.get('config_dict'))
         if kwargs is not None:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
@@ -119,7 +118,7 @@ class Training(FeatureSelection):
             # if k == 'regressor':
         # self._set_regressor()
 
-    def _set_attributes_tune(self):
+    def _set_attributes_train(self):
         '''
         Sets any class attribute to ``None`` that will be created in one of the
         user functions from the ``feature_selection`` class
@@ -127,6 +126,7 @@ class Training(FeatureSelection):
         self.df_tune = None
         self.df_test_full = None
         self.df_pred = None
+        self.df_pred_full = None
         self.df_test = None
 
     def _set_regressor(self):
@@ -216,20 +216,6 @@ class Training(FeatureSelection):
         except ValueError as e:
             print('Estimator was unable to fit due to {0}'.format(e))
             return None
-
-    # def _get_df_tune_cols(self):
-    #     '''
-    #     Gets column names for tuning dataframe
-    #     '''
-    #     cols = ['model_fs', 'feat_n', 'feats_x_select', 'rank_x_select',
-    #             'regressor_name', 'regressor', 'params_regressor',
-    #             'params_tuning']
-    #     prefixes = ['score_train_', 'std_train_', 'score_val_', 'std_val_']
-    #     for obj_str in self.scoring:
-    #         for prefix in prefixes:
-    #             col = prefix + obj_str
-    #             cols.extend([col])
-    #     return cols
 
     def _get_df_tune_cols(self):
         '''
@@ -380,15 +366,15 @@ class Training(FeatureSelection):
             data.extend([np.nan] * (len(self._get_df_test_cols()) - len(data)))
             df_test_full1 = pd.DataFrame(
                 data=[data], index=[df.index[0]], columns=self._get_df_test_cols())
-            return df_test_full1, None
+            return df_test_full1, None, None
 
         msg = ('<params_regressor> are not equal. (this is a bug)')
         assert self.regressor.get_params() == df['params_regressor'].values[0], msg
 
         self.regressor.fit(self.X_train_select, self.y_train)
 
-        _, train_neg_mae, train_neg_rmse, train_r2 = self._error(train_or_test='train')
-        y_pred, test_neg_mae, test_neg_rmse, test_r2 = self._error(train_or_test='test')
+        y_pred_train, train_neg_mae, train_neg_rmse, train_r2 = self._error(train_or_test='train')
+        y_pred_test, test_neg_mae, test_neg_rmse, test_r2 = self._error(train_or_test='test')
 
         self._fit_all_data()  # Fit using both train and test data
         data[-1] = deepcopy(self.regressor)
@@ -396,7 +382,7 @@ class Training(FeatureSelection):
         data.extend([train_neg_mae, test_neg_mae, train_neg_rmse, test_neg_rmse,
                      train_r2, test_r2])
         df_test_full1 = pd.DataFrame([data], index=[df.index[0]], columns=self._get_df_test_cols())
-        return df_test_full1, y_pred
+        return df_test_full1, y_pred_test, y_pred_train
 
 
         # estimator = df_tune_filtered2.iloc[0]['regressor']
@@ -507,13 +493,21 @@ class Training(FeatureSelection):
         '''
         Perform tuning for each unique scenario from ``FeatureSelection``
         (i.e., for each row in <df_fs_params>).
+
+        Example:
+            >>> from research_tools import Training
+            >>> from research_tools.tests import config
+
+            >>> my_train = Training(config_dict=config.config_dict)
+            >>> my_train.train()
         '''
         print('Executing hyperparameter tuning and estimator training...')
-        self._set_params_from_kwargs_tune(**kwargs)
+        self._set_params_from_kwargs_train(**kwargs)
 
         df_tune = self.df_tune
         df_test_full = self.df_test_full
         df_pred = self.df_pred
+        df_pred_full = self.df_pred_full
         for idx in self.df_fs_params.index:
             X_train_select, X_test_select = self.fs_get_X_select(idx)
             n_feats = len(self.df_fs_params.iloc[idx]['feats_x_select'])
@@ -528,7 +522,7 @@ class Training(FeatureSelection):
                 df_tune = df_tune_rank.copy()
             else:
                 df_tune = df_tune.append(df_tune_rank)
-            df_test_full1, y_pred = self._get_test_results(df_tune_rank)
+            df_test_full1, y_pred_test, y_pred_train = self._get_test_results(df_tune_rank)
             if df_test_full is None:
                 df_test_full = df_test_full1.copy()
             else:
@@ -540,12 +534,14 @@ class Training(FeatureSelection):
 
             if df_pred is None:
                 df_pred = self.df_y[self.df_y['train_test'] == 'test'].copy()
+                df_pred_full = self.df_y.copy()
 
                 # col_idx = [self.df_y.columns, self.df_y.columns]
                 # df_pred.columns = pd.MultiIndex.from_arrays(col_idx, names=('full', 'filtered'))
 
-            if y_pred is not None:  # have to store y_pred while we have it
-                df_pred[uid] = y_pred
+            if y_pred_test is not None:  # have to store y_pred while we have it
+                df_pred[uid] = y_pred_test
+                df_pred_full[uid] = np.concatenate([y_pred_train, y_pred_test])
                 # df_pred[(uid, np.nan)] = y_pred
 
         # df_tune = df_tune.sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
@@ -553,6 +549,7 @@ class Training(FeatureSelection):
         self.df_tune = df_tune
         self.df_test_full = df_test_full
         self.df_pred = df_pred
+        self.df_pred_full = df_pred_full
         self._filter_test_results(scoring='test_neg_mae')
 
     # def set_regressor(self, feat_n=None, **kwargs):
@@ -563,7 +560,7 @@ class Training(FeatureSelection):
     #         feat_n (``int``): The DataFrame to get the regressor from
     #             (default: ``Training.df_test``).
     #     '''
-    #     self._set_params_from_kwargs_tune(**kwargs)
+    #     self._set_params_from_kwargs_train(**kwargs)
     #     if feat_n is None:
     #         feat_n = X.sha
     #     params = df[df['feat_n'] == feat_n]['params_regressor'].values[0]
