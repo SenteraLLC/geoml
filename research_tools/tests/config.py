@@ -40,8 +40,7 @@ cs_test3 = {
                  'col_out': 'rate_ntd_kgha'},
     # 'cropscan_bands': ['710', '740', '760', '810'],
     'cropscan_wl_range1': [400, 900],
-    'wx': ['precip_cumsum_plant_to_date', 'gdd_cumsum_plant_to_date',
-           'precip_diff_cumsum_plant_to_date', 'gdd_diff_cumsum_plant_to_date']}
+    'wx': ['solar_rad_cumsum_plant_to_date', 'gdd_cumsum_plant_to_date']}
     # 'wx': ['gdd_cumsum_plant_to_date', 'precip_cumsum_plant_to_date',
     #        'et_rs_cumsum_plant_to_date', 'solar_rad_cumsum_plant_to_date',
     #        'gdd_diff_cumsum_plant_to_date', 'precip_diff_cumsum_plant_to_date',
