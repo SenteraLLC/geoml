@@ -12,6 +12,7 @@ Insight Sensing Corporation. All rights reserved.
 import numpy as np
 import os
 import pandas as pd
+import geopandas as gpd
 
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.model_selection import train_test_split
@@ -31,7 +32,7 @@ class FeatureData(object):
     data for its use in a supervised regression model.
     '''
     __allowed_params = (
-        'base_dir_data', 'fname_obs_tissue', 'fname_cropscan',
+        'base_dir_data', 'fname_obs_tissue', 'fname_cropscan', 'fname_sentinel',
         'random_seed', 'dir_results', 'group_feats',
         'ground_truth_tissue', 'ground_truth_measure',
         'date_tolerance', 'test_size', 'stratify', 'impute_method', 'n_splits',
@@ -43,6 +44,7 @@ class FeatureData(object):
         self.random_seed = None
         self.fname_obs_tissue = 'obs_tissue.csv'
         self.fname_cropscan = 'rs_cropscan.csv'
+        self.fname_sentinel = 'rs_sentinel.csv'
         self.fname_wx = 'calc_weather.csv'
         self.dir_results = None
         self.group_feats = {'dae': 'dae',
@@ -199,6 +201,38 @@ class FeatureData(object):
                 break
         return df
 
+    def _get_primary_keys(self, df):
+        '''
+        Checks df columns to see if "research" or "client" primary keys exist.
+
+        Duplicate function in db_handler!
+
+        Returns:
+            subset (``list``): A list of the primary keys to group by, etc.
+        '''
+        if set(['owner', 'farm', 'field_id', 'year']).issubset(df.columns):
+            subset = ['owner', 'farm', 'field_id', 'year']
+        elif set(['owner', 'study', 'plot_id', 'year']).issubset(df.columns):
+            subset = ['owner', 'study', 'plot_id', 'year']
+        else:
+            print('Neither "research" or "client" primary keys are '
+                  'present in <df>.')
+            subset = None
+        return subset
+
+    # def _read_csv_geojson(self, fname):
+    #     '''
+    #     Depending on file extension, will read from either pd or gpd
+    #     '''
+    #     if os.path.splitext(fname)[-1] == '.csv':
+    #         df = pd.read_csv(fname)
+    #     elif os.path.splitext(fname)[-1] == '.geojson':
+    #         df = gpd.read_file(fname)
+    #     else:
+    #         raise TypeError('<fname_sentinel> must be either a .csv or '
+    #                         '.geojson...')
+    #     return df
+
     def _load_tables(self, tissue_col='tissue', measure_col='measure',
                      value_col='value'):
         '''
@@ -207,7 +241,7 @@ class FeatureData(object):
         '''
         print('loading tables....')
         fname_obs_tissue = os.path.join(self.base_dir_data, self.fname_obs_tissue)
-        df_obs_tissue = pd.read_csv(fname_obs_tissue)
+        df_obs_tissue = self._read_csv_geojson(fname_obs_tissue)
         self.labels_y_id = [tissue_col, measure_col]
         self.label_y = value_col
         self.df_obs_tissue = df_obs_tissue[pd.notnull(df_obs_tissue[value_col])]
@@ -245,17 +279,23 @@ class FeatureData(object):
 
         fname_cropscan = os.path.join(self.base_dir_data, self.fname_cropscan)
         if os.path.isfile(fname_cropscan):
-            df_cs = pd.read_csv(fname_cropscan)
-            self.df_cs = df_cs.groupby(['owner', 'study', 'year', 'plot_id', 'date']
-                                       ).mean().reset_index()
-
+            df_cs = self._read_csv_geojson(fname_cropscan)
+            subset = self._get_primary_keys(df_cs)
+            self.df_cs = df_cs.groupby(subset + ['date']).mean().reset_index()
+        fname_sentinel = os.path.join(self.base_dir_data, self.fname_sentinel)
+        if os.path.isfile(fname_sentinel):
+            df_sentinel = self._read_csv_geojson(fname_sentinel)
+            df_sentinel.rename(columns={'acquisition_time': 'date'}, inplace=True)
+            subset = self._get_primary_keys(df_sentinel)
+            self.df_sentinel = df_sentinel.groupby(subset + ['date']
+                                                   ).mean().reset_index()
         fname_wx = os.path.join(self.base_dir_data, self.fname_wx)
         if os.path.isfile(fname_wx):
-            df_wx = pd.read_csv(fname_wx)
-            self.df_wx = df_wx.groupby(['owner', 'study', 'year', 'date']
-                                       ).mean().reset_index()
+            df_wx = self._read_csv_geojson(fname_wx)
+            subset = self._get_primary_keys(df_sentinel)
+            subset = [i for i in subset if i not in ['field_id', 'plot_id']]
+            self.df_wx = df_wx.groupby(subset + ['date']).mean().reset_index()
         # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
-        # self.df_cs = df_cs[pd.notnull(df_cs['value'])]
 
     def _write_to_readme(self, msg, msi_run_id=None, row=None):
         '''
@@ -264,11 +304,10 @@ class FeatureData(object):
         # Note if I get here to modify foler_name or use msi_run_id:
         # Try to keep msi-run_id out of this class; instead, make all folder
         # names, etc. be reflected in the self.dir_results variable (?)
-        if msi_run_id is not None and row is not None:
-            folder_name = 'msi_' + str(msi_run_id) + '_' + str(row.name).zfill(3)
-            dir_out = os.path.join(self.dir_results, folder_name)
+        # if msi_run_id is not None and row is not None:
+        #     folder_name = 'msi_' + str(msi_run_id) + '_' + str(row.name).zfill(3)
+        #     dir_out = os.path.join(self.dir_results, folder_name)
         # with open(os.path.join(self.dir_results, folder_name + '_README.txt'), 'a') as f:
-
         if self.dir_results is None:
             print('<dir_results> must be set to create README file.')
             return
