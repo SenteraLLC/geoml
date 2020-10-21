@@ -21,6 +21,14 @@ from sklearn.cross_decomposition import PLSRegression
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
 
+sentinel_test1 = {
+    'dap': 'dap',
+    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
+                 'col_out': 'rate_ntd_kgha'},
+    # 'sentinel_bands': ['492', '559', '665', '704', '740', '781', '864', '1612',
+    #                    '2194'],
+    'sentinel_wl_range': [400, 900]}
+
 cs_test1 = {
     'dap': 'dap',
     'rate_ntd': {'col_rate_n': 'rate_n_kgha',
@@ -166,14 +174,42 @@ biomass3 = {
     'cropscan_wl_range1': [400, 900]}
 
 config_dict = {
-    'JoinTables': {
-        'base_dir_data': os.path.join(test_dir, 'testdata')},
-    'FeatureData': {
+    'Tables': {
+        'db_name': 'db_test',
+        'db_host': 'localhost',
+        'db_user': 'postgres',
+        'password': None,  # Note: password does not have to be passsed if stored in local keyring
+        'db_schema': 'dev_client',
+        'db_port': 5432,
+        'db': None,
         'base_dir_data': os.path.join(test_dir, 'testdata'),
+        'table_names': {  # if not connected to a DB, these should point to files that contain the join data.
+            'experiments': 'experiments.geojson',
+            'dates_research': 'dates_research.csv',
+            'trt': 'trt.csv',
+            'trt_n': 'trt_n.csv',
+            'trt_n_crf': 'trt_n_crf.csv',
+            'obs_tissue_research': 'obs_tissue_research.geojson',
+            'obs_soil_research': 'obs_soil_research.geojson',
+            'field_bounds': 'field_bounds.geojson',
+            'dates': 'dates.csv',
+            'as_planted': 'as_planted.geojson',
+            'n_applications': 'n_applications.geojson',
+            'obs_tissue': 'obs_tissue.geojson',
+            'obs_soil': 'obs_soil.geojson',
+            'rs_cropscan': 'rs_cropscan.csv',
+            'rs_sentinel': 'rs_sentinel.geojson',
+            'weather': 'weather.csv',
+            'weather_derived': 'calc_weather.csv'
+            }
+        },
+    'FeatureData': {
+        # 'base_dir_data': os.path.join(test_dir, 'testdata'),
         'random_seed': 999,
-        'fname_obs_tissue': 'obs_tissue.csv',
-        'fname_cropscan': 'rs_cropscan.csv',
-        'fname_wx': 'calc_weather.csv',
+        # 'fname_obs_tissue': 'obs_tissue.csv',
+        # 'fname_cropscan': 'rs_cropscan.csv',
+        # 'fname_sentinel': 'rs_sentinel.csv',
+        # 'fname_wx': 'calc_weather.csv',
         'dir_results': None,
         'group_feats': cs_test2,
         'ground_truth_tissue': 'petiole',  # must coincide with obs_tissue.csv "tissue" column

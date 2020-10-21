@@ -93,7 +93,7 @@ class FeatureSelection(FeatureData):
         '''
         if 'config_dict' in kwargs:
             self._set_params_from_dict_fs(kwargs.get('config_dict'))
-        if kwargs is not None:
+        if len(kwargs) > 0:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)

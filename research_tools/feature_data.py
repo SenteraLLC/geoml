@@ -12,6 +12,7 @@ Insight Sensing Corporation. All rights reserved.
 import numpy as np
 import os
 import pandas as pd
+import geopandas as gpd
 
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.model_selection import train_test_split
@@ -20,10 +21,10 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
 # from research_tools import feature_groups
-from research_tools import JoinTables
+from research_tools import Tables
 
 
-class FeatureData(object):
+class FeatureData(Tables):
     '''
     Class that provides file management functionality specifically for research
     data that are used for the basic training of supervised regression models.
@@ -31,19 +32,22 @@ class FeatureData(object):
     data for its use in a supervised regression model.
     '''
     __allowed_params = (
-        'base_dir_data', 'fname_obs_tissue', 'fname_cropscan',
+        'fname_obs_tissue', 'fname_cropscan', 'fname_sentinel',
         'random_seed', 'dir_results', 'group_feats',
         'ground_truth_tissue', 'ground_truth_measure',
         'date_tolerance', 'test_size', 'stratify', 'impute_method', 'n_splits',
         'n_repeats', 'train_test', 'print_out_fd')
 
     def __init__(self, **kwargs):
+        super(FeatureData, self).__init__(**kwargs)
+        self.load_tables()
+
         # FeatureData defaults
-        self.base_dir_data = None
         self.random_seed = None
-        self.fname_obs_tissue = 'obs_tissue.csv'
-        self.fname_cropscan = 'rs_cropscan.csv'
-        self.fname_wx = 'calc_weather.csv'
+        # self.fname_obs_tissue = 'obs_tissue.csv'
+        # self.fname_cropscan = 'rs_cropscan.csv'
+        # self.fname_sentinel = 'rs_sentinel.csv'
+        # self.fname_wx = 'calc_weather.csv'
         self.dir_results = None
         self.group_feats = {'dae': 'dae',
                             'rate_ntd': {'col_rate_n': 'rate_n_kgha',
@@ -69,11 +73,11 @@ class FeatureData(object):
             raise ValueError('<base_dir_data> must be set to access data '
                              'tables, either with <config_dict> or via '
                              '<**kwargs>.')
+        self._load_df_response()
         if self.dir_results is not None:
             os.makedirs(self.dir_results, exist_ok=True)
         self._get_random_seed()
-        self._load_tables()
-        self.join_info = JoinTables(base_dir_data=self.base_dir_data)
+        # self.tables = Tables(base_dir_data=self.base_dir_data)
 
     # def set_params_from_kwargs(self, **kwargs):
     #     print('_set_params_from_kwargs - entering')
@@ -104,7 +108,7 @@ class FeatureData(object):
         '''
         if 'config_dict' in kwargs:
             self._set_params_from_dict_fd(kwargs.get('config_dict'))
-        if kwargs is not None:
+        if len(kwargs) > 0:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
@@ -146,6 +150,28 @@ class FeatureData(object):
         self.stratify_train = None
         self.stratify_test = None
 
+    def _handle_wl_cols(self, c, wl_range, labels_x, prefix='wl_'):
+        '''
+        Checks for reflectance column validity with a previx present.
+
+        Parameters:
+            c (``str``): The column label to evaluate. If it is numeric and
+                resembles an integer, it will be added to labels_x.
+            labels_x (``list``): The list that holds the x labels to use/keep.
+            prefix (``str``): The prefix to disregard when evaluating <c> for its
+                resemblance of an integer.
+
+        Note:
+            If prefix is set to '' or ``None``, <c> will be appended to <labels_x>.
+        '''
+        if not isinstance(c, str):
+            c = str(c)
+        col = c.replace(prefix, '') if prefix in c else c
+
+        if (col.isnumeric() and int(col) >= wl_range[0] and
+            int(col) <= wl_range[1]):
+            labels_x.append(col)
+        return labels_x
 
     def _get_labels_x(self, group_feats, cols=None):
         '''
@@ -155,15 +181,13 @@ class FeatureData(object):
         '''
         labels_x = []
         for key in group_feats:
-            if 'cropscan_wl_range' in key:
+            if 'wl_range' in key:
                 wl_range = group_feats[key]
-
                 assert cols is not None, ('``cols`` must be passed.')
                 for c in cols:
-                    if (c.isnumeric() and int(c) > wl_range[0] and
-                        int(c) < wl_range[1]):
-                        labels_x.append(c)
-            elif 'cropscan_bands' in key or 'wx' in key:
+                    labels_x = self._handle_wl_cols(c, wl_range, labels_x,
+                                                    prefix='wl_')
+            elif 'bands' in key or 'wx' in key:
                 labels_x.extend(group_feats[key])
             elif 'rate_ntd' in key:
                 labels_x.append(group_feats[key]['col_out'])
@@ -177,85 +201,136 @@ class FeatureData(object):
         Joins predictors to ``df`` based on the contents of group_feats
         '''
         if 'dae' in group_feats:
-            df = self.join_info.dae(df)  # add DAE
+            df = self.dae(df)  # add DAE
         if 'dap' in group_feats:
-            df = self.join_info.dap(df)  # add DAP
+            df = self.dap(df)  # add DAP
         if 'rate_ntd' in group_feats:
             col_rate_n = group_feats['rate_ntd']['col_rate_n']
             col_rate_ntd_out = group_feats['rate_ntd']['col_out']
             # unit_str = value.rsplit('_', 1)[1]
-            df = self.join_info.rate_ntd(df, col_rate_n=col_rate_n,
+            df = self.rate_ntd(df, col_rate_n=col_rate_n,
                  col_rate_ntd_out=col_rate_ntd_out)
         if 'wx' in group_feats:
-            df = self.join_info.join_closest_date(  # join wx by closest date
+            df = self.join_closest_date(  # join wx by closest date
                 df, self.df_wx, left_on='date', right_on='date',
                 tolerance=0, by=['owner', 'study', 'year'])
 
         for key in group_feats:  # necessary because 'cropscan_wl_range1' must be differentiated
             if 'cropscan' in key:
-                df = self.join_info.join_closest_date(  # join cropscan by closest date
-                    df, self.df_cs, left_on='date', right_on='date',
+                df = self.join_closest_date(  # join cropscan by closest date
+                    df, self.rs_cropscan, left_on='date', right_on='date',
                     tolerance=date_tolerance, by=['owner', 'study', 'year', 'plot_id'])
                 break
         return df
 
-    def _load_tables(self, tissue_col='tissue', measure_col='measure',
-                     value_col='value'):
+    def _get_primary_keys(self, df):
         '''
-        Loads the appropriate table based on the value passed for ``tissue``,
-        then filters observations according to
+        Checks df columns to see if "research" or "client" primary keys exist.
+
+        Duplicate function in db_handler!
+
+        Returns:
+            subset (``list``): A list of the primary keys to group by, etc.
         '''
-        print('loading tables....')
-        fname_obs_tissue = os.path.join(self.base_dir_data, self.fname_obs_tissue)
-        df_obs_tissue = pd.read_csv(fname_obs_tissue)
+        if set(['owner', 'farm', 'field_id', 'year']).issubset(df.columns):
+            subset = ['owner', 'farm', 'field_id', 'year']
+        elif set(['owner', 'study', 'plot_id', 'year']).issubset(df.columns):
+            subset = ['owner', 'study', 'plot_id', 'year']
+        else:
+            print('Neither "research" or "client" primary keys are '
+                  'present in <df>.')
+            subset = None
+        return subset
+
+    # def _read_csv_geojson(self, fname):
+    #     '''
+    #     Depending on file extension, will read from either pd or gpd
+    #     '''
+    #     if os.path.splitext(fname)[-1] == '.csv':
+    #         df = pd.read_csv(fname)
+    #     elif os.path.splitext(fname)[-1] == '.geojson':
+    #         df = gpd.read_file(fname)
+    #     else:
+    #         raise TypeError('<fname_sentinel> must be either a .csv or '
+    #                         '.geojson...')
+    #     return df
+
+    def _load_df_response(self, tissue_col='tissue', measure_col='measure',
+                          value_col='value'):
+        '''
+        Loads the response DataFrame based on <ground_truth_tissue> and
+        <ground_truth_measure>. The observations are retrieved from the
+        <obs_tissue> table.
+        '''
+        tissue = self.ground_truth_tissue
+        measure = self.ground_truth_measure
+        print('\nLoading response dataframe...\nTissue: {0}\nMeasure: {1}\n'
+              ''.format(tissue, measure))
+        # fname_obs_tissue = os.path.join(self.base_dir_data, self.fname_obs_tissue)
+        # df_obs_tissue = self._read_csv_geojson(fname_obs_tissue)
         self.labels_y_id = [tissue_col, measure_col]
         self.label_y = value_col
-        self.df_obs_tissue = df_obs_tissue[pd.notnull(df_obs_tissue[value_col])]
+        self.obs_tissue = self.obs_tissue[pd.notnull(self.obs_tissue[value_col])]
+        self.df_response = self.obs_tissue[(self.obs_tissue[measure_col] == measure) &
+                                           (self.obs_tissue[tissue_col] == tissue)]
 
-        # get all unique combinations of tissue and measure cols
-        tissue = df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[tissue_col].tolist()
-        measure = df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[measure_col].tolist()
-        for tissue, measure in zip(tissue, measure):
-            df = self.df_obs_tissue[(self.df_obs_tissue[measure_col] == measure) &
-                                    (self.df_obs_tissue[tissue_col] == tissue)]
-            if tissue == 'tuber' and measure == 'biomdry_Mgha':
-                self.df_tuber_biomdry_Mgha = df.copy()
-            elif tissue == 'vine' and measure == 'biomdry_Mgha':
-                self.df_vine_biomdry_Mgha = df.copy()
-            elif tissue == 'wholeplant' and measure == 'biomdry_Mgha':
-                self.df_wholeplant_biomdry_Mgha = df.copy()
-            elif tissue == 'tuber' and measure == 'biomfresh_Mgha':
-                self.df_tuber_biomfresh_Mgha = df.copy()
-            elif tissue == 'canopy' and measure == 'cover_pct':
-                self.df_canopy_cover_pct = df.copy()
-            elif tissue == 'tuber' and measure == 'n_kgha':
-                self.df_tuber_n_kgha = df.copy()
-            elif tissue == 'vine' and measure == 'n_kgha':
-                self.df_vine_n_kgha = df.copy()
-            elif tissue == 'wholeplant' and measure == 'n_kgha':
-                self.df_wholeplant_n_kgha = df.copy()
-            elif tissue == 'tuber' and measure == 'n_pct':
-                self.df_tuber_n_pct = df.copy()
-            elif tissue == 'vine' and measure == 'n_pct':
-                self.df_vine_n_pct = df.copy()
-            elif tissue == 'wholeplant' and measure == 'n_pct':
-                self.df_wholeplant_n_pct = df.copy()
-            elif tissue == 'petiole' and measure == 'no3_ppm':
-                self.df_petiole_no3_ppm = df.copy()
+    # def _load_tables(self, tissue='petiole', measure='no3_ppm',
+    #                  tissue_col='tissue', measure_col='measure',
+    #                  value_col='value'):
+    #     '''
+    #     Loads the appropriate table based on the value passed for ``tissue``,
+    #     then filters observations according to
+    #     '''
+        # # get all unique combinations of tissue and measure cols
+        # tissue = self.obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[tissue_col].tolist()
+        # measure = self.obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[measure_col].tolist()
+        # for tissue, measure in zip(tissue, measure):
+        #     df = self.obs_tissue[(self.obs_tissue[measure_col] == measure) &
+        #                          (self.obs_tissue[tissue_col] == tissue)]
+        #     if tissue == 'tuber' and measure == 'biomdry_Mgha':
+        #         self.df_tuber_biomdry_Mgha = df.copy()
+        #     elif tissue == 'vine' and measure == 'biomdry_Mgha':
+        #         self.df_vine_biomdry_Mgha = df.copy()
+        #     elif tissue == 'wholeplant' and measure == 'biomdry_Mgha':
+        #         self.df_wholeplant_biomdry_Mgha = df.copy()
+        #     elif tissue == 'tuber' and measure == 'biomfresh_Mgha':
+        #         self.df_tuber_biomfresh_Mgha = df.copy()
+        #     elif tissue == 'canopy' and measure == 'cover_pct':
+        #         self.df_canopy_cover_pct = df.copy()
+        #     elif tissue == 'tuber' and measure == 'n_kgha':
+        #         self.df_tuber_n_kgha = df.copy()
+        #     elif tissue == 'vine' and measure == 'n_kgha':
+        #         self.df_vine_n_kgha = df.copy()
+        #     elif tissue == 'wholeplant' and measure == 'n_kgha':
+        #         self.df_wholeplant_n_kgha = df.copy()
+        #     elif tissue == 'tuber' and measure == 'n_pct':
+        #         self.df_tuber_n_pct = df.copy()
+        #     elif tissue == 'vine' and measure == 'n_pct':
+        #         self.df_vine_n_pct = df.copy()
+        #     elif tissue == 'wholeplant' and measure == 'n_pct':
+        #         self.df_wholeplant_n_pct = df.copy()
+        #     elif tissue == 'petiole' and measure == 'no3_ppm':
+        #         self.df_petiole_no3_ppm = df.copy()
 
-        fname_cropscan = os.path.join(self.base_dir_data, self.fname_cropscan)
-        if os.path.isfile(fname_cropscan):
-            df_cs = pd.read_csv(fname_cropscan)
-            self.df_cs = df_cs.groupby(['owner', 'study', 'year', 'plot_id', 'date']
-                                       ).mean().reset_index()
-
-        fname_wx = os.path.join(self.base_dir_data, self.fname_wx)
-        if os.path.isfile(fname_wx):
-            df_wx = pd.read_csv(fname_wx)
-            self.df_wx = df_wx.groupby(['owner', 'study', 'year', 'date']
-                                       ).mean().reset_index()
+        # fname_cropscan = os.path.join(self.base_dir_data, self.fname_cropscan)
+        # if os.path.isfile(fname_cropscan):
+        #     df_cs = self._read_csv_geojson(fname_cropscan)
+        #     subset = self._get_primary_keys(df_cs)
+        #     self.df_cs = df_cs.groupby(subset + ['date']).mean().reset_index()
+        # fname_sentinel = os.path.join(self.base_dir_data, self.fname_sentinel)
+        # if os.path.isfile(fname_sentinel):
+        #     df_sentinel = self._read_csv_geojson(fname_sentinel)
+        #     df_sentinel.rename(columns={'acquisition_time': 'date'}, inplace=True)
+        #     subset = self._get_primary_keys(df_sentinel)
+        #     self.df_sentinel = df_sentinel.groupby(subset + ['date']
+        #                                            ).mean().reset_index()
+        # fname_wx = os.path.join(self.base_dir_data, self.fname_wx)
+        # if os.path.isfile(fname_wx):
+        #     df_wx = self._read_csv_geojson(fname_wx)
+        #     subset = self._get_primary_keys(df_sentinel)
+        #     subset = [i for i in subset if i not in ['field_id', 'plot_id']]
+        #     self.df_wx = df_wx.groupby(subset + ['date']).mean().reset_index()
         # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
-        # self.df_cs = df_cs[pd.notnull(df_cs['value'])]
 
     def _write_to_readme(self, msg, msi_run_id=None, row=None):
         '''
@@ -264,11 +339,10 @@ class FeatureData(object):
         # Note if I get here to modify foler_name or use msi_run_id:
         # Try to keep msi-run_id out of this class; instead, make all folder
         # names, etc. be reflected in the self.dir_results variable (?)
-        if msi_run_id is not None and row is not None:
-            folder_name = 'msi_' + str(msi_run_id) + '_' + str(row.name).zfill(3)
-            dir_out = os.path.join(self.dir_results, folder_name)
+        # if msi_run_id is not None and row is not None:
+        #     folder_name = 'msi_' + str(msi_run_id) + '_' + str(row.name).zfill(3)
+        #     dir_out = os.path.join(self.dir_results, folder_name)
         # with open(os.path.join(self.dir_results, folder_name + '_README.txt'), 'a') as f:
-
         if self.dir_results is None:
             print('<dir_results> must be set to create README file.')
             return
@@ -303,28 +377,20 @@ class FeatureData(object):
             measure_col (``str``): The column name from "obs_tissue.csv" to
                 look for ``measure``.
         '''
-        tissue_list = self.df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[tissue_col].tolist()
-        measure_list = self.df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[measure_col].tolist()
+        tissue_list = self.obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[tissue_col].tolist()
+        measure_list = self.obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[measure_col].tolist()
         avail_list = ['_'.join(map(str, i)) for i in zip(tissue_list, measure_list)]
         # avail_list = ["vine_n_pct", "pet_no3_ppm", "tuber_n_pct",
         #               "biomass_kgha"]
         msg = ('``tissue``  and ``measure`` must be '
-               'one of:\n{0}.\nPlease see "obs_tissue.csv" to be sure your '
+               'one of:\n{0}.\nPlease see "obs_tissue" table to be sure your '
                'intended data are available.'
                ''.format(list(zip(tissue_list, measure_list))))
         assert '_'.join((tissue, measure)) in avail_list, msg
 
-        df = self.df_obs_tissue[(self.df_obs_tissue[measure_col] == measure) &
-                                (self.df_obs_tissue[tissue_col] == tissue)]
+        df = self.obs_tissue[(self.obs_tissue[measure_col] == measure) &
+                             (self.obs_tissue[tissue_col] == tissue)]
         return df
-        # if ground_truth == 'vine_n_pct':
-        #     return self.df_vine_n_pct.copy(), self.labels_y_id, self.label_y
-        # if ground_truth == 'pet_no3_ppm':
-        #     return self.df_petiole_no3_ppm.copy(), self.labels_y_id, self.label_y
-        # if ground_truth == 'tuber_n_pct':
-        #     return self.df_tuber_n_pct.copy(), self.labels_y_id, self.label_y
-        # if ground_truth == 'biomass_kha':
-        #     return self.df_tuber_n_pct.copy(), self.labels_y_id, self.label_y
 
     def _stratify_set(self):
         '''
@@ -352,10 +418,13 @@ class FeatureData(object):
             df:
         '''
         # df = self._add_stratify_id(df)
-        df_stratify = df[self.stratify]
+        df_stratify = df[fd.stratify]
         df_train, df_test = train_test_split(
-            df, test_size=self.test_size, random_state=self.random_seed,
+            df, test_size=fd.test_size, random_state=fd.random_seed,
             stratify=df_stratify)
+        df2 = df.groupby(fd.stratify).agg(['count'])
+
+
         df_train.insert(0, 'train_test', 'train')
         df_test.insert(0, 'train_test', 'test')
         df = df_train.copy()
@@ -524,9 +593,9 @@ class FeatureData(object):
             # stratify=stratify)
 
         # df, labels_y_id, label_y = self._get_response_df(self.ground_truth)
-        df = self._get_response_df(self.ground_truth_tissue,
-                                   self.ground_truth_measure)
-        df = self._join_group_feats(df, self.group_feats, self.date_tolerance)
+        df = fd._get_response_df(fd.ground_truth_tissue,
+                                   fd.ground_truth_measure)
+        df = fd._join_group_feats(df, fd.group_feats, fd.date_tolerance)
         df = self._train_test_split_df(df)
 
         X_train, X_test, y_train, y_test, df = self._get_X_and_y(
