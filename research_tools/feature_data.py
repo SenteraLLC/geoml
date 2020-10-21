@@ -108,7 +108,7 @@ class FeatureData(Tables):
         '''
         if 'config_dict' in kwargs:
             self._set_params_from_dict_fd(kwargs.get('config_dict'))
-        if kwargs is not None:
+        if len(kwargs) > 0:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
@@ -418,10 +418,13 @@ class FeatureData(Tables):
             df:
         '''
         # df = self._add_stratify_id(df)
-        df_stratify = df[self.stratify]
+        df_stratify = df[fd.stratify]
         df_train, df_test = train_test_split(
-            df, test_size=self.test_size, random_state=self.random_seed,
+            df, test_size=fd.test_size, random_state=fd.random_seed,
             stratify=df_stratify)
+        df2 = df.groupby(fd.stratify).agg(['count'])
+
+
         df_train.insert(0, 'train_test', 'train')
         df_test.insert(0, 'train_test', 'test')
         df = df_train.copy()
@@ -590,9 +593,9 @@ class FeatureData(Tables):
             # stratify=stratify)
 
         # df, labels_y_id, label_y = self._get_response_df(self.ground_truth)
-        df = self._get_response_df(self.ground_truth_tissue,
-                                   self.ground_truth_measure)
-        df = self._join_group_feats(df, self.group_feats, self.date_tolerance)
+        df = fd._get_response_df(fd.ground_truth_tissue,
+                                   fd.ground_truth_measure)
+        df = fd._join_group_feats(df, fd.group_feats, fd.date_tolerance)
         df = self._train_test_split_df(df)
 
         X_train, X_test, y_train, y_test, df = self._get_X_and_y(

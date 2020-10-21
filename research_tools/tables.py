@@ -111,11 +111,17 @@ class Tables(object):
         '''
         if 'config_dict' in kwargs:
             self._set_params_from_dict_t(kwargs.get('config_dict'))
-        if kwargs is not None:
+            self._connect_to_db()
+        db_creds_old = [self.db_name, self.db_host, self.db_user,
+                        self.db_schema, self.db_port]
+        if len(kwargs) > 0:  # this evaluates to False if empty dict ({})
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
-        self._connect_to_db()
+            db_creds_new = [self.db_name, self.db_host, self.db_user,
+                            self.db_schema, self.db_port]
+            if db_creds_new != db_creds_old:  # Only connects/reconnects if something changed
+                self._connect_to_db()
 
     def _connect_to_db(self):
         '''
@@ -393,6 +399,12 @@ class Tables(object):
             return self.obs_tissue
         if table_name == 'obs_soil':
             return self.obs_soil
+        if table_name == 'rs_sentinel':
+            return self.rs_sentinel
+        if table_name == 'weather':
+            return self.weather
+        if table_name == 'weather_derived':
+            return self.weather_derived
 
     def _set_table_to_self(self, table_name, df):
         '''
@@ -465,9 +477,9 @@ class Tables(object):
         if isinstance(self.db, DBHandler):
             print('\nLoading tables from database...')
             for table_name in self.table_names.keys():
-                print(table_name)
                 df = self._load_table_from_db(table_name)
                 if df is not None:
+                    print(table_name)
                     self._set_table_to_self(table_name, df)
         else:
             msg = ('There is no connection to a database, and '
@@ -479,44 +491,20 @@ class Tables(object):
         print('\nLoading tables from <base_dir_data>...')
         for table_name, fname in self.table_names.items():
             if self._get_table_from_self(table_name) is None and fname is not None:
-                print(table_name)
                 df = self._load_table_from_file(table_name, fname)
                 if df is not None:
+                    print(table_name)
                     df = db_utils.cols_to_datetime(df)
                     self._set_table_to_self(table_name, df)
 
         # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
+        # TODO: Do any groupby() function for cropscan (and all data for that
+        # matter) before putting into the DB/tables - it must line up with the
+        # obs_tissue observations or whatever the response variable is.
         if self.rs_cropscan_res is not None:
             subset = db_utils.get_primary_keys(self.rs_cropscan_res)
             self.rs_cropscan_res = self.rs_cropscan_res.groupby(
                 subset + ['date']).mean().reset_index()
-
-        if self.rs_sentinel is not None:
-            subset = db_utils.get_primary_keys(self.rs_sentinel)
-            self.rs_sentinel = self.rs_sentinel.groupby(
-                subset + ['acquisition_time']).mean().reset_index()
-
-        if self.weather_derived is not None:
-            subset = db_utils.get_primary_keys(self.weather_derived)
-            subset = [i for i in subset if i not in ['field_id', 'plot_id']]
-            self.weather_derived = self.weather_derived.groupby(
-                subset + ['date']).mean().reset_index()
-
-        # if self.base_dir_data is not None:
-        #     self.fnames = {
-        #         # 'cropscan': os.path.join(self.base_dir_data, 'cropscan.csv'),
-        #         'dates': os.path.join(self.base_dir_data, 'metadata_dates.csv'),
-        #         'experiments': os.path.join(self.base_dir_data, 'metadata_exp.csv'),
-        #         'treatments': os.path.join(self.base_dir_data, 'metadata_trt.csv'),
-        #         'n_apps': os.path.join(self.base_dir_data, 'metadata_trt_n.csv'),
-        #         'n_crf': os.path.join(self.base_dir_data, 'metadata_trt_n_crf.csv'),
-        #         'wx': os.path.join(self.base_dir_data, 'calc_weather.csv')}
-        #         # 'petiole_no3': os.path.join(self.base_dir_data, 'tissue_petiole_NO3_ppm.csv'),
-        #         # 'total_n': os.path.join(self.base_dir_data, 'tissue_wp_N_pct.csv')}
-        #     self._read_dfs()
-        # else:
-        #     print('WARNING: ``base_dir_data`` was not passed. Functions may not '
-        #           'perform as expected.\n')
 
     def join_closest_date(
             self, df_left, df_right, left_on='date', right_on='date',
@@ -724,13 +712,15 @@ class Tables(object):
                                  'columns: {0}.'.format(cols_missing))
         self._cr_rate_ntd(df)  # raises an error if data aren't suitable
         if 'field_id' in subset:
-            Remove null values from n_applications.geojson and db table
-            df_join = df.merge(self.field_bounds, on=subset)
+            # Remove null values from n_applications.geojson and db table
+            df_join = df.merge(self.field_bounds[subset], on=subset)
             # on = [i for i in subset if i != 'field_id']
             # df_join = df_join.merge(self.n_applications[on + ['trt_n']], on=on)
             df_join = df_join.merge(
                 self.n_applications[subset + ['date_applied', col_rate_n]],
                 on=subset, validate='many_to_many')
+            if isinstance(df, gpd.GeoDataFrame):
+                cols_require += [df.geometry.name]
         elif 'plot_id' in subset:
             df_join = df.merge(self.experiments, on=subset)
             on = [i for i in subset if i != 'plot_id']
@@ -745,7 +735,14 @@ class Tables(object):
         # This is required in the first place because there are potentially
         # multiple types of observations (e.g., vine N and tuber N)
         # cols_sum = ['owner', 'study','year', 'plot_id', 'date']
-        df_sum = df_join.groupby(cols_require)[col_rate_n].sum().reset_index()
-        df_sum.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-        df_out = df.merge(df_sum, on=cols_require)
+        # sort=False because geometry cannot be sorted
+        if isinstance(df, gpd.GeoDataFrame):
+            df_sum = gpd.GeoDataFrame(df_join.groupby(
+                cols_require, sort=False)[col_rate_n].sum().reset_index())
+            df_sum.set_geometry('geom', drop=False, inplace=True, crs=4326)
+            df_sum.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+            df_out = df.merge(df_sum, on=cols_require)
+        else:
+            # TODO: Grab old code from github
+            print('grab old code from github')
         return df_out
