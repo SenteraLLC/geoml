@@ -16,8 +16,8 @@ import geopandas as gpd
 from sqlalchemy import inspect
 
 from db import DBHandler
-from db.table_templates import get_cols_nullable
 from db.table_templates import table_templates
+import db.utilities as db_utils
 
 
 class Tables(object):
@@ -60,27 +60,32 @@ class Tables(object):
         self.base_dir_data = None
         self.table_names = {
             'experiments': 'experiments.geojson',
-            'dates_research': 'dates_research.csv',
+            'dates_res': 'dates_res.csv',
             'trt': 'trt.csv',
             'trt_n': 'trt_n.csv',
             'trt_n_crf': 'trt_n_crf.csv',
-            'obs_tissue_research': 'obs_tissue_research.geojson',
-            'obs_soil_research': 'obs_soil_research.geojson',
+            'obs_tissue_res': 'obs_tissue_res.geojson',
+            'obs_soil_res': 'obs_soil_res.geojson',
+            'rs_cropscan_res': 'rs_cropscan.csv',
             'field_bounds': 'field_bounds.geojson',
             'dates': 'dates.csv',
             'as_planted': 'as_planted.geojson',
             'n_applications': 'n_applications.geojson',
             'obs_tissue': 'obs_tissue.geojson',
             'obs_soil': 'obs_soil.geojson',
-            'rs_cropscan': 'rs_cropscan.csv',
             'rs_sentinel': 'rs_sentinel.geojson',
-            'weather': 'calc_weather.csv'
+            'weather': 'weather.csv',
+            'weather_derived': 'calc_weather.csv'
             }
 
         self._set_params_from_kwargs_t(**kwargs)
         self._set_attributes_t(**kwargs)
 
-        self.load_tables(**kwargs)
+        # The following are "temporary" tables, in that they need to find a
+        # home in the DB (stored), or we have to come up with a solution to
+        # derive them on demand (derived).
+        # self.weather_derived = pd.read_csv(os.path.join(
+        #     self.base_dir_data, self.table_names['weather_derived']))
 
     def _set_params_from_dict_t(self, config_dict):
         '''
@@ -139,20 +144,23 @@ class Tables(object):
         user functions
         '''
         self.experiments = None
-        self.dates_research = None
+        self.dates_res = None
         self.trt = None
         self.trt_n = None
         self.trt_n_crf = None
-        self.obs_tissue_research = None
-        self.obs_soil_research = None
+        self.obs_tissue_res = None
+        self.obs_soil_res = None
+        self.rs_cropscan_res = None
         self.field_bounds = None
+        self.dates = None
         self.as_planted = None
         self.n_applications = None
         self.obs_tissue = None
         self.obs_soil = None
         self.rs_sentinel = None
         self.weather = None
-        self.fnames = None
+
+        self.weather_derived = None  # Not sure if this will be a derived or stored table
 
     def _cr_rate_ntd(self, df):
         '''
@@ -168,7 +176,7 @@ class Tables(object):
                'in a long format with multiple types of data (e.g., vine N '
                'and tuber N)?\n..or does ``df`` contain subsamples?')
         # cols = ['owner', 'study', 'year', 'plot_id', 'date']
-        subset = self._get_primary_keys(df)
+        subset = db_utils.get_primary_keys(df)
         # if df.groupby(cols).size()[0].max() > 1:
         if df.groupby(subset + ['date']).size()[0].max() > 1:
             raise AttributeError(msg)
@@ -305,19 +313,19 @@ class Tables(object):
         fname_cropscan = os.path.join(self.base_dir_data, self.fname_cropscan)
         if os.path.isfile(fname_cropscan):
             df_cs = self._read_csv_geojson(fname_cropscan)
-            subset = self._get_primary_keys(df_cs)
+            subset = db_utils.get_primary_keys(df_cs)
             self.df_cs = df_cs.groupby(subset + ['date']).mean().reset_index()
         fname_sentinel = os.path.join(self.base_dir_data, self.fname_sentinel)
         if os.path.isfile(fname_sentinel):
             df_sentinel = self._read_csv_geojson(fname_sentinel)
             df_sentinel.rename(columns={'acquisition_time': 'date'}, inplace=True)
-            subset = self._get_primary_keys(df_sentinel)
+            subset = db_utils.get_primary_keys(df_sentinel)
             self.df_sentinel = df_sentinel.groupby(subset + ['date']
                                                    ).mean().reset_index()
         fname_wx = os.path.join(self.base_dir_data, self.fname_wx)
         if os.path.isfile(fname_wx):
             df_wx = self._read_csv_geojson(fname_wx)
-            subset = self._get_primary_keys(df_sentinel)
+            subset = db_utils.get_primary_keys(df_sentinel)
             subset = [i for i in subset if i not in ['field_id', 'plot_id']]
             self.df_wx = df_wx.groupby(subset + ['date']).mean().reset_index()
         # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
@@ -361,20 +369,22 @@ class Tables(object):
         '''
         if table_name == 'experiments':
             return self.experiments
-        if table_name == 'dates_research':
-            return self.dates_research
+        if table_name == 'dates_res':
+            return self.dates_res
         if table_name == 'trt':
             return self.trt
         if table_name == 'trt_n':
             return self.trt_n
         if table_name == 'trt_n_crf':
             return self.trt_n_crf
-        if table_name == 'obs_tissue_research':
-            return self.obs_tissue_research
-        if table_name == 'obs_soil_research':
-            return self.obs_soil_research
+        if table_name == 'obs_tissue_res':
+            return self.obs_tissue_res
+        if table_name == 'obs_soil_res':
+            return self.obs_soil_res
         if table_name == 'field_bounds':
             return self.field_bounds
+        if table_name == 'dates':
+            return self.dates
         if table_name == 'as_planted':
             return self.as_planted
         if table_name == 'n_applications':
@@ -384,40 +394,43 @@ class Tables(object):
         if table_name == 'obs_soil':
             return self.obs_soil
 
-    def _set_table_to_self(self, table_name, df, date_format='%Y-%m-%d'):
+    def _set_table_to_self(self, table_name, df):
         '''
         Sets df to appropriate variable based on table_name
         '''
         msg = ('The following columns are required in "{0}". Missing columns: '
                '"{1}".')
-        cols_require, _ = get_cols_nullable(table_name, engine=self.db.engine, db_schema=self.db.db_schema)
+        cols_require, _ = db_utils.get_cols_nullable(
+            table_name, engine=self.db.engine, db_schema=self.db.db_schema)
         cols_require = [item for item in cols_require if item != 'id']
         if not all(i in df.columns for i in cols_require):
             cols_missing = list(sorted(set(cols_require) - set(df.columns)))
             raise AttributeError(msg.format(table_name, cols_missing))
 
-        for c in cols_require:
-            if 'date' in c:
-                df.loc[:, c] = pd.to_datetime(df.loc[:, c], format=date_format)
+        # for c in cols_require:
+        #     if 'date' in c or 'time' in c:
+                # df.loc[:, c] = pd.to_datetime(df.loc[:, c], format=date_format)
 
         if table_name == 'experiments':
             self.experiments = df
-        if table_name == 'dates_research':
-            self.dates_research = df
+        if table_name == 'dates_res':
+            self.dates_res = df
         if table_name == 'trt':
             self.trt = df
         if table_name == 'trt_n':
             self.trt_n = df
         if table_name == 'trt_n_crf':
             self.trt_n_crf = df
-        if table_name == 'obs_tissue_research':
-            self.obs_tissue_research = df
-        if table_name == 'obs_soil_research':
-            self.obs_soil_research = df
+        if table_name == 'obs_tissue_res':
+            self.obs_tissue_res = df
+        if table_name == 'obs_soil_res':
+            self.obs_soil_res = df
         if table_name == 'field_bounds':
             self.field_bounds = df
         if table_name == 'as_planted':
             self.as_planted = df
+        if table_name == 'dates':
+            self.dates = df
         if table_name == 'n_applications':
             self.n_applications = df
         if table_name == 'obs_tissue':
@@ -428,6 +441,8 @@ class Tables(object):
             self.rs_sentinel = df
         if table_name == 'weather':
             self.weather = df
+        if table_name == 'weather_derived':
+            self.weather_derived = df
 
     def load_tables(self, **kwargs):
         '''
@@ -448,6 +463,7 @@ class Tables(object):
         self._set_params_from_kwargs_t(**kwargs)
 
         if isinstance(self.db, DBHandler):
+            print('\nLoading tables from database...')
             for table_name in self.table_names.keys():
                 print(table_name)
                 df = self._load_table_from_db(table_name)
@@ -460,12 +476,31 @@ class Tables(object):
                    'pass <base_dir_data>.')
             assert self.base_dir_data is not None, msg
 
+        print('\nLoading tables from <base_dir_data>...')
         for table_name, fname in self.table_names.items():
             if self._get_table_from_self(table_name) is None and fname is not None:
                 print(table_name)
                 df = self._load_table_from_file(table_name, fname)
                 if df is not None:
+                    df = db_utils.cols_to_datetime(df)
                     self._set_table_to_self(table_name, df)
+
+        # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
+        if self.rs_cropscan_res is not None:
+            subset = db_utils.get_primary_keys(self.rs_cropscan_res)
+            self.rs_cropscan_res = self.rs_cropscan_res.groupby(
+                subset + ['date']).mean().reset_index()
+
+        if self.rs_sentinel is not None:
+            subset = db_utils.get_primary_keys(self.rs_sentinel)
+            self.rs_sentinel = self.rs_sentinel.groupby(
+                subset + ['acquisition_time']).mean().reset_index()
+
+        if self.weather_derived is not None:
+            subset = db_utils.get_primary_keys(self.weather_derived)
+            subset = [i for i in subset if i not in ['field_id', 'plot_id']]
+            self.weather_derived = self.weather_derived.groupby(
+                subset + ['date']).mean().reset_index()
 
         # if self.base_dir_data is not None:
         #     self.fnames = {
@@ -532,7 +567,7 @@ class Tables(object):
         df_join = df_join.drop(right_on2, 1)
         return df_join
 
-    def dae(self, df, on=['owner', 'study', 'year']):
+    def dae(self, df):
         '''
         Adds a days after emergence (DAE) column to df
 
@@ -564,15 +599,17 @@ class Tables(object):
             1   NNI  2019      101 2019-07-09  Petiole  NO3_ppm   2728.023000   47
             2   NNI  2019      101 2019-07-23  Petiole  NO3_ppm   1588.190000   61
         '''
-        subset = self._get_primary_keys(df)
+        subset = db_utils.get_primary_keys(df)
         cols_require = subset + ['date']
         if not all(i in df.columns for i in cols_require):
             cols_missing = list(sorted(set(cols_require) - set(df.columns)))
             raise AttributeError('<df> is missing the following required '
                                  'columns: {0}.'.format(cols_missing))
         if 'field_id' in subset:
-            raise NotImplementedError('TODO: for farm data.')
+            df_join = df.merge(self.dates, on=subset,
+                               validate='many_to_one')
         elif 'plot_id' in subset:
+            on = [i for i in subset if i != 'plot_id']
             df_join = df.merge(self.df_dates, on=on,
                                validate='many_to_one')
 
@@ -584,7 +621,7 @@ class Tables(object):
         df_out = df.merge(df_out, on=cols_require)
         return df_out
 
-    def dap(self, df, on=['owner', 'study', 'year']):
+    def dap(self, df):
         '''
         Adds a days after planting (DAP) column to df
 
@@ -616,25 +653,26 @@ class Tables(object):
             1   NNI  2019      101 2019-07-09  Petiole  NO3_ppm   2728.023000   68
             2   NNI  2019      101 2019-07-23  Petiole  NO3_ppm   1588.190000   82
         '''
-        subset = self._get_primary_keys(df)
+        subset = db_utils.get_primary_keys(df)
         cols_require = subset + ['date']
         if not all(i in df.columns for i in cols_require):
             cols_missing = list(sorted(set(cols_require) - set(df.columns)))
             raise AttributeError('<df> is missing the following required '
                                  'columns: {0}.'.format(cols_missing))
         if 'field_id' in subset:
-            raise NotImplementedError('TODO: for farm data.')
+            df_join = df.merge(self.dates, on=subset,
+                               validate='many_to_one')
         elif 'plot_id' in subset:
-            df_join = df.merge(self.df_dates, on=on,
+            on = [i for i in subset if i != 'plot_id']
+            df_join = df.merge(self.dates_res, on=on,
                                validate='many_to_one')
         df_join['dap'] = (df_join['date']-df_join['date_plant']).dt.days
-        df_out = df_join[cols_require + ['dae']]
+        df_out = df_join[cols_require + ['dap']]
         df_out = df.merge(df_out, on=cols_require)
         return df_out
 
     def rate_ntd(self, df, col_rate_n='rate_n_kgha',
-                 col_rate_ntd_out='rate_ntd_kgha',
-                 on=['owner', 'study', 'year', 'plot_id']):
+                 col_rate_ntd_out='rate_ntd_kgha'):
         '''
         Adds a column "rate_ntd" indicating the amount of N applied up to the
         date in the df['date'] column (not inclusive).
@@ -677,23 +715,29 @@ class Tables(object):
             1   NNI  2019      101  2019-07-09  Petiole  NO3_ppm   2728.023000       156.919
             2   NNI  2019      101  2019-07-23  Petiole  NO3_ppm   1588.190000       179.336
         '''
-        cols_require = on + ['date']
+        subset = db_utils.get_primary_keys(df)
+        cols_require = subset + ['date']
+        # cols_require = on + ['date']
         if not all(i in df.columns for i in cols_require):
             cols_missing = list(sorted(set(cols_require) - set(df.columns)))
             raise AttributeError('<df> is missing the following required '
                                  'columns: {0}.'.format(cols_missing))
         self._cr_rate_ntd(df)  # raises an error if data aren't suitable
-        subset = self._get_primary_keys(df)
         if 'field_id' in subset:
-            raise NotImplementedError('TODO: for farm data.')
+            Remove null values from n_applications.geojson and db table
+            df_join = df.merge(self.field_bounds, on=subset)
+            # on = [i for i in subset if i != 'field_id']
+            # df_join = df_join.merge(self.n_applications[on + ['trt_n']], on=on)
+            df_join = df_join.merge(
+                self.n_applications[subset + ['date_applied', col_rate_n]],
+                on=subset, validate='many_to_many')
         elif 'plot_id' in subset:
-            df_join = df.merge(self.df_exp, on=on)
+            df_join = df.merge(self.experiments, on=subset)
+            on = [i for i in subset if i != 'plot_id']
+            df_join = df_join.merge(self.df_trt[on + ['trt_id', 'trt_n']], on=on)
             df_join = df_join.merge(
-                self.df_trt[['owner', 'study', 'year', 'trt_id', 'trt_n']],
-                on=['owner', 'study', 'year', 'trt_id'])
-            df_join = df_join.merge(
-                self.df_n_apps[['owner', 'study', 'year', 'trt_n', 'date_applied', col_rate_n]],
-                on=['owner', 'study', 'year', 'trt_n'], validate='many_to_many')
+                self.df_n_apps[on + ['trt_n', 'date_applied', col_rate_n]],
+                on=on + ['trt_n'], validate='many_to_many')
 
         # remove all rows where date_applied is after date
         df_join = df_join[df_join['date'] >= df_join['date_applied']]

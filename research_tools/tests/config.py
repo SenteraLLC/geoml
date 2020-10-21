@@ -25,8 +25,9 @@ sentinel_test1 = {
     'dap': 'dap',
     'rate_ntd': {'col_rate_n': 'rate_n_kgha',
                  'col_out': 'rate_ntd_kgha'},
-    'sentinel_bands': ['492', '559', '665', '704', '740', '781', '864', '1612',
-                       '2194']}
+    # 'sentinel_bands': ['492', '559', '665', '704', '740', '781', '864', '1612',
+    #                    '2194'],
+    'sentinel_wl_range': [400, 900]}
 
 cs_test1 = {
     'dap': 'dap',
@@ -198,16 +199,17 @@ config_dict = {
             'obs_soil': 'obs_soil.geojson',
             'rs_cropscan': 'rs_cropscan.csv',
             'rs_sentinel': 'rs_sentinel.geojson',
-            'weather': 'calc_weather.csv'
+            'weather': 'weather.csv',
+            'weather_derived': 'calc_weather.csv'
             }
         },
     'FeatureData': {
-        'base_dir_data': os.path.join(test_dir, 'testdata'),
+        # 'base_dir_data': os.path.join(test_dir, 'testdata'),
         'random_seed': 999,
-        'fname_obs_tissue': 'obs_tissue.csv',
-        'fname_cropscan': 'rs_cropscan.csv',
-        'fname_sentinel': 'rs_sentinel.csv',
-        'fname_wx': 'calc_weather.csv',
+        # 'fname_obs_tissue': 'obs_tissue.csv',
+        # 'fname_cropscan': 'rs_cropscan.csv',
+        # 'fname_sentinel': 'rs_sentinel.csv',
+        # 'fname_wx': 'calc_weather.csv',
         'dir_results': None,
         'group_feats': cs_test2,
         'ground_truth_tissue': 'petiole',  # must coincide with obs_tissue.csv "tissue" column
