@@ -12,6 +12,9 @@ Insight Sensing Corporation. All rights reserved.
 import numpy as np
 import os
 
+from sklearn.model_selection import LeavePGroupsOut
+from sklearn.model_selection import train_test_split
+
 from sklearn.preprocessing import PowerTransformer
 from sklearn.compose import TransformedTargetRegressor
 
@@ -215,9 +218,17 @@ config_dict = {
         'ground_truth_tissue': 'petiole',  # must coincide with obs_tissue.csv "tissue" column
         'ground_truth_measure': 'no3_ppm',  # must coincide with obs_tissue.csv "measure" column
         'date_tolerance': 3,
-        'test_size': 0.4,
-        'stratify': ['owner', 'study', 'date'],
+        'cv_method': LeavePGroupsOut,
+        'cv_method_kwargs': {'n_groups': 1},  # will be passed as ['cv_method'](**['cv_method_kwargs'])
+        'cv_split_kwargs': {'X': 'df', 'groups': 'df["year"] != 2020'},  # will be passed to ['cv_method'].split()???
+        # 'cv_method': ShuffleSplit,
+        # 'cv_method_kwargs': {'n_splits': 2, 'test_size': 0.4},
+        # 'cv_split_kwargs': {'X': 'df', 'groups': 'df["year"] != 2020'},
+        # 'cv_method': train_test_split,
+        # 'cv_method_kwargs': {'arrays': 'df', 'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'},  # to pass a str, wrap in double quotes
+        # 'cv_split_kwargs': None,
         'impute_method': 'iterative',
+        'kfold_stratify': ['owner', 'year'],
         'n_splits': 4,
         'n_repeats': 3,
         'train_test': 'train',

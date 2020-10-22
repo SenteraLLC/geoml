@@ -9,17 +9,20 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+import inspect
 import numpy as np
 import os
 import pandas as pd
 import geopandas as gpd
 
+from copy import deepcopy
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.model_selection import train_test_split
 from sklearn.impute import KNNImputer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
+import db.utilities as db_utils
 # from research_tools import feature_groups
 from research_tools import Tables
 
@@ -35,8 +38,8 @@ class FeatureData(Tables):
         'fname_obs_tissue', 'fname_cropscan', 'fname_sentinel',
         'random_seed', 'dir_results', 'group_feats',
         'ground_truth_tissue', 'ground_truth_measure',
-        'date_tolerance', 'test_size', 'stratify', 'impute_method', 'n_splits',
-        'n_repeats', 'train_test', 'print_out_fd')
+        'date_tolerance', 'cv_method', 'cv_method_kwargs', 'cv_split_kwargs',
+        'impute_method', 'kfold_stratify', 'n_splits', 'n_repeats', 'train_test', 'print_out_fd')
 
     def __init__(self, **kwargs):
         super(FeatureData, self).__init__(**kwargs)
@@ -57,9 +60,11 @@ class FeatureData(Tables):
         self.ground_truth_tissue = 'vine'
         self.ground_truth_measure = 'n_pct'
         self.date_tolerance = 3
-        self.test_size = 0.4
-        self.stratify = ['study', 'date']
+        self.cv_method = train_test_split
+        self.cv_method_kwargs = {'arrays': 'df', 'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'}
+        self.cv_split_kwargs = None
         self.impute_method = 'iterative'
+        self.kfold_stratify = ['owner', 'year']
         self.n_splits = 2
         self.n_repeats = 3
         self.train_test = 'train'
@@ -398,38 +403,116 @@ class FeatureData(Tables):
         for both the train and test sets: <stratify_train> and <stratify_test>
         '''
         msg1 = ('All <stratify> strings must be columns in <df_y>')
-        for c in self.stratify:
+        for c in self.kfold_stratify:
             assert c in self.df_y.columns, msg1
 
         self.stratify_train = self.df_y[
-            self.df_y['train_test'] == 'train'].groupby(self.stratify
-                                                        ).ngroup().values
+            self.df_y['train_test'] == 'train'].groupby(
+                self.kfold_stratify).ngroup().values
         self.stratify_test = self.df_y[
-            self.df_y['train_test'] == 'test'].groupby(self.stratify
-                                                        ).ngroup().values
+            self.df_y['train_test'] == 'test'].groupby(
+                self.kfold_stratify).ngroup().values
+
+    def _check_sklearn_splitter(self):
+        '''
+        Checks <cv_method>, <cv_method_kwargs>, and <cv_split_kwargs> for
+        continuity.
+
+        Raises a ValueError if an invalid parameter keyword is provided.
+
+        Note:
+            Does not check for the validity of the keyword argument(s).
+        '''
+        cv_method_args = inspect.getfullargspec(self.cv_method)[0]
+        cv_split_args = inspect.getfullargspec(self.cv_method.split)[0]
+        cv_method_args.remove('self')
+        cv_split_args.remove('self')
+        msg1 = ('Some <cv_method_kwargs> parameters are not available with '
+                'the <{0}> function.\nAllowed parameters: {1}\nPassed '
+                'to <cv_method_kwargs>: {2}\n\nPlease adjust '
+                '<cv_method> and <cv_method_kwargs> so they follow the '
+                'requirements of one of the many scikit-learn "splitter '
+                'classes". Documentation available at '
+                'https://scikit-learn.org/stable/modules/classes.html#splitter-classes.'
+                ''.format(self.cv_method.__name__,
+                          cv_method_args,
+                          list(self.cv_method_kwargs.keys())))
+        msg2 = ('Some <cv_split_kwargs> parameters are not available with '
+                'the <{0}.split()> method.\nAllowed parameters: {1}\nPassed '
+                'to <cv_split_kwargs>: {2}\n\nPlease adjust <cv_method>, '
+                '<cv_method_kwargs>, and/or <cv_split_kwargs> so they follow '
+                'the requirements of one of the many scikit-learn "splitter '
+                'classes". Documentation available at '
+                'https://scikit-learn.org/stable/modules/classes.html#splitter-classes.'
+                ''.format(self.cv_method.__name__,
+                          cv_split_args,
+                          list(self.cv_split_kwargs.keys())))
+        if any([i not in inspect.getfullargspec(self.cv_method)[0]
+                for i in self.cv_method_kwargs]) == True:
+            raise ValueError(msg1)
+        if any([i not in inspect.getfullargspec(self.cv_method.split)[0]
+                for i in self.cv_split_kwargs]) == True:
+            raise ValueError(msg2)
+
+    def _cv_method_check_random_seed(self):
+        '''
+        If 'random_state' is a valid parameter in <cv_method>, sets from
+        <random_seed>.
+        '''
+        cv_method_args = inspect.getfullargspec(self.cv_method)[0]
+        if 'random_state' in cv_method_args:  # ensure random_seed is set correctly
+            self.cv_method_kwargs['random_state'] = self.random_seed  # if this will get passed to eval(), should be fine since it gets passed to str() first
 
     def _train_test_split_df(self, df):
         '''
-        Splits ``df`` into train and test sets; all parameters used by
-        ``sklearn.train_test_split`` must have been set before invoking this
-        function.
+        Splits <df> into train and test sets.
+
+        This function is designed to handle any of the many scikit-learn
+        "splitter classes". Documentation available at
+        https://scikit-learn.org/stable/modules/classes.html#splitter-classes.
+        All parameters used by the <cv_method> function or the
+        <cv_method.split> method should be set via
+        <cv_method_kwargs> and <cv_split_kwargs>.
 
         Parameters:
-            df:
+            cv_method (``sklearn.model_selection.SplitterClass``): The
+                scikit-learn method to use to split into training and test
+                groups.
+            cv_method_kwargs (``dict``): Keyword arguments to be passed to
+                ``cv_method()``.
+            cv_split_kwargs (``dict``): Keyword arguments to be passed to
+                ``cv_method.split()``.
         '''
-        # df = self._add_stratify_id(df)
-        df_stratify = df[fd.stratify]
-        df_train, df_test = train_test_split(
-            df, test_size=fd.test_size, random_state=fd.random_seed,
-            stratify=df_stratify)
-        df2 = df.groupby(fd.stratify).agg(['count'])
+        # if 'groups' in inspect.getargspec(cv_method.split)[0]:
+        #     # get array describing the group of each row
+        #     df_groups = df[group_col] != group_val_test
 
+        self._cv_method_check_random_seed()
+        # if train_test_split, ignore cv_split_kwargs
+        # also, assume it is a string that should be evaluated
+        if self.cv_method.__name__ == 'train_test_split':
+            scope = locals()
+            cv_method_kwargs = dict(
+                (k, eval(str(self.cv_method_kwargs[k]), scope)) for k in self.cv_method_kwargs)
+            # df_train, df_test = train_test_split(df, test_size=0.4, stratify=df_stratify)
+            df_train, df_test = self.cv_method(**cv_method_kwargs)
+        else:
+            self._check_sklearn_splitter()
+            scope = locals()
+            cv_split_kwargs = dict(
+                (k, eval(str(self.cv_split_kwargs[k]), scope)) for k in self.cv_split_kwargs)
+            # cv_split_kwargs = {}
+            # for k in self.cv_split_kwargs:
+            #     setattr(cv_split_kwargs, k, self.cv_split_kwargs[k])
+            cv = self.cv_method(**self.cv_method_kwargs)
+            train_idx, test_idx = next(cv.split(**cv_split_kwargs))
+            df_train, df_test = df.loc[train_idx], df.loc[test_idx]
 
         df_train.insert(0, 'train_test', 'train')
         df_test.insert(0, 'train_test', 'test')
-        df = df_train.copy()
-        df = df.append(df_test).reset_index(drop=True)
-        return df
+        df_out = df_train.copy()
+        df_out = df_out.append(df_test).reset_index(drop=True)
+        return df_out
 
     def _impute_missing_data(self, X, method='iterative'):
         '''
@@ -567,20 +650,39 @@ class FeatureData(Tables):
                 greater than ``date_tolerance``, the join will not occur and
                 data will be neglected). Only relevant if predictor features
                 were collected on a different day than response features.
-            test_size (``float``):
-            stratify (``str``):
+            cv_method (``sklearn.model_selection.SplitterClass``): The
+                scikit-learn method to use to split into training and test
+                groups.
+            cv_method_kwargs (``dict``): Keyword arguments to be passed to
+                ``cv_method()``.
+            cv_split_kwargs (``dict``): Keyword arguments to be passed to
+                ``cv_method.split()``.
+            stratify (``list``): If not None, data is split in a stratified
+                fashion, using this as the class labels. Ignored if
+                ``cv_method`` is not "stratified". See
+                ``sklearn.model_selection.train_test_split()`` documentation
+                for more information. Note that if there are less than two
+                unique stratified "groups", an error will be raised.
             impute_method (``str``):
+
+        Note:
+            This function is designed to handle any of the many scikit-learn
+            "splitter classes". Documentation available at
+            https://scikit-learn.org/stable/modules/classes.html#splitter-classes.
+            All parameters used by the <cv_method> function or the
+            <cv_method.split> method should be set via
+            <cv_method_kwargs> and <cv_split_kwargs>.
 
         Example:
             >>> from research_tools import FeatureData
             >>> from research_tools.tests import config
 
-            >>> feat_data_cs = FeatureData(config_dict=config.config_dict)
-            >>> feat_data_cs.get_feat_group_X_y(test_size=0.1)
-            >>> print('Shape of training matrix "X": {0}'.format(feat_data_cs.X_train.shape))
-            >>> print('Shape of training vector "y": {0}'.format(feat_data_cs.y_train.shape))
-            >>> print('Shape of testing matrix "X":  {0}'.format(feat_data_cs.X_test.shape))
-            >>> print('Shape of testing vector "y":  {0}'.format(feat_data_cs.y_test.shape))
+            >>> fd = FeatureData(config_dict=config.config_dict)
+            >>> fd.get_feat_group_X_y(test_size=0.1)
+            >>> print('Shape of training matrix "X": {0}'.format(fd.X_train.shape))
+            >>> print('Shape of training vector "y": {0}'.format(fd.y_train.shape))
+            >>> print('Shape of testing matrix "X":  {0}'.format(fd.X_test.shape))
+            >>> print('Shape of testing vector "y":  {0}'.format(fd.y_test.shape))
             Shape of training matrix "X": (579, 14)
             Shape of training vector "y": (579,)
             Shape of testing matrix "X":  (65, 14)
@@ -593,15 +695,16 @@ class FeatureData(Tables):
             # stratify=stratify)
 
         # df, labels_y_id, label_y = self._get_response_df(self.ground_truth)
-        df = fd._get_response_df(fd.ground_truth_tissue,
-                                   fd.ground_truth_measure)
-        df = fd._join_group_feats(df, fd.group_feats, fd.date_tolerance)
+        df = self._get_response_df(self.ground_truth_tissue,
+                                   self.ground_truth_measure)
+        df = self._join_group_feats(df, self.group_feats, self.date_tolerance)
         df = self._train_test_split_df(df)
 
         X_train, X_test, y_train, y_test, df = self._get_X_and_y(
             df, impute_method=self.impute_method)
 
-        labels_id = ['owner', 'study', 'year', 'plot_id', 'date', 'train_test']
+        subset = db_utils.get_primary_keys(df)
+        labels_id = subset + ['date', 'train_test']
         self.df_X = df[labels_id + self.labels_x]
         self.df_y = df[labels_id + self.labels_y_id + [self.label_y]]
         self.labels_id = labels_id
@@ -639,9 +742,9 @@ class FeatureData(Tables):
             >>> from research_tools import FeatureData
             >>> from research_tools.tests import config
 
-            >>> feat_data_cs = FeatureData(config_dict=config.config_dict)
-            >>> feat_data_cs.get_feat_group_X_y()
-            >>> cv_rep_strat = feat_data_cs.kfold_repeated_stratified(print_out_fd=True)
+            >>> fd = FeatureData(config_dict=config.config_dict)
+            >>> fd.get_feat_group_X_y()
+            >>> cv_rep_strat = fd.kfold_repeated_stratified(print_out_fd=True)
             Number of splits: 2
             Number of repetitions: 3
             The number of observations in each cross-validation dataset are listed below.
