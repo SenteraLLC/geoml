@@ -221,8 +221,8 @@ class FeatureData(Tables):
             col_rate_ntd_out = group_feats['rate_ntd']['col_out']
             # unit_str = value.rsplit('_', 1)[1]
             df = self.rate_ntd(df, col_rate_n=col_rate_n,
-                 col_rate_ntd_out=col_rate_ntd_out)
-            df[col_rate_ntd_out] = pd.to_numeric(df[col_rate_ntd_out])
+                               col_rate_ntd_out=col_rate_ntd_out)
+            # df[col_rate_ntd_out] = pd.to_numeric(df[col_rate_ntd_out])
         if 'weather_derived' in group_feats:
             df = self.join_closest_date(  # join weather by closest date
                 df, self.weather_derived, left_on='date', right_on='date',
