@@ -412,8 +412,13 @@ class Tables(object):
         '''
         msg = ('The following columns are required in "{0}". Missing columns: '
                '"{1}".')
+        if self.db is not None:
+            engine = self.db.engine
+            db_schema = self.db.db_schema
+        else:
+            engine, db_schema = None, None
         cols_require, _ = db_utils.get_cols_nullable(
-            table_name, engine=self.db.engine, db_schema=self.db.db_schema)
+            table_name, engine=engine, db_schema=db_schema)
         cols_require = [item for item in cols_require if item != 'id']
         if not all(i in df.columns for i in cols_require):
             cols_missing = list(sorted(set(cols_require) - set(df.columns)))
@@ -507,12 +512,16 @@ class Tables(object):
         '''
         subset_left = db_utils.get_primary_keys(df_left)
         subset_right = db_utils.get_primary_keys(df_right)
+        # Get names of geometry columns
+        geom_l = df_left.geometry.name + '_l'
+        geom_r = df_right.geometry.name + '_r'
+
         # Missing geometry will get filtered out here
         df_merge1 = df_left.merge(df_right, how='inner', on=subset_left, suffixes=['_l', '_r'], validate='many_to_many')
         # Grab geometry for each df; because zonal stats were retrieved based
         # on obs_tissue geom, we can keep observations that geometry is equal.
-        gdf_merge1_l = gpd.GeoDataFrame(df_merge1['geom_l'], geometry='geom_l')
-        gdf_merge1_r = gpd.GeoDataFrame(df_merge1['geom_r'], geometry='geom_r')
+        gdf_merge1_l = gpd.GeoDataFrame(df_merge1[geom_l], geometry=geom_l)
+        gdf_merge1_r = gpd.GeoDataFrame(df_merge1[geom_r], geometry=geom_r)
         # Remove all rows whose left geom does not "almost eqaul" right geom
         df_sjoin2 = df_merge1[gdf_merge1_l.geom_almost_equals(gdf_merge1_r, 8)]
         left_on2 = left_on + '_l'
@@ -527,7 +536,7 @@ class Tables(object):
         df_delta = df_sjoin2[abs(df_sjoin2['date_delta']) <= tolerance]
         # Because a left row may have multiple matches with the right <df>,
         # keep only the one that is the closest. First, find duplicate rows.
-        subset = subset_left + [left_on2, 'geom_r']
+        subset = subset_left + [left_on2, geom_r]
         df_dup = df_delta[df_delta.duplicated(subset=subset, keep=False)]
         # Next, find row with lowest date_delta; if same, just get first.
         df_keep = pd.DataFrame(data=[], columns=df_dup.columns)  # df for selected entries
@@ -542,14 +551,123 @@ class Tables(object):
         df_join = df_join.append(df_keep)
         df_join = df_join[pd.notnull(df_join['date_delta'])]
         # drop right join columns,
-        if 'geom_l' in df_join.columns:
-            df_join = gpd.GeoDataFrame(df_join, geometry='geom_l')
-            df_join.rename(columns={'geom_l': 'geometry'}, inplace=True)
+        if geom_l in df_join.columns:
+            df_join = gpd.GeoDataFrame(df_join, geometry=geom_l)
+            df_join.rename(columns={geom_l: 'geometry'}, inplace=True)
         df_join.rename(columns={left_on2:left_on}, inplace=True)
-        cols_drop = [c+side for side in ['_l', '_r'] for c in ['id', 'geom']
+        cols_drop = [c+side for side in ['_l', '_r'] for c in ['id', 'geom', 'geometry']
                      if c+side in df_join.columns] + [right_on2]
         df_join.drop(columns=cols_drop, inplace=True)
         return df_join
+
+    def _add_id_by_subset(self, df, subset, col_id='id'):
+        '''
+        Adds a new column named 'id' to <df> based on unique subset values.
+        '''
+        df_unique_id = df.drop_duplicates(
+            subset=subset, keep='first').sort_values(
+                by=subset)[subset]
+        df_unique_id.insert(0, 'id', list(range(len(df_unique_id))))
+        df_id = df.merge(df_unique_id, on=subset)
+        df_id = df_id[['id'] + [c for c in df_id.columns if c != 'id' ]]
+        return df_id
+
+    def _calc_ntd_with_geom(self, df, df_join, col_rate_n, col_rate_ntd_out,
+                            col_id='id'):
+        '''
+        Calculates nitrogen applied to date for a geodataframe potentially
+        having multiple geometries in the same "subset".
+
+        The issue is that with multiple geometries in the same field_id, the
+        N applications are being added across geometries all towards the same
+        field_id and it is mis-calculated as being much higher N rate than it
+        actually was. By separating, we can add up N applied thus far for
+        fields with a single geometry, then handle fields with mutliple
+        geometries separate.
+            # 0. Separate between primary key rows that are unique (those with
+            # only a single geometry), and those that aren't (those with
+            # multiple geometries).
+        Note:
+            <df> should already have the join with the <n_applications> table.
+        '''
+        subset = db_utils.get_primary_keys(df)
+        cols_require = subset + ['date']  # Unique subset for which to calculate NTD
+
+        if col_id not in df_join.columns:  # required for multiple geometries
+            self._add_id_by_subset(df_join, subset=cols_require, col_id=col_id)
+
+        # 1. Get all unique geometries for each year
+        # subgeom = subset + [df_join.geometry.name]
+        # df_unique = df_join[~df_join.duplicated(
+        #     subset=subgeom, keep='first')][subgeom]
+
+        # # 2. Separate fields with only a single geometry from those with
+        # # multiple geometries by checking <df_unique> subset.
+        # df_subset_1_geom = df_unique[~df_unique.duplicated(
+        #     subset=subset, keep=False)][subgeom]
+        # df_subset_mult_geom = df_unique[df_unique.duplicated(
+        #     subset=subset, keep=False)][subgeom]
+
+        # # 3. Combine single and multiple geometries, and get N app info
+        # df_single_mult = pd.concat([df_subset_1_geom, df_subset_mult_geom],
+        #                            ignore_index=True)
+        # df_join_single_mult = df_join.merge(  # get N app info for all dates
+        #     df_single_mult, on=subgeom)
+
+        # 4. Calculate N applied to date, and merge with original <df>
+        # df_ntd = df_join_single_mult.groupby(
+        #     cols_require + [col_id])[col_rate_n].sum().reset_index()
+        df_ntd = df_join.groupby(
+            cols_require + [col_id])[col_rate_n].sum().reset_index()
+        df_ntd = df_ntd.sort_values(by=col_id).reset_index(drop=True)
+        df_ntd.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+        df_out = df.merge(df_ntd, on=cols_require + [col_id],
+                          validate='many_to_one')  # col_id required because it is unique for each observation
+        return df_out
+
+# ##############
+#         # 1. Get all unique geometries
+#         subgeom = subset + [df_join.geometry.name]
+#         df_unique = df_join[~df_join.duplicated(  # don't want id because this is unique geom not obs
+#             subset=subgeom, keep='first')][subgeom]
+
+#         # 2. Separate fields with only a single geometry from those with
+#         # multiple geometries by checking <df_unique> subset.
+#         df_subset_1_geom = df_unique[~df_unique.duplicated(
+#             subset=subset, keep=False)][subgeom]
+#         df_subset_mult_geom = df_unique[df_unique.duplicated(
+#             subset=subset, keep=False)][subgeom]
+
+#         # 3. For fields with 1 geom, business as usual
+#         df_join_single = df_join.merge(  # get attributes from <df_join>
+#             df_subset_1_geom, on=subgeom)
+#         df_ntd_single = df_join_single.groupby(cols_require + ['id'])[col_rate_n].sum().reset_index()
+
+#         # 4. For fields with multiple geom, calculate NTD for each separately
+#         df_join_mult = df_join.merge(
+#             df_subset_mult_geom, on=subgeom)
+#         df_ntd_mult = df_join_mult.groupby(cols_require + ['id'])[col_rate_n].sum().reset_index()  # have to use id because 'geom' won't work
+
+#         # Combine at point of renaming col
+#         df_single_mult = pd.concat([df_ntd_single, df_ntd_mult], ignore_index=True).sort_values(by='id')
+#         df_single_mult.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+
+#         df_out = df.merge(df_single_mult, on=cols_require + ['id'], validate='many_to_one')
+#         # at this point, I think 'id' can be dropped?
+
+
+# ##################
+        # df_ntd_single.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+        # df_out_single = df.merge(df_ntd_single, on=cols_require)
+
+        # # df_ntd_mult.drop(columns='id', inplace=True)  # have to drop id because it will influence final merge with df
+        # df_ntd_mult.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+
+        # df_out_mult = df.merge(df_ntd_mult, on=cols_require + ['id'], validate='many_to_one')
+        # df_out_mult = df_out_mult.drop_duplicates(subset=cols_require + ['id', col_rate_ntd_out])
+        # df_out = pd.concat([df_out_single, df_out_mult], ignore_index=True).sort_values(by='id')
+        # # at this point, I think 'id' can be dropped?
+        # return df_out
 
     def load_tables(self, **kwargs):
         '''
@@ -784,115 +902,6 @@ class Tables(object):
         # df_out = df_join[cols_require + ['dap']]
         # df_out = df.merge(df_out, on=cols_require)
         # return df_out.reset_index(drop=True)
-
-    def _add_id_by_subset(self, df, subset, col_id='id'):
-        '''
-        Adds a new column named 'id' to <df> based on unique subset values.
-        '''
-        df_unique_id = df.drop_duplicates(
-            subset=subset, keep='first').sort_values(
-                by=subset)[subset]
-        df_unique_id.insert(0, 'id', list(range(len(df_unique_id))))
-        df_id = df.merge(df_unique_id, on=subset)
-        df_id = df_id[['id'] + [c for c in df_id.columns if c != 'id' ]]
-        return df_id
-
-    def _calc_ntd_with_geom(self, df, df_join, col_rate_n, col_rate_ntd_out,
-                            col_id='id'):
-        '''
-        Calculates nitrogen applied to date for a geodataframe potentially
-        having multiple geometries in the same "subset".
-
-        The issue is that with multiple geometries in the same field_id, the
-        N applications are being added across geometries all towards the same
-        field_id and it is mis-calculated as being much higher N rate than it
-        actually was. By separating, we can add up N applied thus far for
-        fields with a single geometry, then handle fields with mutliple
-        geometries separate.
-            # 0. Separate between primary key rows that are unique (those with
-            # only a single geometry), and those that aren't (those with
-            # multiple geometries).
-        Note:
-            <df> should already have the join with the <n_applications> table.
-        '''
-        subset = db_utils.get_primary_keys(df)
-        cols_require = subset + ['date']  # Unique subset for which to calculate NTD
-
-        if col_id not in df_join.columns:  # required for multiple geometries
-            self._add_id_by_subset(df_join, subset=cols_require, col_id=col_id)
-
-        # 1. Get all unique geometries for each year
-        # subgeom = subset + [df_join.geometry.name]
-        # df_unique = df_join[~df_join.duplicated(
-        #     subset=subgeom, keep='first')][subgeom]
-
-        # # 2. Separate fields with only a single geometry from those with
-        # # multiple geometries by checking <df_unique> subset.
-        # df_subset_1_geom = df_unique[~df_unique.duplicated(
-        #     subset=subset, keep=False)][subgeom]
-        # df_subset_mult_geom = df_unique[df_unique.duplicated(
-        #     subset=subset, keep=False)][subgeom]
-
-        # # 3. Combine single and multiple geometries, and get N app info
-        # df_single_mult = pd.concat([df_subset_1_geom, df_subset_mult_geom],
-        #                            ignore_index=True)
-        # df_join_single_mult = df_join.merge(  # get N app info for all dates
-        #     df_single_mult, on=subgeom)
-
-        # 4. Calculate N applied to date, and merge with original <df>
-        # df_ntd = df_join_single_mult.groupby(
-        #     cols_require + [col_id])[col_rate_n].sum().reset_index()
-        df_ntd = df_join.groupby(
-            cols_require + [col_id])[col_rate_n].sum().reset_index()
-        df_ntd = df_ntd.sort_values(by=col_id).reset_index(drop=True)
-        df_ntd.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-        df_out = df.merge(df_ntd, on=cols_require + [col_id],
-                          validate='many_to_one')  # col_id required because it is unique for each observation
-        return df_out
-
-# ##############
-#         # 1. Get all unique geometries
-#         subgeom = subset + [df_join.geometry.name]
-#         df_unique = df_join[~df_join.duplicated(  # don't want id because this is unique geom not obs
-#             subset=subgeom, keep='first')][subgeom]
-
-#         # 2. Separate fields with only a single geometry from those with
-#         # multiple geometries by checking <df_unique> subset.
-#         df_subset_1_geom = df_unique[~df_unique.duplicated(
-#             subset=subset, keep=False)][subgeom]
-#         df_subset_mult_geom = df_unique[df_unique.duplicated(
-#             subset=subset, keep=False)][subgeom]
-
-#         # 3. For fields with 1 geom, business as usual
-#         df_join_single = df_join.merge(  # get attributes from <df_join>
-#             df_subset_1_geom, on=subgeom)
-#         df_ntd_single = df_join_single.groupby(cols_require + ['id'])[col_rate_n].sum().reset_index()
-
-#         # 4. For fields with multiple geom, calculate NTD for each separately
-#         df_join_mult = df_join.merge(
-#             df_subset_mult_geom, on=subgeom)
-#         df_ntd_mult = df_join_mult.groupby(cols_require + ['id'])[col_rate_n].sum().reset_index()  # have to use id because 'geom' won't work
-
-#         # Combine at point of renaming col
-#         df_single_mult = pd.concat([df_ntd_single, df_ntd_mult], ignore_index=True).sort_values(by='id')
-#         df_single_mult.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-
-#         df_out = df.merge(df_single_mult, on=cols_require + ['id'], validate='many_to_one')
-#         # at this point, I think 'id' can be dropped?
-
-
-# ##################
-        # df_ntd_single.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-        # df_out_single = df.merge(df_ntd_single, on=cols_require)
-
-        # # df_ntd_mult.drop(columns='id', inplace=True)  # have to drop id because it will influence final merge with df
-        # df_ntd_mult.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-
-        # df_out_mult = df.merge(df_ntd_mult, on=cols_require + ['id'], validate='many_to_one')
-        # df_out_mult = df_out_mult.drop_duplicates(subset=cols_require + ['id', col_rate_ntd_out])
-        # df_out = pd.concat([df_out_single, df_out_mult], ignore_index=True).sort_values(by='id')
-        # # at this point, I think 'id' can be dropped?
-        # return df_out
 
     def rate_ntd(self, df, col_rate_n='rate_n_kgha',
                  col_rate_ntd_out='rate_ntd_kgha'):
