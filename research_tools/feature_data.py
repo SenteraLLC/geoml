@@ -14,6 +14,7 @@ import numpy as np
 import os
 import pandas as pd
 import geopandas as gpd
+import warnings
 
 from copy import deepcopy
 from sklearn.model_selection import RepeatedStratifiedKFold
@@ -157,7 +158,7 @@ class FeatureData(Tables):
 
     def _handle_wl_cols(self, c, wl_range, labels_x, prefix='wl_'):
         '''
-        Checks for reflectance column validity with a previx present.
+        Checks for reflectance column validity with a prefix present.
 
         Parameters:
             c (``str``): The column label to evaluate. If it is numeric and
@@ -175,7 +176,13 @@ class FeatureData(Tables):
 
         if (col.isnumeric() and int(col) >= wl_range[0] and
             int(col) <= wl_range[1]):
-            labels_x.append(col)
+            labels_x.append(c)
+        # else:
+        #     print('Wavelength column <{0}> is not valid. Please note that '
+        #           'wavelength columns should begin with <prefix> and the rest '
+        #           'must include the wavelength value that can be interpreted '
+        #           'as an integer (be sure columns are not decimals).'
+        #           ''.format(c))
         return labels_x
 
     def _get_labels_x(self, group_feats, cols=None):
@@ -215,17 +222,21 @@ class FeatureData(Tables):
             # unit_str = value.rsplit('_', 1)[1]
             df = self.rate_ntd(df, col_rate_n=col_rate_n,
                  col_rate_ntd_out=col_rate_ntd_out)
-        if 'wx' in group_feats:
-            df = self.join_closest_date(  # join wx by closest date
-                df, self.df_wx, left_on='date', right_on='date',
-                tolerance=0, by=['owner', 'study', 'year'])
+            df[col_rate_ntd_out] = pd.to_numeric(df[col_rate_ntd_out])
+        if 'weather_derived' in group_feats:
+            df = self.join_closest_date(  # join weather by closest date
+                df, self.weather_derived, left_on='date', right_on='date',
+                tolerance=0)
 
         for key in group_feats:  # necessary because 'cropscan_wl_range1' must be differentiated
             if 'cropscan' in key:
                 df = self.join_closest_date(  # join cropscan by closest date
                     df, self.rs_cropscan, left_on='date', right_on='date',
-                    tolerance=date_tolerance, by=['owner', 'study', 'year', 'plot_id'])
-                break
+                    tolerance=date_tolerance)
+            if 'sentinel' in key:
+                df = self.join_closest_date(  # join sentinel by closest date
+                    df, self.rs_sentinel, left_on='date',
+                    right_on='acquisition_time', tolerance=date_tolerance)
         return df
 
     def _get_primary_keys(self, df):
@@ -413,23 +424,37 @@ class FeatureData(Tables):
             self.df_y['train_test'] == 'test'].groupby(
                 self.kfold_stratify).ngroup().values
 
-    def _check_sklearn_splitter(self):
+    def _check_sklearn_splitter(self, raise_error=False):
         '''
         Checks <cv_method>, <cv_method_kwargs>, and <cv_split_kwargs> for
         continuity.
 
-        Raises a ValueError if an invalid parameter keyword is provided.
+        Displays a UserWarning or raises ValueError if an invalid parameter
+        keyword is provided.
+
+        Parameters:
+            raise_error (``bool``): If ``True``, raises a ``ValueError`` if
+                parameters do not appera to be available. Otherwise, simply
+                issues a warning, and will try to move forward anyways. This
+                exists because <inspect.getfullargspec(self.cv_method)[0]> is
+                used to get the arguments, but certain scikit-learn functions/
+                methods do not expose their arguments to be screened by
+                <inspect.getfullargspec>. Thus, the only way to use certain
+                splitter functions is to bypass this check.
 
         Note:
-            Does not check for the validity of the keyword argument(s).
+            Does not check for the validity of the keyword argument(s). Also,
+            the warnings does not work as fully intended because when
+            <inspect.getfullargspec(self.cv_method)[0]> returns an empty list,
+            there is no either a warning or ValueError can be raised.
         '''
         cv_method_args = inspect.getfullargspec(self.cv_method)[0]
         cv_split_args = inspect.getfullargspec(self.cv_method.split)[0]
-        cv_method_args.remove('self')
-        cv_split_args.remove('self')
-        msg1 = ('Some <cv_method_kwargs> parameters are not available with '
-                'the <{0}> function.\nAllowed parameters: {1}\nPassed '
-                'to <cv_method_kwargs>: {2}\n\nPlease adjust '
+        if 'self' in cv_method_args: cv_method_args.remove('self')
+        if 'self' in cv_split_args: cv_split_args.remove('self')
+        msg1 = ('Some <cv_method_kwargs> parameters do not appear to be '
+                'available with the <{0}> function.\nAllowed parameters: {1}\n'
+                'Passed to <cv_method_kwargs>: {2}\n\nPlease adjust '
                 '<cv_method> and <cv_method_kwargs> so they follow the '
                 'requirements of one of the many scikit-learn "splitter '
                 'classes". Documentation available at '
@@ -449,10 +474,17 @@ class FeatureData(Tables):
                           list(self.cv_split_kwargs.keys())))
         if any([i not in inspect.getfullargspec(self.cv_method)[0]
                 for i in self.cv_method_kwargs]) == True:
-            raise ValueError(msg1)
+            if raise_error:
+                raise ValueError(msg1)
+            else:
+                warnings.warn(msg1, UserWarning)
+
         if any([i not in inspect.getfullargspec(self.cv_method.split)[0]
                 for i in self.cv_split_kwargs]) == True:
-            raise ValueError(msg2)
+            if raise_error:
+                raise ValueError(msg2)
+            else:
+                warnings.warn(msg2, UserWarning)
 
     def _cv_method_check_random_seed(self):
         '''
@@ -475,35 +507,46 @@ class FeatureData(Tables):
         <cv_method_kwargs> and <cv_split_kwargs>.
 
         Parameters:
+            df (``pandas.DataFrame``): The df to split between train and test
+                sets.
             cv_method (``sklearn.model_selection.SplitterClass``): The
                 scikit-learn method to use to split into training and test
-                groups.
+                groups. In addition to <SplitterClass>(es), <cv_method> can be
+                <sklearn.model_selection.train_test_split>, in which case
+                <cv_split_kwargs> is ignored and <cv_method_kwargs> should be
+                used to pass <cv_method> parameters that will be evaluated via
+                the eval() function.
             cv_method_kwargs (``dict``): Keyword arguments to be passed to
                 ``cv_method()``.
             cv_split_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method.split()``.
-        '''
-        # if 'groups' in inspect.getargspec(cv_method.split)[0]:
-        #     # get array describing the group of each row
-        #     df_groups = df[group_col] != group_val_test
+                ``cv_method.split()``. Note that the <X> kwarg defaults to
+                ``df`` if not set.
 
+        Note:
+            If <n_splits> is set for any <SplitterClass>, it is generally
+            ignored. That is, if there are multiple splitting iterations
+            (<n_splits> greater than 1), only the first iteration is used to
+            split between train and test sets.
+        '''
         self._cv_method_check_random_seed()
-        # if train_test_split, ignore cv_split_kwargs
-        # also, assume it is a string that should be evaluated
         if self.cv_method.__name__ == 'train_test_split':
-            scope = locals()
+            # Because train_test_split has **kwargs for options, random_state is not caught, so it should be set explicitly
+            self.cv_method_kwargs['random_state'] = self.random_seed
+            if 'arrays' in self.cv_method_kwargs:  # I think can only be <df>?
+                df = eval(self.cv_method_kwargs.pop('arrays', None))
+            scope = locals()  # So it understands what <df> is inside func scope
             cv_method_kwargs = dict(
-                (k, eval(str(self.cv_method_kwargs[k]), scope)) for k in self.cv_method_kwargs)
-            # df_train, df_test = train_test_split(df, test_size=0.4, stratify=df_stratify)
-            df_train, df_test = self.cv_method(**cv_method_kwargs)
+                (k, eval(str(self.cv_method_kwargs[k]), scope)
+                 ) for k in self.cv_method_kwargs)
+            df_train, df_test = self.cv_method(df, **cv_method_kwargs)
         else:
-            self._check_sklearn_splitter()
+            self._check_sklearn_splitter(raise_error=False)
+            if 'X' not in self.cv_split_kwargs:  # sets X to <df>
+                self.cv_split_kwargs['X'] = 'df'
             scope = locals()
             cv_split_kwargs = dict(
-                (k, eval(str(self.cv_split_kwargs[k]), scope)) for k in self.cv_split_kwargs)
-            # cv_split_kwargs = {}
-            # for k in self.cv_split_kwargs:
-            #     setattr(cv_split_kwargs, k, self.cv_split_kwargs[k])
+                (k, eval(str(self.cv_split_kwargs[k]), scope)
+                 ) for k in self.cv_split_kwargs)
             cv = self.cv_method(**self.cv_method_kwargs)
             train_idx, test_idx = next(cv.split(**cv_split_kwargs))
             df_train, df_test = df.loc[train_idx], df.loc[test_idx]
@@ -522,7 +565,7 @@ class FeatureData(Tables):
             method (``str``): should be one of "iterative" (takes more time)
                 or "knn" (default: "iterative").
         '''
-        if np.isnan(X).any() is False:
+        if pd.isnull(X).any() is False:
             return X
 
         if method == 'iterative':
@@ -656,7 +699,8 @@ class FeatureData(Tables):
             cv_method_kwargs (``dict``): Keyword arguments to be passed to
                 ``cv_method()``.
             cv_split_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method.split()``.
+                ``cv_method.split()``. Note that the <X> kwarg defaults to
+                ``df`` if not set.
             stratify (``list``): If not None, data is split in a stratified
                 fashion, using this as the class labels. Ignored if
                 ``cv_method`` is not "stratified". See

@@ -210,37 +210,37 @@ class Tables(object):
     #         'df_wx': ['owner', 'study', 'year', 'date'],
     #         }
 
-    def _check_requirements_custom(
-            self, df, date_cols=['date'], by=['owner', 'study', 'year', 'plot_id'],
-            date_format='%Y-%m-%d'):
-        '''
-        Checks that ``df`` has all of the correct columns and that they contain
-        the correct data types
+    # def _check_requirements_custom(
+    #         self, df, date_cols=['date'], by=['owner', 'study', 'year', 'plot_id'],
+    #         date_format='%Y-%m-%d'):
+    #     '''
+    #     Checks that ``df`` has all of the correct columns and that they contain
+    #     the correct data types
 
-        Parameters:
-            df (``pandas.DataFrame``): the input DataFrame
-            f (``str``): the function calling the _check_requirements()
-                function. This is used to access join_tables.msg_require, which
-                contains all the messages to be raised if the correct columns
-                are not in ``df``. If ``None``, just assumes ``df`` should
-                contain ["study", "year", and "plot_id"]
-        '''
-        if not isinstance(date_cols, list):
-            date_cols = [date_cols]
-        cols_require = by.copy()
-        cols_require.extend(date_cols)
+    #     Parameters:
+    #         df (``pandas.DataFrame``): the input DataFrame
+    #         f (``str``): the function calling the _check_requirements()
+    #             function. This is used to access join_tables.msg_require, which
+    #             contains all the messages to be raised if the correct columns
+    #             are not in ``df``. If ``None``, just assumes ``df`` should
+    #             contain ["study", "year", and "plot_id"]
+    #     '''
+    #     if not isinstance(date_cols, list):
+    #         date_cols = [date_cols]
+    #     cols_require = by.copy()
+    #     cols_require.extend(date_cols)
 
-        msg = ('The following columns are required in ``df``: {0}. Please '
-               'check that each of these column names are in "df.columns".'
-               ''.format(cols_require))
-        if not all(i in df.columns for i in cols_require):
-            raise AttributeError(msg)
+    #     msg = ('The following columns are required in ``df``: {0}. Please '
+    #            'check that each of these column names are in "df.columns".'
+    #            ''.format(cols_require))
+    #     if not all(i in df.columns for i in cols_require):
+    #         raise AttributeError(msg)
 
-        n_dt = len(df.select_dtypes(include=[np.datetime64]).columns)
-        if n_dt < len(date_cols):
-            for d in date_cols:
-                df[d] = pd.to_datetime(df.loc[:, d], format=date_format)
-        return df
+    #     n_dt = len(df.select_dtypes(include=[np.datetime64]).columns)
+    #     if n_dt < len(date_cols):
+    #         for d in date_cols:
+    #             df[d] = pd.to_datetime(df.loc[:, d], format=date_format)
+    #     return df
 
         # TODO: check each of the column data types if they must be particular (e.g., datetime)
 
@@ -456,6 +456,101 @@ class Tables(object):
         if table_name == 'weather_derived':
             self.weather_derived = df
 
+    def _check_col_names(self, df, cols_require):
+        '''
+        Checks to be sure all of the required columns are in <df>.
+
+        Raises:
+            AttributeError if <df> is missing any of the required columns.
+        '''
+        if not all(i in df.columns for i in cols_require):
+            cols_missing = list(sorted(set(cols_require) - set(df.columns)))
+            raise AttributeError('<df> is missing the following required '
+                                 'columns: {0}.'.format(cols_missing))
+
+    def _dt_or_ts_to_date(self, df, col_date, date_format='%Y-%m-%d'):
+        '''
+        Checks if <col> is a valid datetime or timestamp column. If not, sets
+        it as such as a <datetime.date> object.
+
+        Returns:
+            df
+        '''
+        if not pd.core.dtypes.common.is_datetime64_any_dtype(df[col_date]):
+            df[col_date] = pd.to_datetime(df.loc[:, col_date], format=date_format)
+        df[col_date] = df[col_date].dt.date
+        df[col_date] = pd.to_datetime(df[col_date])  # convert to datetime so pd.merge is possible
+
+        # if isinstance(df[col_date].iloc[0], pd._libs.tslibs.timestamps.Timestamp):
+        #     df[col_date] = df[col_date].to_datetime64()
+        return df
+
+    def _join_geom_date(self, df_left, df_right, left_on, right_on, tolerance=3):
+        '''
+        Merges on geometry, then keeps only closest date.
+
+        The problem here is that pd.merge_asof() requires the data to be sorted
+        on the keys to be joined, and because geometry cannot be sorted
+        inherently, this will not work for tables/geodataframes that are able
+        to support multiple geometries for a given set of primary keys.
+
+        Method:
+            0. For any empty geometry, we assume we are missing field_bounds
+            and thus do not have Sentinel imagery.
+            1. Many to many spatial join between df_left and df_right; this
+            will probably result in 10x+ data rows.
+            2. Remove all rows whose left geom does not "almost eqaul" the
+            right geom (using gpd.geom_almost_equals()).
+            3. Remove all rows whose left date is outside the tolerance of the
+            right date.
+            4. Finally, choose the columns to keep and tidy up df.
+        '''
+        subset_left = db_utils.get_primary_keys(df_left)
+        subset_right = db_utils.get_primary_keys(df_right)
+        # Missing geometry will get filtered out here
+        df_merge1 = df_left.merge(df_right, how='inner', on=subset_left, suffixes=['_l', '_r'], validate='many_to_many')
+        # Grab geometry for each df; because zonal stats were retrieved based
+        # on obs_tissue geom, we can keep observations that geometry is equal.
+        gdf_merge1_l = gpd.GeoDataFrame(df_merge1['geom_l'], geometry='geom_l')
+        gdf_merge1_r = gpd.GeoDataFrame(df_merge1['geom_r'], geometry='geom_r')
+        # Remove all rows whose left geom does not "almost eqaul" right geom
+        df_sjoin2 = df_merge1[gdf_merge1_l.geom_almost_equals(gdf_merge1_r, 8)]
+        left_on2 = left_on + '_l'
+        right_on2 = right_on + '_r'
+        df_sjoin2.rename(columns={left_on:left_on2, right_on:right_on2}, inplace=True)
+        # Add "date_delta" column
+        idx_delta = df_sjoin2.columns.get_loc(left_on2)
+        df_sjoin2.insert(
+            idx_delta+1, 'date_delta',
+            (df_sjoin2[left_on2]-df_sjoin2[right_on2]).astype('timedelta64[D]'))
+        # Remove rows whose left date is outside tolerance of the right date.
+        df_delta = df_sjoin2[abs(df_sjoin2['date_delta']) <= tolerance]
+        # Because a left row may have multiple matches with the right <df>,
+        # keep only the one that is the closest. First, find duplicate rows.
+        subset = subset_left + [left_on2, 'geom_r']
+        df_dup = df_delta[df_delta.duplicated(subset=subset, keep=False)]
+        # Next, find row with lowest date_delta; if same, just get first.
+        df_keep = pd.DataFrame(data=[], columns=df_dup.columns)  # df for selected entries
+        df_unique = df_dup.drop_duplicates(subset=subset, keep='first')[subset]
+        for idx, row in df_unique.iterrows():  # Unique subset cols only
+            # The magic to get duplicate of a particular unique non-null group
+            df_filtered = df_dup[df_dup[row.index].isin(row.values).all(1)]
+            # Find index where delta is min and append it to df_keep
+            idx_min = abs(df_filtered['date_delta']).idxmin(axis=0, skipna=True)
+            df_keep = df_keep.append(df_filtered.loc[idx_min, :])
+        df_join = df_delta.drop_duplicates(subset=subset, keep=False)
+        df_join = df_join.append(df_keep)
+        df_join = df_join[pd.notnull(df_join['date_delta'])]
+        # drop right join columns,
+        if 'geom_l' in df_join.columns:
+            df_join = gpd.GeoDataFrame(df_join, geometry='geom_l')
+            df_join.rename(columns={'geom_l': 'geometry'}, inplace=True)
+        df_join.rename(columns={left_on2:left_on}, inplace=True)
+        cols_drop = [c+side for side in ['_l', '_r'] for c in ['id', 'geom']
+                     if c+side in df_join.columns] + [right_on2]
+        df_join.drop(columns=cols_drop, inplace=True)
+        return df_join
+
     def load_tables(self, **kwargs):
         '''
         Loads all tables in ``Tables.table_names``.
@@ -508,52 +603,69 @@ class Tables(object):
 
     def join_closest_date(
             self, df_left, df_right, left_on='date', right_on='date',
-            tolerance=0, by=['owner', 'study', 'year', 'plot_id'], direction='nearest'):
+            tolerance=0, direction='nearest'):
         '''
         Joins ``df_left`` to ``df_right`` by the closest date (after first
-        joining by the ``by`` columns).
-
+        joining by the ``by`` columns)
         Parameters:
-            df_left (``pd.DataFrame``):
-            df_right (``pd.DataFrame``):
-            left_on (``str``):
-            right_on (``str``):
-            tolerance (``int``): Number of days away to still allow join (if dates
-                are greater than ``tolerance``, the join will not occur).
-            by (``str`` or ``list``): Match on these columns before performing
-                merge operation.
+            df_left (``pd.DataFrame``): The left dataframe to join from.
+            df_right (``pd.DataFrame``): The right dataframe to join. If
+                <df_left> and <df_right> have geometry, only geometry from
+                <df_left> will be kept.
+            left_on (``str``): The "date" column name in <df_left> to join
+                from.
+            right_on (``str``): The "date" column name in <df_right> to join
+                to.
+            tolerance (``int``): Number of days away to still allow join (if
+                date_delta is greater than <tolerance>, the join will not
+                occur).
             direction (``str``): Whether to search for prior, subsequent, or
-                closest matches.
+                closest matches. This is only implemented if geometry is not
+                present.
 
         Note:
             Parameter names closely follow the pandas.merge_asof function:
             https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.merge_asof.html
         '''
-        df_left = self._check_requirements_custom(
-            df_left, date_cols=[left_on], by=by, date_format='%Y-%m-%d')
-        df_right = self._check_requirements_custom(
-            df_right, date_cols=[right_on], by=by, date_format='%Y-%m-%d')
+        subset_left = db_utils.get_primary_keys(df_left)
+        subset_right = db_utils.get_primary_keys(df_right)
+        msg = ('The primary keys in <df_left> are not the same as those in '
+               '<df_right>. <join_closest_date()> requires that both dfs have '
+               'the same primary keys.')
+        assert subset_left == subset_right, msg
 
-        df_left.sort_values(left_on, inplace=True)
-        df_right.sort_values(right_on, inplace=True)
-        left_on2 = left_on + '_l'
-        right_on2 = right_on + '_r'
-        df_join = pd.merge_asof(
-            df_left.rename(columns={left_on:left_on2}),
-            df_right.rename(columns={right_on:right_on2}),
-            left_on=left_on2, right_on=right_on2, by=by,
-            tolerance=pd.Timedelta(tolerance, unit='D'), direction=direction)
+        cols_require_l = subset_left + [left_on]
+        cols_require_r = subset_right + [right_on]
+        self._check_col_names(df_left, cols_require_l)
+        self._check_col_names(df_right, cols_require_r)
+        df_left = self._dt_or_ts_to_date(df_left, left_on)
+        df_right = self._dt_or_ts_to_date(df_right, right_on)
 
-        idx_delta = df_join.columns.get_loc(left_on2)
-        if tolerance == 0:
-            df_join.dropna(inplace=True)
-        elif tolerance > 0:
-            df_join.insert(idx_delta+1, 'date_delta', None)
-            df_join['date_delta'] = (df_join[left_on2]-df_join[right_on2]).astype('timedelta64[D]')
-            df_join = df_join[pd.notnull(df_join['date_delta'])]
-        df_join = df_join.rename(columns={left_on2:left_on})
-        df_join = df_join.drop(right_on2, 1)
-        return df_join
+        if isinstance(df_left, gpd.GeoDataFrame) and isinstance(df_right, gpd.GeoDataFrame):
+            df_join = self._join_geom_date(df_left, df_right, left_on,
+                                           right_on, tolerance=tolerance)
+        else:
+            df_left.sort_values(left_on, inplace=True)
+            df_right.sort_values(right_on, inplace=True)
+            left_on2 = left_on + '_l'
+            right_on2 = right_on + '_r'
+            # by = subset_left + [df_left.geometry.name]
+            df_join = pd.merge_asof(
+                df_left.rename(columns={left_on:left_on2}),
+                df_right.rename(columns={right_on:right_on2}),
+                left_on=left_on2, right_on=right_on2, by=subset_left,
+                tolerance=pd.Timedelta(tolerance, unit='D'), direction=direction)
+
+            idx_delta = df_join.columns.get_loc(left_on2)
+            if tolerance == 0:
+                df_join.dropna(inplace=True)
+            elif tolerance > 0:
+                df_join.insert(idx_delta+1, 'date_delta', None)
+                df_join['date_delta'] = (df_join[left_on2]-df_join[right_on2]).astype('timedelta64[D]')
+                df_join = df_join[pd.notnull(df_join['date_delta'])]
+            df_join = df_join.rename(columns={left_on2:left_on})
+            df_join.drop(columns=[right_on2], inplace=True)
+        return df_join.reset_index(drop=True)
 
     def dae(self, df):
         '''
@@ -589,10 +701,8 @@ class Tables(object):
         '''
         subset = db_utils.get_primary_keys(df)
         cols_require = subset + ['date']
-        if not all(i in df.columns for i in cols_require):
-            cols_missing = list(sorted(set(cols_require) - set(df.columns)))
-            raise AttributeError('<df> is missing the following required '
-                                 'columns: {0}.'.format(cols_missing))
+        self._check_col_names(df, cols_require)
+
         if 'field_id' in subset:
             df_join = df.merge(self.dates, on=subset,
                                validate='many_to_one')
@@ -607,7 +717,7 @@ class Tables(object):
         # df_out = df.merge(df_out, on=['owner', 'study', 'year', 'plot_id', 'date'])
         df_out = df_join[cols_require + ['dae']]
         df_out = df.merge(df_out, on=cols_require)
-        return df_out
+        return df_out.reset_index(drop=True)
 
     def dap(self, df):
         '''
@@ -643,10 +753,8 @@ class Tables(object):
         '''
         subset = db_utils.get_primary_keys(df)
         cols_require = subset + ['date']
-        if not all(i in df.columns for i in cols_require):
-            cols_missing = list(sorted(set(cols_require) - set(df.columns)))
-            raise AttributeError('<df> is missing the following required '
-                                 'columns: {0}.'.format(cols_missing))
+        self._check_col_names(df, cols_require)
+
         if 'field_id' in subset:
             df_join = df.merge(self.dates, on=subset,
                                validate='many_to_one')
@@ -657,7 +765,7 @@ class Tables(object):
         df_join['dap'] = (df_join['date']-df_join['date_plant']).dt.days
         df_out = df_join[cols_require + ['dap']]
         df_out = df.merge(df_out, on=cols_require)
-        return df_out
+        return df_out.reset_index(drop=True)
 
     def rate_ntd(self, df, col_rate_n='rate_n_kgha',
                  col_rate_ntd_out='rate_ntd_kgha'):
@@ -705,22 +813,17 @@ class Tables(object):
         '''
         subset = db_utils.get_primary_keys(df)
         cols_require = subset + ['date']
-        # cols_require = on + ['date']
-        if not all(i in df.columns for i in cols_require):
-            cols_missing = list(sorted(set(cols_require) - set(df.columns)))
-            raise AttributeError('<df> is missing the following required '
-                                 'columns: {0}.'.format(cols_missing))
+        self._check_col_names(df, cols_require)
         self._cr_rate_ntd(df)  # raises an error if data aren't suitable
         if 'field_id' in subset:
-            # Remove null values from n_applications.geojson and db table
             df_join = df.merge(self.field_bounds[subset], on=subset)
             # on = [i for i in subset if i != 'field_id']
             # df_join = df_join.merge(self.n_applications[on + ['trt_n']], on=on)
             df_join = df_join.merge(
                 self.n_applications[subset + ['date_applied', col_rate_n]],
                 on=subset, validate='many_to_many')
-            if isinstance(df, gpd.GeoDataFrame):
-                cols_require += [df.geometry.name]
+            # if isinstance(df, gpd.GeoDataFrame):
+            #     cols_require += [df.geometry.name]
         elif 'plot_id' in subset:
             df_join = df.merge(self.experiments, on=subset)
             on = [i for i in subset if i != 'plot_id']
@@ -737,12 +840,56 @@ class Tables(object):
         # cols_sum = ['owner', 'study','year', 'plot_id', 'date']
         # sort=False because geometry cannot be sorted
         if isinstance(df, gpd.GeoDataFrame):
-            df_sum = gpd.GeoDataFrame(df_join.groupby(
-                cols_require, sort=False)[col_rate_n].sum().reset_index())
-            df_sum.set_geometry('geom', drop=False, inplace=True, crs=4326)
+            # 0. Separate between primary key rows that are unique (those with
+            # only a single geometry), and those that aren't (those with
+            # multiple geometries). The issue is that with multiple geometries,
+            # the N applications are being added across geometries all towards
+            # the same field_id. By separating, we can add up N applied thus
+            # far for fields with a single geometry, then handle mutliple
+            # geometries separate.
+            # 1. Get all unique geometries
+            subgeom = subset + [df_join.geometry.name]
+            df_unique = df_join[~df_join.duplicated(subset=subgeom, keep='first')][subgeom]
+            # 2. Keep only fields with single geometries by checking
+            # <df_unique> only for the non-duplicated items (not considering
+            # geometry).
+            df_fields_wi_1_geom = df_unique[~df_unique.duplicated(subset=subset, keep=False)][subset]
+            df_fields_wi_mult_geom = df_unique[df_unique.duplicated(subset=subset, keep=False)][subgeom]
+            # 3. For fields with 1 geom, business as usual
+            df_join_single = df_join.merge(df_fields_wi_1_geom, on=subset)
+            df_join_single = df_join_single[df_join_single['date'] >= df_join_single['date_applied']]
+            df_ntd_single = df_join_single.groupby(cols_require)[col_rate_n].sum().reset_index()
+
+            df_ntd_single.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+            df_out_single = df.merge(df_ntd_single, on=cols_require)
+            # 4. For fields with multiple geom, calculate NTD for each separately
+            df_join_mult = df_join.merge(df_fields_wi_mult_geom, on=subgeom)
+            df_join_mult = df_join_mult[df_join_mult['date'] >= df_join_mult['date_applied']]
+            df_join_mult = df_join_mult.drop_duplicates(subset=cols_require + ['id', col_rate_n])  # this is extra, maybe because validate doesn't work for geom
+            df_ntd_mult = df_join_mult.groupby(cols_require + ['id'])[col_rate_n].sum().reset_index()  # have to use id because 'geom' won't work
+            # df_ntd_mult.drop(columns='id', inplace=True)  # have to drop id because it will influence final merge with df
+            df_ntd_mult.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+
+            df_out_mult = df.merge(df_ntd_mult, on=cols_require + ['id'], validate='many_to_one')
+            df_out_mult = df_out_mult.drop_duplicates(subset=cols_require + ['id', col_rate_ntd_out])
+            df_out = pd.concat([df_out_single, df_out_mult], ignore_index=True).sort_values(by='id')
+            # at this point, I think 'id' can be dropped?
+
+
+            # # 1. Create a list that stores the unique polygons
+            # # 2. For each polygon, add total N applied?
+            # df_good = df_join[sub].drop_duplicates(subset=sub, keep=False)
+            # df_dup = df_join[df_join.duplicated(subset=sub, keep=False)][sub]
+            # df_unique = df_dup.drop_duplicates(subset=subset, keep='first')[cols_require]
+            # # # Next, find row with lowest date_delta; if same, just get first.
+            # # df_keep = pd.DataFrame(data=[], columns=df_dup.columns)  # df for selected entries
+            # df_sum_good = gpd.GeoDataFrame(df_good.groupby(
+            #     cols_require, sort=True)[col_rate_n].sum().reset_index())
+            # df_sum.set_geometry('geom', drop=False, inplace=True, crs=4326)
+            # df_sum.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+            # df_out = df.merge(df_sum, on=cols_require)
+        else:
+            df_sum = df_join.groupby(cols_require)[col_rate_n].sum().reset_index()
             df_sum.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
             df_out = df.merge(df_sum, on=cols_require)
-        else:
-            # TODO: Grab old code from github
-            print('grab old code from github')
-        return df_out
+        return df_out.reset_index(drop=True)

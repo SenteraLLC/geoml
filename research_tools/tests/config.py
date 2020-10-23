@@ -13,6 +13,7 @@ import numpy as np
 import os
 
 from sklearn.model_selection import LeavePGroupsOut
+from sklearn.model_selection import ShuffleSplit
 from sklearn.model_selection import train_test_split
 
 from sklearn.preprocessing import PowerTransformer
@@ -30,7 +31,7 @@ sentinel_test1 = {
                  'col_out': 'rate_ntd_kgha'},
     # 'sentinel_bands': ['492', '559', '665', '704', '740', '781', '864', '1612',
     #                    '2194'],
-    'sentinel_wl_range': [400, 900]}
+    'sentinel_wl_range': [400, 2200]}
 
 cs_test1 = {
     'dap': 'dap',
@@ -214,18 +215,18 @@ config_dict = {
         # 'fname_sentinel': 'rs_sentinel.csv',
         # 'fname_wx': 'calc_weather.csv',
         'dir_results': None,
-        'group_feats': cs_test2,
+        'group_feats': sentinel_test1,
         'ground_truth_tissue': 'petiole',  # must coincide with obs_tissue.csv "tissue" column
         'ground_truth_measure': 'no3_ppm',  # must coincide with obs_tissue.csv "measure" column
         'date_tolerance': 3,
         'cv_method': LeavePGroupsOut,
         'cv_method_kwargs': {'n_groups': 1},  # will be passed as ['cv_method'](**['cv_method_kwargs'])
-        'cv_split_kwargs': {'X': 'df', 'groups': 'df["year"] != 2020'},  # will be passed to ['cv_method'].split()???
+        'cv_split_kwargs': {'groups': 'df["year"] != 2020'},  # will be passed to ['cv_method'].split()???
         # 'cv_method': ShuffleSplit,
-        # 'cv_method_kwargs': {'n_splits': 2, 'test_size': 0.4},
-        # 'cv_split_kwargs': {'X': 'df', 'groups': 'df["year"] != 2020'},
+        # 'cv_method_kwargs': {'test_size': 0.4},
+        # 'cv_split_kwargs': {'groups': 'df["year"] != 2020'},
         # 'cv_method': train_test_split,
-        # 'cv_method_kwargs': {'arrays': 'df', 'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'},  # to pass a str, wrap in double quotes
+        # 'cv_method_kwargs': {'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'},  # to pass a str, wrap in double quotes
         # 'cv_split_kwargs': None,
         'impute_method': 'iterative',
         'kfold_stratify': ['owner', 'year'],
