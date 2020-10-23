@@ -124,22 +124,6 @@ class FeatureData(Tables):
         Sets any class attribute to ``None`` that will be created in one of the
         user functions
         '''
-        self.df_obs_tissue = None
-        self.df_tuber_biomdry_Mgha = None
-        self.df_vine_biomdry_Mgha = None
-        self.df_wholeplant_biomdry_Mgha = None
-        self.df_tuber_biomfresh_Mgha = None
-        self.df_canopy_cover_pct = None
-        self.df_tuber_n_kgha = None
-        self.df_vine_n_kgha = None
-        self.df_wholeplant_n_kgha = None
-        self.df_tuber_n_pct = None
-        self.df_vine_n_pct = None
-        self.df_wholeplant_n_pct = None
-        self.df_petiole_no3_ppm = None
-        self.df_cs = None
-        self.df_wx = None
-
         self.df_X = None
         self.df_y = None
 
@@ -155,6 +139,22 @@ class FeatureData(Tables):
         self.y_test = None
         self.stratify_train = None
         self.stratify_test = None
+
+        # self.df_obs_tissue = None
+        # self.df_tuber_biomdry_Mgha = None
+        # self.df_vine_biomdry_Mgha = None
+        # self.df_wholeplant_biomdry_Mgha = None
+        # self.df_tuber_biomfresh_Mgha = None
+        # self.df_canopy_cover_pct = None
+        # self.df_tuber_n_kgha = None
+        # self.df_vine_n_kgha = None
+        # self.df_wholeplant_n_kgha = None
+        # self.df_tuber_n_pct = None
+        # self.df_vine_n_pct = None
+        # self.df_wholeplant_n_pct = None
+        # self.df_petiole_no3_ppm = None
+        # self.df_cs = None
+        # self.df_wx = None
 
     def _handle_wl_cols(self, c, wl_range, labels_x, prefix='wl_'):
         '''
@@ -193,13 +193,14 @@ class FeatureData(Tables):
         '''
         labels_x = []
         for key in group_feats:
+            print(key)
             if 'wl_range' in key:
                 wl_range = group_feats[key]
                 assert cols is not None, ('``cols`` must be passed.')
                 for c in cols:
                     labels_x = self._handle_wl_cols(c, wl_range, labels_x,
                                                     prefix='wl_')
-            elif 'bands' in key or 'wx' in key:
+            elif 'bands' in key or 'weather_derived' in key:
                 labels_x.extend(group_feats[key])
             elif 'rate_ntd' in key:
                 labels_x.append(group_feats[key]['col_out'])
@@ -707,7 +708,8 @@ class FeatureData(Tables):
                 ``sklearn.model_selection.train_test_split()`` documentation
                 for more information. Note that if there are less than two
                 unique stratified "groups", an error will be raised.
-            impute_method (``str``):
+            impute_method (``str``): How to impute missing feature data. Must
+                be one of: ["iterative", "knn", None].
 
         Note:
             This function is designed to handle any of the many scikit-learn

@@ -28,10 +28,10 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 sentinel_test1 = {
     'dap': 'dap',
     'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    # 'sentinel_bands': ['492', '559', '665', '704', '740', '781', '864', '1612',
-    #                    '2194'],
-    'sentinel_wl_range': [400, 2200]}
+                  'col_out': 'rate_ntd_kgha'},
+    'sentinel_wl_range': [400, 2200],
+    'weather_derived': ['gdd_cumsum_plant_to_date']
+    }
 
 cs_test1 = {
     'dap': 'dap',
@@ -179,7 +179,7 @@ biomass3 = {
 
 config_dict = {
     'Tables': {
-        'db_name': 'db_test',
+        'db_name': None,
         'db_host': 'localhost',
         'db_user': 'postgres',
         'password': None,  # Note: password does not have to be passsed if stored in local keyring
@@ -219,15 +219,15 @@ config_dict = {
         'ground_truth_tissue': 'petiole',  # must coincide with obs_tissue.csv "tissue" column
         'ground_truth_measure': 'no3_ppm',  # must coincide with obs_tissue.csv "measure" column
         'date_tolerance': 3,
-        'cv_method': LeavePGroupsOut,
-        'cv_method_kwargs': {'n_groups': 1},  # will be passed as ['cv_method'](**['cv_method_kwargs'])
-        'cv_split_kwargs': {'groups': 'df["year"] != 2020'},  # will be passed to ['cv_method'].split()???
+        # 'cv_method': LeavePGroupsOut,
+        # 'cv_method_kwargs': {'n_groups': 1},  # will be passed as ['cv_method'](**['cv_method_kwargs'])
+        # 'cv_split_kwargs': {'groups': 'df["year"] != 2020'},  # will be passed to ['cv_method'].split()???
         # 'cv_method': ShuffleSplit,
         # 'cv_method_kwargs': {'test_size': 0.4},
         # 'cv_split_kwargs': {'groups': 'df["year"] != 2020'},
-        # 'cv_method': train_test_split,
-        # 'cv_method_kwargs': {'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'},  # to pass a str, wrap in double quotes
-        # 'cv_split_kwargs': None,
+        'cv_method': train_test_split,
+        'cv_method_kwargs': {'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'},  # to pass a str, wrap in double quotes
+        'cv_split_kwargs': None,
         'impute_method': 'iterative',
         'kfold_stratify': ['owner', 'year'],
         'n_splits': 4,
@@ -235,7 +235,7 @@ config_dict = {
         'train_test': 'train',
         'print_out_fd': False},
     'FeatureSelection': {
-        'base_dir_data': os.path.join(test_dir, 'testdata'),
+        # 'base_dir_data': os.path.join(test_dir, 'testdata'),
         'model_fs': Lasso(),
         'model_fs_params_set': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
         'model_fs_params_adjust_min': {'alpha': 1},  # these are initial values to begin
@@ -246,7 +246,7 @@ config_dict = {
         # 'step_pct': 0.1,
         'print_out_fs': False},
     'Training': {
-        'base_dir_data': os.path.join(test_dir, 'testdata'),
+        # 'base_dir_data': os.path.join(test_dir, 'testdata'),
         'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=True, method='yeo-johnson', standardize=True)),
         'regressor_params': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
         'param_grid': {'alpha': list(np.logspace(-4, 0, 5))},
