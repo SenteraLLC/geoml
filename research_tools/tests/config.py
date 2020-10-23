@@ -202,7 +202,7 @@ config_dict = {
             'obs_tissue': 'obs_tissue.geojson',
             'obs_soil': 'obs_soil.geojson',
             'rs_cropscan': 'rs_cropscan.csv',
-            'rs_sentinel': 'rs_sentinel.geojson',
+            'rs_sentinel': 'rs_sentinel2.geojson',
             'weather': 'weather.csv',
             'weather_derived': 'calc_weather.csv'
             }

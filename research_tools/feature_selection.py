@@ -471,7 +471,7 @@ class FeatureSelection(FeatureData):
                 '``get_X_select()``.')
         assert isinstance(self.df_fs_params, pd.DataFrame), msg1
 
-        feats_x_select = self.df_fs_params.iloc[df_fs_params_idx]['feats_x_select']
+        feats_x_select = self.df_fs_params.loc[df_fs_params_idx]['feats_x_select']
 
         X_train_select = self.X_train[:,feats_x_select]
         X_test_select = self.X_test[:,feats_x_select]

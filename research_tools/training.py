@@ -510,7 +510,7 @@ class Training(FeatureSelection):
         df_pred_full = self.df_pred_full
         for idx in self.df_fs_params.index:
             X_train_select, X_test_select = self.fs_get_X_select(idx)
-            n_feats = len(self.df_fs_params.iloc[idx]['feats_x_select'])
+            n_feats = len(self.df_fs_params.loc[idx]['feats_x_select'])
             if self.print_out_train == True:
                 print('Number of features: {0}'.format(n_feats))
             df_tune_grid = self._tune_grid_search()
@@ -565,5 +565,4 @@ class Training(FeatureSelection):
     #         feat_n = X.sha
     #     params = df[df['feat_n'] == feat_n]['params_regressor'].values[0]
     #     my_train.regressor.set_params(**params)
-
 

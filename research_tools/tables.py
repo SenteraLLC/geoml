@@ -772,7 +772,14 @@ class Tables(object):
                 df_left.rename(columns={left_on:left_on2}),
                 df_right.rename(columns={right_on:right_on2}),
                 left_on=left_on2, right_on=right_on2, by=subset_left,
-                tolerance=pd.Timedelta(tolerance, unit='D'), direction=direction)
+                tolerance=pd.Timedelta(tolerance, unit='D'),
+                direction=direction)
+            if isinstance(df_left, gpd.GeoDataFrame):
+                df_join = gpd.GeoDataFrame(
+                    df_join, geometry=df_left.geometry.name)
+            if isinstance(df_right, gpd.GeoDataFrame):
+                df_join = gpd.GeoDataFrame(
+                    df_join, geometry=df_right.geometry.name)
 
             idx_delta = df_join.columns.get_loc(left_on2)
             if tolerance == 0:
