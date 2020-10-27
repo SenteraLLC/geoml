@@ -523,7 +523,7 @@ class Tables(object):
         gdf_merge1_l = gpd.GeoDataFrame(df_merge1[geom_l], geometry=geom_l)
         gdf_merge1_r = gpd.GeoDataFrame(df_merge1[geom_r], geometry=geom_r)
         # Remove all rows whose left geom does not "almost eqaul" right geom
-        df_sjoin2 = df_merge1[gdf_merge1_l.geom_almost_equals(gdf_merge1_r, 8)]
+        df_sjoin2 = df_merge1[gdf_merge1_l.geom_almost_equals(gdf_merge1_r, 8)].copy()
         left_on2 = left_on + '_l'
         right_on2 = right_on + '_r'
         df_sjoin2.rename(columns={left_on:left_on2, right_on:right_on2}, inplace=True)

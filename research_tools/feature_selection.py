@@ -477,7 +477,7 @@ class FeatureSelection(FeatureData):
         X_test_select = self.X_test[:,feats_x_select]
         self.X_train_select = X_train_select
         self.X_test_select = X_test_select
-        self.labels_x_select = self.df_fs_params.iloc[df_fs_params_idx]['labels_x_select']
-        self.rank_x_select = self.df_fs_params.iloc[df_fs_params_idx]['rank_x_select']
+        self.labels_x_select = self.df_fs_params.loc[df_fs_params_idx]['labels_x_select']
+        self.rank_x_select = self.df_fs_params.loc[df_fs_params_idx]['rank_x_select']
         return X_train_select, X_test_select
 

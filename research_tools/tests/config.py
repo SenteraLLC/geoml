@@ -179,7 +179,7 @@ biomass3 = {
 
 config_dict = {
     'Tables': {
-        'db_name': None,
+        'db_name': 'db_test',
         'db_host': 'localhost',
         'db_user': 'postgres',
         'password': None,  # Note: password does not have to be passsed if stored in local keyring
@@ -202,7 +202,7 @@ config_dict = {
             'obs_tissue': 'obs_tissue.geojson',
             'obs_soil': 'obs_soil.geojson',
             'rs_cropscan': 'rs_cropscan.csv',
-            'rs_sentinel': 'rs_sentinel2.geojson',
+            'rs_sentinel': 'rs_sentinel.geojson',
             'weather': 'weather.csv',
             'weather_derived': 'calc_weather.csv'
             }
