@@ -13,43 +13,53 @@ API to retrieve training data, create X matrix, and perform feature selection, h
 [![build](https://circleci.com/gh/insight-sensing/research_tools/tree/dev.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/research_tools?branch=dev)
 
 ## Setup and Installation
-Dependencies are provided for both a production environment (e.g., one that would be deployed on a cloud DB), and for a development or testing environment.
+There is an *environment.yml* file that can be used to create the environment and install the dependencies. After cloning from Github, create the environment:
 
-### Production
-- `conda create -n insight_prod python=3.8`
-- `conda install -c anaconda scikit-learn`
-- `conda install -c conda-forge pandas`
+`conda env create -n insight -f .db\environment.yml`
 
-### Dev/Test
-- `conda create -n insight_dev python=3.8`
-- `conda install -c anaconda scikit-learn`
-- `conda install -c conda-forge pandas`
-- `conda install -c conda-forge pytest`
+### Testing
+To perfrom testing, a few other packages are required
+- `conda install -c conda-forge pytest-cov`
+- `conda install -c conda-forge postgis`
+- `pip install git+git://github.com/tk0miya/testing.postgresql.git@c81ded434d00ec8424de0f9e1f4063c778c6aaa8#egg=testing.postgresql`
+- `pip install pytest_pgsql`
 
-### Run tests
+- Note: On Windows, the `postgis` dependency must be installed via `pip` since it is not available on conda-forge.
+- Note: On Windows, the `find_program` function of `testing.postgresql` should also be modified (see [db issue #10](https://github.com/insight-sensing/db/issues/10)).
+
 Run tests to be sure everything is installed appropriately:
 - `pytest research_tools\tests`
 
 ### Use
 ```
-from research_tools.tests import config
+from copy import deepcopy
 from research_tools import Training
+from research_tools.tests import config
 
-my_train = Training(config_dict=config.config_dict)
-my_train.train()
+config_dict = deepcopy(config.config_dict)
+config_dict['Tables']['base_dir_data'] = r'G:\Shared drives\Data\client_data\CSS Farms\db_tables\from_db'
+config_dict['FeatureData']['group_feats'] = config.sentinel_test1
+config_dict['FeatureData']['impute_method'] = None
+config_dict['FeatureSelection']['n_feats'] = 11
+
+train = Training(config_dict=config_dict)
+train.train()
 ```
 
 ## Classes
 There are multiple classes that work together to perform all the necessary steps for training supervised regression estimators. Here is a brief summary:
 
-### JoinTables
-Assists with joining tables that contain training data. In addition to the join, many of the user functions available to add new columns/features to the input DataFrame (or X) that hopefully explain the response variable being predicted.
+### Tables
+`Tables` loads in all the available tables that might contain data to build the X matrices for training and testing (`X_train` and `X_test`). If a PostgreSQL database is available, this can be connected by passing the appropriate credentials. The public/user functions derive new data feautes from the original data to be added to the X matrices for explaining the response variable being predicted.
+
+### FeatureData
+`FeatureData` inherits from `Tables`, and executes the ppropriate joins among tables (according to the `group_feats` variable) to actually construct the X matrices for training and testing (`X_train` and `X_test`).
 
 ### FeatureSelection
 `FeatureSelection` inherits from `FeatureData`, and carries out all tasks related to feature selection before model tuning, training, and prediction. The information garnered from `FeatureSelection` is quite simply all the parameters required to duplicate a given number of features, as well as its cross-validation results (e.g., features used, ranking, training and validation scores, etc.).
 
 ### Training
-`Training` inherits from an instance of `FeatureSelection` (which inherits from `FeatureData`), and consists of functions to carry out the hyperparameter tuning and chooses the most suitable hyperparameters for each unique number of features. Testing is then performed using the chosen hyperparameters and results recorded, then each estimator (i.e., for each number of features) is fit using the full dataset (i.e., train and test sets), being sure to use the hyperparameters and features selected from cross validation. After `Training.train()` is executed, each trained estimator is stored in `Training.df_test` under the "regressor" column. The full set of estimators (i.e., for all feature selection combinations, with potential duplicate estimators for the same number of features) is stored in `Training.df_test_full`. These estimators are fully trained and cross validated, and can be safely distributed to predict new observations. Care must be taken to ensure information about input features is tracked (not only the number of features, but specifications) so new data can be preocessed to be ingested by the estimator to make new predictions.
+`Training` inherits from an instance of `FeatureSelection` and consists of functions to carry out the hyperparameter tuning and chooses the most suitable hyperparameters for each unique number of features. Testing is then performed using the chosen hyperparameters and results recorded, then each estimator (i.e., for each number of features) is fit using the full dataset (i.e., train and test sets), being sure to use the hyperparameters and features selected from cross validation. After `Training.train()` is executed, each trained estimator is stored in `Training.df_test` under the "regressor" column. The full set of estimators (i.e., for all feature selection combinations, with potential duplicate estimators for the same number of features) is stored in `Training.df_test_full`. These estimators are fully trained and cross validated, and can be safely distributed to predict new observations. Care must be taken to ensure information about input features is tracked (not only the number of features, but specifications) so new data can be preocessed to be ingested by the estimator to make new predictions. Also note that care must be taken to ensure the cross-validation strategy (indicated via `cv_method`, `cv_method_kwargs`, and `cv_split_kwargs`) is suitable for your application and that it does not inadvertenly lead to model overfitting - for this reason, multiple cross-validation methods are encouraged.
 
 ## License
 TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.

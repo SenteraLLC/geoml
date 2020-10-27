@@ -15,10 +15,8 @@ import os
 from sklearn.model_selection import LeavePGroupsOut
 from sklearn.model_selection import ShuffleSplit
 from sklearn.model_selection import train_test_split
-
 from sklearn.preprocessing import PowerTransformer
 from sklearn.compose import TransformedTargetRegressor
-
 from sklearn.linear_model import Lasso
 from sklearn.cross_decomposition import PLSRegression
 
@@ -33,33 +31,13 @@ sentinel_test1 = {
     'weather_derived': ['gdd_cumsum_plant_to_date']
     }
 
-cs_test1 = {
-    'dap': 'dap',
-    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    'cropscan_bands': ['460', '510', '560', '610', '660', '680', '710', '720',
-                       '740', '760', '810', '870', '900']}
-
-cs_test2 = {
+cs_test = {
     'dae': 'dae',
     'rate_ntd': {'col_rate_n': 'rate_n_kgha',
                  'col_out': 'rate_ntd_kgha'},
     'cropscan_wl_range1': [400, 900]}
 
-cs_test3 = {
-    'dae': 'dae',
-    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    # 'cropscan_bands': ['710', '740', '760', '810'],
-    'cropscan_wl_range1': [400, 900],
-    'wx': ['solar_rad_cumsum_plant_to_date', 'gdd_cumsum_plant_to_date']}
-    # 'wx': ['gdd_cumsum_plant_to_date', 'precip_cumsum_plant_to_date',
-    #        'et_rs_cumsum_plant_to_date', 'solar_rad_cumsum_plant_to_date',
-    #        'gdd_diff_cumsum_plant_to_date', 'precip_diff_cumsum_plant_to_date',
-    #        'et_rs_diff_cumsum_plant_to_date',
-    #        'solar_rad_diff_cumsum_plant_to_date']}
-
-summer_2020 = {
+rosen_trts = {
     'dae': 'dae',
     'rate_ntd': {'col_rate_n': 'rate_n_kgha',
                  'col_out': 'rate_ntd_kgha'},
@@ -97,25 +75,7 @@ summer_2020 = {
            # 'temp_diff_cummean_last28', 'temp_diff_diff_cummean_last28'
             ]}
 
-nni1_diff = {
-    'dae': 'dae',
-    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    'cropscan_wl_range1': [400, 900],
-    'wx': ['gdd_cumsum_plant_to_date',
-           'gdd_diff_cumsum_plant_to_date']}
-
-nni2_diff = {
-    'dae': 'dae',
-    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    'cropscan_wl_range1': [400, 900],
-    'wx': ['gdd_cumsum_plant_to_date',
-           'gdd_diff_cumsum_plant_to_date',  # 1st
-           'precip_cumsum_plant_to_date', 'et_rs_cumsum_plant_to_date',
-           'precip_diff_cumsum_plant_to_date', 'et_rs_diff_cumsum_plant_to_date']}
-
-nni3_diff = {
+nni = {
     'dae': 'dae',
     'rate_ntd': {'col_rate_n': 'rate_n_kgha',
                  'col_out': 'rate_ntd_kgha'},
@@ -127,48 +87,7 @@ nni3_diff = {
            'ipar_cumsum_plant_to_date', 'temp_diff_cummean_bulk_to_date', 'et_rs_cumsum_bulk_to_date', 'solar_rad_cumsum_bulk_to_date',
            'ipar_diff_cumsum_plant_to_date', 'temp_diff_diff_cummean_bulk_to_date', 'et_rs_diff_cumsum_bulk_to_date', 'solar_rad_diff_cumsum_bulk_to_date']}
 
-biomass1_diff = {
-    'dae': 'dae',
-    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date',
-           'gdd_diff_cumsum_plant_to_date', 'ipar_diff_cumsum_plant_to_date']}
-
-biomass2_diff = {
-    'dae': 'dae',
-    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date',
-           'gdd_diff_cumsum_plant_to_date', 'ipar_diff_cumsum_plant_to_date',  # 1st
-           'temp_diff_cummean_bulk_to_date', 'et_rs_cumsum_bulk_to_date', 'solar_rad_cumsum_bulk_to_date',
-           'temp_diff_diff_cummean_bulk_to_date', 'et_rs_diff_cumsum_bulk_to_date', 'solar_rad_diff_cumsum_bulk_to_date']}
-
-biomass3_diff = {
-    'dae': 'dae',
-    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date',
-           'gdd_diff_cumsum_plant_to_date', 'ipar_diff_cumsum_plant_to_date',  # 1st
-           'temp_diff_cummean_bulk_to_date', 'et_rs_cumsum_bulk_to_date', 'solar_rad_cumsum_bulk_to_date',
-           'temp_diff_diff_cummean_bulk_to_date', 'et_rs_diff_cumsum_bulk_to_date', 'solar_rad_diff_cumsum_bulk_to_date',  # 2nd
-           'precip_cumsum_plant_to_date', 'et_rs_cumsum_plant_to_date',
-           'precip_diff_cumsum_plant_to_date', 'et_rs_diff_cumsum_plant_to_date'],
-    'cropscan_wl_range1': [400, 900]}
-
-biomass1 = {
-    'dae': 'dae',
-    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date']}
-
-biomass2 = {
-    'dae': 'dae',
-    'rate_ntd': {'col_rate_n': 'rate_n_kgha',
-                 'col_out': 'rate_ntd_kgha'},
-    'wx': ['gdd_cumsum_plant_to_date', 'ipar_cumsum_plant_to_date',  # 1st
-           'temp_diff_cummean_bulk_to_date', 'et_rs_cumsum_bulk_to_date', 'solar_rad_cumsum_bulk_to_date']}
-
-biomass3 = {
+biomass = {
     'dae': 'dae',
     'rate_ntd': {'col_rate_n': 'rate_n_kgha',
                  'col_out': 'rate_ntd_kgha'},
@@ -204,16 +123,10 @@ config_dict = {
             'rs_cropscan': 'rs_cropscan.csv',
             'rs_sentinel': 'rs_sentinel.geojson',
             'weather': 'weather.csv',
-            'weather_derived': 'calc_weather.csv'
-            }
+            'weather_derived': 'calc_weather.csv'}
         },
     'FeatureData': {
-        # 'base_dir_data': os.path.join(test_dir, 'testdata'),
         'random_seed': 999,
-        # 'fname_obs_tissue': 'obs_tissue.csv',
-        # 'fname_cropscan': 'rs_cropscan.csv',
-        # 'fname_sentinel': 'rs_sentinel.csv',
-        # 'fname_wx': 'calc_weather.csv',
         'dir_results': None,
         'group_feats': sentinel_test1,
         'ground_truth_tissue': 'petiole',  # must coincide with obs_tissue.csv "tissue" column
@@ -235,7 +148,6 @@ config_dict = {
         'train_test': 'train',
         'print_out_fd': False},
     'FeatureSelection': {
-        # 'base_dir_data': os.path.join(test_dir, 'testdata'),
         'model_fs': Lasso(),
         'model_fs_params_set': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
         'model_fs_params_adjust_min': {'alpha': 1},  # these are initial values to begin
@@ -246,7 +158,6 @@ config_dict = {
         # 'step_pct': 0.1,
         'print_out_fs': False},
     'Training': {
-        # 'base_dir_data': os.path.join(test_dir, 'testdata'),
         'regressor': TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=True, method='yeo-johnson', standardize=True)),
         'regressor_params': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},
         'param_grid': {'alpha': list(np.logspace(-4, 0, 5))},
