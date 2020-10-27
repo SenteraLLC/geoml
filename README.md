@@ -15,20 +15,22 @@ API to retrieve training data, create X matrix, and perform feature selection, h
 ## Setup and Installation
 There is an *environment.yml* file that can be used to create the environment and install the dependencies. After cloning from Github, create the environment:
 
-`conda env create -n insight -f .db\environment.yml`
+`conda env create -n insight -f .research_tools\environment.yml`
 
 ### Testing
 To perfrom testing, a few other packages are required
-- `conda install -c conda-forge pytest-cov`
-- `conda install -c conda-forge postgis`
-- `pip install git+git://github.com/tk0miya/testing.postgresql.git@c81ded434d00ec8424de0f9e1f4063c778c6aaa8#egg=testing.postgresql`
-- `pip install pytest_pgsql`
+```
+conda install -c conda-forge pytest-cov
+conda install -c conda-forge postgis
+pip install git+git://github.com/tk0miya/testing.postgresql.git@c81ded434d00ec8424de0f9e1f4063c778c6aaa8#egg=testing.postgresql
+pip install pytest_pgsql
+```
 
-- Note: On Windows, the `postgis` dependency must be installed via `pip` since it is not available on conda-forge.
-- Note: On Windows, the `find_program` function of `testing.postgresql` should also be modified (see [db issue #10](https://github.com/insight-sensing/db/issues/10)).
+Note: On Windows, the `postgis` dependency must be installed via `pip` since it is not available on conda-forge.
+Note: On Windows, the `find_program` function of `testing.postgresql` should also be modified (see [db issue #10](https://github.com/insight-sensing/db/issues/10)).
 
 Run tests to be sure everything is installed appropriately:
-- `pytest research_tools\tests`
+`pytest research_tools\tests`
 
 ### Use
 ```
