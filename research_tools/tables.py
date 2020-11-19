@@ -412,6 +412,7 @@ class Tables(object):
         '''
         msg = ('The following columns are required in "{0}". Missing columns: '
                '"{1}".')
+        print(table_name)
         if self.db is not None:
             engine = self.db.engine
             db_schema = self.db.db_schema
@@ -692,7 +693,7 @@ class Tables(object):
             for table_name in self.table_names.keys():
                 df = self._load_table_from_db(table_name)
                 if df is not None:
-                    print(table_name)
+                    # print(table_name)
                     self._set_table_to_self(table_name, df)
         else:
             msg = ('There is no connection to a database, and '
@@ -706,7 +707,7 @@ class Tables(object):
             if self._get_table_from_self(table_name) is None and fname is not None:
                 df = self._load_table_from_file(table_name, fname)
                 if df is not None:
-                    print(table_name)
+                    # print(table_name)
                     df = db_utils.cols_to_datetime(df)
                     self._set_table_to_self(table_name, df)
 

@@ -15,6 +15,8 @@ import os
 from sklearn.model_selection import LeavePGroupsOut
 from sklearn.model_selection import ShuffleSplit
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RepeatedKFold
+from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.preprocessing import PowerTransformer
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.linear_model import Lasso
@@ -108,19 +110,19 @@ config_dict = {
         'base_dir_data': os.path.join(test_dir, 'testdata'),
         'table_names': {  # if not connected to a DB, these should point to files that contain the join data.
             'experiments': 'experiments.geojson',
-            'dates_research': 'dates_research.csv',
+            'dates_res': 'dates_research.csv',
             'trt': 'trt.csv',
             'trt_n': 'trt_n.csv',
             'trt_n_crf': 'trt_n_crf.csv',
-            'obs_tissue_research': 'obs_tissue_research.geojson',
-            'obs_soil_research': 'obs_soil_research.geojson',
+            'obs_tissue_res': 'obs_tissue_research.geojson',
+            'obs_soil_res': 'obs_soil_research.geojson',
+            'rs_cropscan_res': 'rs_cropscan.csv',
             'field_bounds': 'field_bounds.geojson',
             'dates': 'dates.csv',
             'as_planted': 'as_planted.geojson',
             'n_applications': 'n_applications.geojson',
             'obs_tissue': 'obs_tissue.geojson',
             'obs_soil': 'obs_soil.geojson',
-            'rs_cropscan': 'rs_cropscan.csv',
             'rs_sentinel': 'rs_sentinel.geojson',
             'weather': 'weather.csv',
             'weather_derived': 'calc_weather.csv'}
@@ -132,21 +134,34 @@ config_dict = {
         'ground_truth_tissue': 'petiole',  # must coincide with obs_tissue.csv "tissue" column
         'ground_truth_measure': 'no3_ppm',  # must coincide with obs_tissue.csv "measure" column
         'date_tolerance': 3,
+        'cv_method': LeavePGroupsOut,
+        'cv_method_kwargs': {'n_groups': 1},  # will be passed as ['cv_method'](**['cv_method_kwargs'])
+        'cv_split_kwargs': {'groups': 'df["year"] != 2020'},  # explicitly places <groups> == True (e.g., 2018 and 2019) in train set
         # 'cv_method': LeavePGroupsOut,
-        # 'cv_method_kwargs': {'n_groups': 1},  # will be passed as ['cv_method'](**['cv_method_kwargs'])
-        # 'cv_split_kwargs': {'groups': 'df["year"] != 2020'},  # will be passed to ['cv_method'].split()???
+        # 'cv_method_kwargs': {'n_groups': 1},
+        # 'cv_split_kwargs': {'groups': ['year']},  # randomly (?) chooses <n_groups> <groups> (e.g., 1 "year") for test set
         # 'cv_method': ShuffleSplit,
         # 'cv_method_kwargs': {'test_size': 0.4},
         # 'cv_split_kwargs': {'groups': 'df["year"] != 2020'},
-        'cv_method': train_test_split,
-        'cv_method_kwargs': {'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'},  # to pass a str, wrap in double quotes
-        'cv_split_kwargs': None,
+        # 'cv_method': train_test_split,
+        # 'cv_method_kwargs': {'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'},  # to pass a str, wrap in double quotes
+        # 'cv_split_kwargs': None,
         'impute_method': 'iterative',
-        'kfold_stratify': ['owner', 'year'],
-        'n_splits': 4,
-        'n_repeats': 3,
+        # 'kfold_stratify': ['owner', 'year'],
+        # 'n_splits': 4,
+        # 'n_repeats': 3,
         'train_test': 'train',
-        'print_out_fd': False},
+        'cv_method_tune': RepeatedStratifiedKFold,
+        'cv_method_tune_kwargs': {'n_splits': 4, 'n_repeats': 3},
+        'cv_split_tune_kwargs': {'y': ['farm', 'year']},
+        # 'cv_method_tune': RepeatedKFold,
+        # 'cv_method_tune_kwargs': {'n_splits': 4, 'n_repeats': 2},
+        # 'cv_split_tune_kwargs': None,
+        # 'cv_method_tune': LeavePGroupsOut, # if method is a "group" method, then split_tune_kwargs should have a "gropus" parameter
+        # 'cv_method_tune_kwargs': {'n_groups': 1},
+        # 'cv_split_tune_kwargs': {'groups': 'df["year"] != 2019'},
+        'print_out_fd': False,
+        'print_splitter_info': False},
     'FeatureSelection': {
         'model_fs': Lasso(),
         'model_fs_params_set': {'max_iter': 100000, 'selection': 'cyclic', 'warm_start': True},

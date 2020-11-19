@@ -40,7 +40,10 @@ class FeatureData(Tables):
         'random_seed', 'dir_results', 'group_feats',
         'ground_truth_tissue', 'ground_truth_measure',
         'date_tolerance', 'cv_method', 'cv_method_kwargs', 'cv_split_kwargs',
-        'impute_method', 'kfold_stratify', 'n_splits', 'n_repeats', 'train_test', 'print_out_fd')
+        'impute_method', 'cv_method_tune', 'cv_method_tune_kwargs',
+        'cv_split_tune_kwargs',
+        # 'kfold_stratify', 'n_splits', 'n_repeats',
+        'train_test', 'print_out_fd', 'print_splitter_info')
 
     def __init__(self, **kwargs):
         super(FeatureData, self).__init__(**kwargs)
@@ -65,11 +68,15 @@ class FeatureData(Tables):
         self.cv_method_kwargs = {'arrays': 'df', 'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'}
         self.cv_split_kwargs = None
         self.impute_method = 'iterative'
-        self.kfold_stratify = ['owner', 'year']
-        self.n_splits = 2
-        self.n_repeats = 3
+        # self.kfold_stratify = ['owner', 'year']
+        # self.n_splits = 2
+        # self.n_repeats = 3
         self.train_test = 'train'
+        self.cv_method_tune = RepeatedStratifiedKFold
+        self.cv_method_tune_kwargs = {'n_splits': 4, 'n_repeats': 3}
+        self.cv_split_tune_kwargs = None
         self.print_out_fd = False
+        self.print_splitter_info = False
         # self.test_f_self(**kwargs)
 
         self._set_params_from_kwargs_fd(**kwargs)
@@ -193,7 +200,7 @@ class FeatureData(Tables):
         '''
         labels_x = []
         for key in group_feats:
-            print(key)
+            print('Loading <group_feats> key: {0}'.format(key))
             if 'wl_range' in key:
                 wl_range = group_feats[key]
                 assert cols is not None, ('``cols`` must be passed.')
@@ -285,9 +292,24 @@ class FeatureData(Tables):
         # df_obs_tissue = self._read_csv_geojson(fname_obs_tissue)
         self.labels_y_id = [tissue_col, measure_col]
         self.label_y = value_col
-        self.obs_tissue = self.obs_tissue[pd.notnull(self.obs_tissue[value_col])]
-        self.df_response = self.obs_tissue[(self.obs_tissue[measure_col] == measure) &
-                                           (self.obs_tissue[tissue_col] == tissue)]
+        if self.obs_tissue_res is not None:
+            obs_tissue = self.obs_tissue_res.copy()
+        elif self.obs_tissue is not None:
+            obs_tissue = self.obs_tissue.copy()
+        else:
+            raise ValueError('Both <obs_tissue> and <obs_tisue_res> are None. '
+                             'Please be sure either <obs_tissue> or '
+                             '<obs_tissue_res> is in <base_dir_data> or '
+                             '<db_schema>.')
+        if self.obs_tissue_res is not None and self.obs_tissue is not None:
+            raise ValueError('Both <obs_tissue> and <obs_tissue_res> are '
+                             'populated, so we are unsure which table to '
+                             'load. Please be sure only one of <obs_tissue> '
+                             'or <obs_tissue_res> is in <base_dir_data> or '
+                             '<db_schema>.')
+        obs_tissue = obs_tissue[pd.notnull(obs_tissue[value_col])]
+        self.df_response = obs_tissue[(obs_tissue[measure_col] == measure) &
+                                           (obs_tissue[tissue_col] == tissue)]
 
     # def _load_tables(self, tissue='petiole', measure='no3_ppm',
     #                  tissue_col='tissue', measure_col='measure',
@@ -407,23 +429,35 @@ class FeatureData(Tables):
                              (self.obs_tissue[tissue_col] == tissue)]
         return df
 
-    def _stratify_set(self):
+    def _stratify_set(self, stratify_cols=['owner', 'farm', 'year'],
+                      train_test=None, df=None):
         '''
         Creates a 1-D array of the stratification IDs (to be used by k-fold)
         for both the train and test sets: <stratify_train> and <stratify_test>
+
+        Returns:
+            groups (``numpy.ndarray): Array that asssigns each observation to
+                a stratification group.
         '''
+        if df is None:
+            df = self.df_y.copy()
         msg1 = ('All <stratify> strings must be columns in <df_y>')
-        for c in self.kfold_stratify:
-            assert c in self.df_y.columns, msg1
+        for c in stratify_cols:
+            assert c in df.columns, msg1
+        if train_test is None:
+            groups = df.groupby(stratify_cols).ngroup().values
+        else:
+            groups = df[df['train_test'] == train_test].groupby(
+                stratify_cols).ngroup().values
 
-        self.stratify_train = self.df_y[
-            self.df_y['train_test'] == 'train'].groupby(
-                self.kfold_stratify).ngroup().values
-        self.stratify_test = self.df_y[
-            self.df_y['train_test'] == 'test'].groupby(
-                self.kfold_stratify).ngroup().values
+        unique, counts = np.unique(groups, return_counts=True)
+        print('\nStratification groups: {0}'.format(stratify_cols))
+        print('Number of stratification groups:  {0}'.format(len(unique)))
+        print('Minimum number of splits allowed: {0}'.format(min(counts)))
+        return groups
 
-    def _check_sklearn_splitter(self, raise_error=False):
+    def _check_sklearn_splitter(self, cv_method, cv_method_kwargs,
+                                cv_split_kwargs=None, raise_error=False):
         '''
         Checks <cv_method>, <cv_method_kwargs>, and <cv_split_kwargs> for
         continuity.
@@ -433,7 +467,7 @@ class FeatureData(Tables):
 
         Parameters:
             raise_error (``bool``): If ``True``, raises a ``ValueError`` if
-                parameters do not appera to be available. Otherwise, simply
+                parameters do not appear to be available. Otherwise, simply
                 issues a warning, and will try to move forward anyways. This
                 exists because <inspect.getfullargspec(self.cv_method)[0]> is
                 used to get the arguments, but certain scikit-learn functions/
@@ -447,10 +481,21 @@ class FeatureData(Tables):
             <inspect.getfullargspec(self.cv_method)[0]> returns an empty list,
             there is no either a warning or ValueError can be raised.
         '''
-        cv_method_args = inspect.getfullargspec(self.cv_method)[0]
-        cv_split_args = inspect.getfullargspec(self.cv_method.split)[0]
+        if cv_split_kwargs is None:
+            cv_split_kwargs = {}
+
+        # import inspect
+        # from sklearn.model_selection import RepeatedStratifiedKFold
+        # cv_method = RepeatedStratifiedKFold
+        # cv_method_kwargs = {'n_splits': 4, 'n_repeats': 3}
+        # cv_split_kwargs = None
+
+        cv_method_args = inspect.getfullargspec(cv_method)[0]
+        cv_split_args = inspect.getfullargspec(cv_method.split)[0]
         if 'self' in cv_method_args: cv_method_args.remove('self')
         if 'self' in cv_split_args: cv_split_args.remove('self')
+        return cv_split_kwargs
+
         msg1 = ('Some <cv_method_kwargs> parameters do not appear to be '
                 'available with the <{0}> function.\nAllowed parameters: {1}\n'
                 'Passed to <cv_method_kwargs>: {2}\n\nPlease adjust '
@@ -458,9 +503,9 @@ class FeatureData(Tables):
                 'requirements of one of the many scikit-learn "splitter '
                 'classes". Documentation available at '
                 'https://scikit-learn.org/stable/modules/classes.html#splitter-classes.'
-                ''.format(self.cv_method.__name__,
+                ''.format(cv_method.__name__,
                           cv_method_args,
-                          list(self.cv_method_kwargs.keys())))
+                          list(cv_method_kwargs.keys())))
         msg2 = ('Some <cv_split_kwargs> parameters are not available with '
                 'the <{0}.split()> method.\nAllowed parameters: {1}\nPassed '
                 'to <cv_split_kwargs>: {2}\n\nPlease adjust <cv_method>, '
@@ -468,31 +513,55 @@ class FeatureData(Tables):
                 'the requirements of one of the many scikit-learn "splitter '
                 'classes". Documentation available at '
                 'https://scikit-learn.org/stable/modules/classes.html#splitter-classes.'
-                ''.format(self.cv_method.__name__,
+                ''.format(cv_method.__name__,
                           cv_split_args,
-                          list(self.cv_split_kwargs.keys())))
-        if any([i not in inspect.getfullargspec(self.cv_method)[0]
-                for i in self.cv_method_kwargs]) == True:
+                          list(cv_split_kwargs.keys())))
+        if any([i not in inspect.getfullargspec(cv_method)[0]
+                for i in cv_method_kwargs]) == True:
             if raise_error:
                 raise ValueError(msg1)
             else:
                 warnings.warn(msg1, UserWarning)
 
-        if any([i not in inspect.getfullargspec(self.cv_method.split)[0]
-                for i in self.cv_split_kwargs]) == True:
+        if any([i not in inspect.getfullargspec(cv_method.split)[0]
+                for i in cv_split_kwargs]) == True:
             if raise_error:
                 raise ValueError(msg2)
             else:
                 warnings.warn(msg2, UserWarning)
 
-    def _cv_method_check_random_seed(self):
+    def _cv_method_check_random_seed(self, cv_method, cv_method_kwargs):
         '''
         If 'random_state' is a valid parameter in <cv_method>, sets from
         <random_seed>.
         '''
-        cv_method_args = inspect.getfullargspec(self.cv_method)[0]
+        cv_method_args = inspect.getfullargspec(cv_method)[0]
         if 'random_state' in cv_method_args:  # ensure random_seed is set correctly
-            self.cv_method_kwargs['random_state'] = self.random_seed  # if this will get passed to eval(), should be fine since it gets passed to str() first
+            cv_method_kwargs['random_state'] = self.random_seed  # if this will get passed to eval(), should be fine since it gets passed to str() first
+        return cv_method_kwargs
+
+    def _splitter_eval(self, cv_split_kwargs, df=None):
+        '''
+        Preps the CV split keyword arguments (evaluates them to variables).
+        '''
+        if cv_split_kwargs is None:
+            cv_split_kwargs = {}
+        if 'X' not in cv_split_kwargs and df is not None:  # sets X to <df>
+            cv_split_kwargs['X'] = 'df'
+        scope = locals()
+
+        if df is None and 'df' in [
+                i for i in [a for a in cv_split_kwargs.values()]]:
+            raise ValueError(
+                '<df> is None, but is present in <cv_split_kwargs>. Please '
+                'pass <df> or ajust <cv_split_kwargs>')
+        # evaluate any str; keep anything else as is
+        cv_split_kwargs_eval = dict(
+            (k, eval(str(cv_split_kwargs[k]), scope))
+            if isinstance(cv_split_kwargs[k], str)
+            else (k, cv_split_kwargs[k])
+            for k in cv_split_kwargs)
+        return cv_split_kwargs_eval
 
     def _train_test_split_df(self, df):
         '''
@@ -527,28 +596,47 @@ class FeatureData(Tables):
             (<n_splits> greater than 1), only the first iteration is used to
             split between train and test sets.
         '''
-        self._cv_method_check_random_seed()
-        if self.cv_method.__name__ == 'train_test_split':
+        cv_method = self.cv_method
+        cv_method_kwargs = self.cv_method_kwargs
+        cv_split_kwargs = self.cv_split_kwargs
+        cv_method_kwargs = self._cv_method_check_random_seed(
+            cv_method, cv_method_kwargs)
+
+        if cv_method.__name__ == 'train_test_split':
             # Because train_test_split has **kwargs for options, random_state is not caught, so it should be set explicitly
-            self.cv_method_kwargs['random_state'] = self.random_seed
-            if 'arrays' in self.cv_method_kwargs:  # I think can only be <df>?
-                df = eval(self.cv_method_kwargs.pop('arrays', None))
+            cv_method_kwargs['random_state'] = self.random_seed
+            if 'arrays' in cv_method_kwargs:  # I think can only be <df>?
+                df = eval(cv_method_kwargs.pop('arrays', None))
             scope = locals()  # So it understands what <df> is inside func scope
-            cv_method_kwargs = dict(
-                (k, eval(str(self.cv_method_kwargs[k]), scope)
-                 ) for k in self.cv_method_kwargs)
-            df_train, df_test = self.cv_method(df, **cv_method_kwargs)
+            cv_method_kwargs_eval = dict(
+                (k, eval(str(cv_method_kwargs[k]), scope)
+                 ) for k in cv_method_kwargs)
+            # return
+            df_train, df_test = cv_method(df, **cv_method_kwargs_eval)
         else:
-            self._check_sklearn_splitter(raise_error=False)
-            if 'X' not in self.cv_split_kwargs:  # sets X to <df>
-                self.cv_split_kwargs['X'] = 'df'
-            scope = locals()
-            cv_split_kwargs = dict(
-                (k, eval(str(self.cv_split_kwargs[k]), scope)
-                 ) for k in self.cv_split_kwargs)
-            cv = self.cv_method(**self.cv_method_kwargs)
-            train_idx, test_idx = next(cv.split(**cv_split_kwargs))
+            cv_split_kwargs = self._check_sklearn_splitter(
+                cv_method, cv_method_kwargs, cv_split_kwargs,
+                raise_error=False)
+            cv = cv_method(**cv_method_kwargs)
+            for key in ['y', 'groups']:
+                if key in cv_split_kwargs:
+                    if isinstance(cv_split_kwargs[key], list):
+                        # assume these are columns to group by and adjust kwargs
+                        cv_split_kwargs[key] = self._stratify_set(
+                            stratify_cols=cv_split_kwargs[key],
+                            train_test=None, df=df)
+
+            # Now cv_split_kwargs should be ready to be evaluated
+            cv_split_kwargs_eval = self._splitter_eval(
+                cv_split_kwargs, df=df)
+
+            if 'X' not in cv_split_kwargs_eval:  # sets X
+                cv_split_kwargs_eval['X'] = df
+
+            train_idx, test_idx = next(cv.split(**cv_split_kwargs_eval))
             df_train, df_test = df.loc[train_idx], df.loc[test_idx]
+        print('\nNumber of observations in the "training" set: {0}'.format(len(df_train)))
+        print('Number of observations in the "test" set: {0}\n'.format(len(df_test)))
 
         df_train.insert(0, 'train_test', 'train')
         df_test.insert(0, 'train_test', 'test')
@@ -633,13 +721,13 @@ class FeatureData(Tables):
         self.df_X.to_csv(fname_out_X, index=False)
         self.df_y.to_csv(fname_out_y, index=False)
 
-    def _kfold_repeated_stratified_print(self, cv_rep_strat, train_test='train'):
+    def _splitter_print(self, splitter, train_test='train'):
         '''
         Checks the proportions of the stratifications in the dataset and prints
         the number of observations in each stratified group. The keys are based
         on the stratified IDs in <stratify_train> or <stratify_test>
         '''
-        df_X = self.df_X[self.df_X['train_test'] == train_test]
+        df_X = self.df_X[self.df_X['self_test'] == train_test]
         if train_test == 'train':
             stratify_vector = self.stratify_train
         elif train_test == 'test':
@@ -651,7 +739,7 @@ class FeatureData(Tables):
         print('Total number of observations: {0}'.format(len(stratify_vector)))
         train_list = []
         val_list = []
-        for train_index, val_index in cv_rep_strat:
+        for train_index, val_index in splitter:
             X_meta_train_fold = stratify_vector[train_index]
             X_meta_val_fold = stratify_vector[val_index]
             X_train_dataset_id = X_meta_train_fold[:]
@@ -734,11 +822,7 @@ class FeatureData(Tables):
         '''
         print('Getting feature data...')
         self._set_params_from_kwargs_fd(**kwargs)
-            # group_feats=group_feats, ground_truth=ground_truth,
-            # date_tolerance=date_tolerance, test_size=test_size,
-            # stratify=stratify)
 
-        # df, labels_y_id, label_y = self._get_response_df(self.ground_truth)
         df = self._get_response_df(self.ground_truth_tissue,
                                    self.ground_truth_measure)
         df = self._join_group_feats(df, self.group_feats, self.date_tolerance)
@@ -752,80 +836,59 @@ class FeatureData(Tables):
         self.df_X = df[labels_id + self.labels_x]
         self.df_y = df[labels_id + self.labels_y_id + [self.label_y]]
         self.labels_id = labels_id
-        self._stratify_set()
 
         if self.dir_results is not None:
             self._save_df_X_y()
 
-    def kfold_repeated_stratified(self, **kwargs):
-        '''
-        Builds a repeated, stratified k-fold cross-validation ``sklearn``
-        object for both the X matrix and y vector based on
-        ``FeatureData.df_X`` and ``FeatureData.df_y``. The returned
-        cross-validation object can be used for any ``sklearn`` model.
-
-        Parameters:
-            n_splits (``int``): Number of folds. Must be at least 2
-                (default: 4).
-            n_repeats (``int``): Number of times cross-validator needs to be
-                repeated (default: 3).
-            train_test (``str``): Because ``df_X`` and ``df_y`` have a column
-                denoting whether any given observation belongs to the training
-                set or the test set. This parameter indicates if observations
-                from the training set (i.e., "train") or the test set (i.e.,
-                "test") should be stratified (default: "train").
-            print_out_fd (``bool``): If ``print_out_fd`` is set to ``True``, the
-                number of observations in each k-fold stratification will be
-                printed to the console (default: ``False``).
-
-        Returns:
-            cv_rep_strat: A repeated, stratified cross-validation object
-                suitable to be used with sklearn models.
-
-        Example:
-            >>> from research_tools import FeatureData
-            >>> from research_tools.tests import config
-
-            >>> fd = FeatureData(config_dict=config.config_dict)
-            >>> fd.get_feat_group_X_y()
-            >>> cv_rep_strat = fd.kfold_repeated_stratified(print_out_fd=True)
-            Number of splits: 2
-            Number of repetitions: 3
-            The number of observations in each cross-validation dataset are listed below.
-            The key represents the <stratify_train> ID, and the value represents the number of observations used from that stratify ID
-            Total number of observations: 386
-
-            K-fold train set:
-            Number of observations: 193
-            {0: 10, 1: 9, 2: 10, 3: 9, 4: 10, 5: 9, 6: 9, 7: 10, 8: 9, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
-            {0: 9, 1: 10, 2: 9, 3: 9, 4: 9, 5: 10, 6: 10, 7: 9, 8: 10, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
-            {0: 10, 1: 9, 2: 10, 3: 9, 4: 10, 5: 9, 6: 9, 7: 10, 8: 9, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
-            {0: 9, 1: 10, 2: 9, 3: 9, 4: 9, 5: 10, 6: 10, 7: 9, 8: 10, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
-            {0: 10, 1: 9, 2: 10, 3: 9, 4: 10, 5: 9, 6: 9, 7: 10, 8: 9, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
-            {0: 9, 1: 10, 2: 9, 3: 9, 4: 9, 5: 10, 6: 10, 7: 9, 8: 10, 9: 11, 10: 11, 11: 11, 12: 11, 13: 16, 14: 16, 15: 16, 16: 16}
-        '''
+    def get_tuning_splitter(self, **kwargs):
         self._set_params_from_kwargs_fd(**kwargs)
 
-        if self.train_test == 'train':
-            X = self.X_train
-            y = self.y_train
-            stratify_vector = self.stratify_train
-        elif self.train_test == 'test':
-            X = self.X_test
-            y = self.y_test
-            stratify_vector = self.stratify_test
-        msg1 = ('<X> and <y> must have the same length')
-        msg2 = ('<stratify_vector> must have the same length as <X> and <y>')
-        assert len(X) == len(y), msg1
-        assert len(stratify_vector) == len(y), msg2
+        cv_method = self.cv_method_tune
+        cv_method_kwargs = self.cv_method_tune_kwargs
+        cv_split_kwargs = self.cv_split_tune_kwargs
+        cv_method_kwargs = self._cv_method_check_random_seed(
+            cv_method, cv_method_kwargs)
 
-        rskf = RepeatedStratifiedKFold(
-            n_splits=self.n_splits, n_repeats=self.n_repeats,
-            random_state=self.random_seed)
-        if self.print_out_fd is True:
-            print('\nNumber of splits: {0}\nNumber of repetitions: {1}'
-                  ''.format(self.n_splits, self.n_repeats))
-            cv_rep_strat = rskf.split(X, stratify_vector)
-            self._kfold_repeated_stratified_print(cv_rep_strat)
-        cv_rep_strat = rskf.split(X, stratify_vector)
-        return cv_rep_strat
+        if cv_method.__name__ == 'train_test_split':
+            # Because train_test_split has **kwargs for options, random_state is not caught, so it should be set explicitly
+            cv_method_kwargs['random_state'] = self.random_seed
+            if 'arrays' in cv_method_kwargs:  # I think can only be <df>?
+                df = eval(cv_method_kwargs.pop('arrays', None))
+            scope = locals()  # So it understands what <df> is inside func scope
+            cv_method_kwargs_eval = dict(
+                (k, eval(str(cv_method_kwargs[k]), scope)
+                 ) for k in cv_method_kwargs)
+            return cv_method(df, **cv_method_kwargs_eval)
+        else:
+            cv_split_kwargs = self._check_sklearn_splitter(
+                cv_method, cv_method_kwargs, cv_split_kwargs,
+                raise_error=False)
+            self.cv_split_tune_kwargs = cv_split_kwargs
+            cv = cv_method(**cv_method_kwargs)
+            for key in ['y', 'groups']:
+                if key in cv_split_kwargs:
+                    if isinstance(cv_split_kwargs[key], list):
+                        # assume these are columns to group by and adjust kwargs
+                        cv_split_kwargs[key] = self._stratify_set(
+                            stratify_cols=cv_split_kwargs[key],
+                            train_test='train')
+
+            # Now cv_split_kwargs should be ready to be evaluated
+            df_X_train = self.df_X[self.df_X['train_test'] == 'train']
+            cv_split_kwargs_eval = self._splitter_eval(
+                cv_split_kwargs, df=df_X_train)
+
+            if 'X' not in cv_split_kwargs_eval:  # sets X
+                cv_split_kwargs_eval['X'] = df_X_train
+
+        if self.print_splitter_info == True:
+            n_train = []
+            n_val = []
+            for idx_train, idx_val in cv.split(**cv_split_kwargs_eval):
+                n_train.append(len(idx_train))
+                n_val.append(len(idx_val))
+            print('Tuning splitter: number of cross-validation splits: {0}'.format(cv.get_n_splits(**cv_split_kwargs_eval)))
+            print('Number of observations in the (tuning) train set (avg): {0:.1f}'.format(np.mean(n_train)))
+            print('Number of observations in the (tuning) validation set (avg): {0:.1f}\n'.format(np.mean(n_val)))
+
+        return cv.split(**cv_split_kwargs_eval)

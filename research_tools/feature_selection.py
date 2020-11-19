@@ -44,7 +44,8 @@ class FeatureSelection(FeatureData):
     def __init__(self, **kwargs):
         super(FeatureSelection, self).__init__(**kwargs)
         self.get_feat_group_X_y()
-        cv_rep_strat = self.kfold_repeated_stratified()
+        # cv_rep_strat = self.kfold_repeated_stratified()
+        _ = self.get_tuning_splitter()  # Just to test to make sure it works
         # FeatureData defaults
         # self.base_data_dir = None
         self.model_fs = Lasso()  # params below are specific to this model
@@ -423,7 +424,7 @@ class FeatureSelection(FeatureData):
              [ 57.         358.672        0.67396667]
              [ 63.         246.587        0.48595   ]]
         '''
-        print('Performing feature selection...')
+        print('\nPerforming feature selection...')
         self._set_params_from_kwargs_fs(**kwargs)
 
         if self.n_feats is None:

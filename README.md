@@ -26,8 +26,7 @@ pip install git+git://github.com/tk0miya/testing.postgresql.git@c81ded434d00ec84
 pip install pytest_pgsql
 ```
 
-Note: On Windows, the `postgis` dependency must be installed via `pip` since it is not available on conda-forge.
-Note: On Windows, the `find_program` function of `testing.postgresql` should also be modified (see [db issue #10](https://github.com/insight-sensing/db/issues/10)).
+Note: On Windows, the `postgis` dependency must be installed via `pip` since it is not available on conda-forge. Also not that the `find_program` function of `testing.postgresql` should also be modified if using Windows (see [db issue #10](https://github.com/insight-sensing/db/issues/10)).
 
 Run tests to be sure everything is installed appropriately:
 `pytest research_tools\tests`
