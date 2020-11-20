@@ -9,6 +9,7 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+from datetime import datetime
 import numpy as np
 import os
 
@@ -180,6 +181,15 @@ config_dict = {
         'scoring': ('neg_mean_absolute_error', 'neg_mean_squared_error', 'r2'),
         'refit': 'neg_mean_absolute_error',
         'rank_scoring': 'neg_mean_absolute_error',
-        'print_out_train': False}
+        'print_out_train': False},
+    'Predict': {
+        'date_predict': datetime(2020, 7, 13),
+        'gdf_pred': None,  # if left to None, <primary_keys_pred> should be set
+        'primary_keys_pred': {'owner': 'css-farms-dalhart',
+                              'farm': 'cabrillas',
+                              'field_id': 'c-06',
+                              'year': 2020},  # year isn't necessary; overwritten by date_predict.year
+        'image_search_method': 'past',  # must be one of ['past', 'future', 'nearest']
+        }
     }
 
