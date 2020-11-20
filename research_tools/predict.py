@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from research_tools import Training
+import spatial.utilities as spatial_utils
 
 
 class Predict(Training):
@@ -96,28 +97,98 @@ class Predict(Training):
         '''
         print('add variable here.')
 
-    def _get_most_recent_image(self, method='past'):
+    def _get_image_dates(self):
         '''
-        Finds the most recent image to <Predict.date>.
+        Gets the date of each image in the DB.
+        '''
+        df_date = pd.DataFrame(columns=['raster_name', 'date'])
+        for t_name in tables_s3:
+            date_img = t_name.split('_')[1]
+            df_temp = pd.DataFrame.from_dict({'raster_name': [t_name],
+                                              'date': [date_img]})
+            df_date = df_date.append(df_temp)
+        df_date['date'] =  pd.to_datetime(
+            df_date['date'], format='%Y%m%dt%H%M%S')
+        return df_date
 
-
+    def _match_date(self, date_series, date=None, method='nearest'):
+        '''
+        Finds the closest date from <series> based on the <method>.
 
         Parameters:
+            method (``str``): How to search for the "nearest" date. Must be
+                one of ['nearest', 'past', 'future']. "past" returns the image
+                captured closest in the past, "future" returns the image
+                captured closest in the future, and "nearest" returns the image
+                captured closest, either in the past or future.
+            date_series (``pandas.Series``): A vector containing multiple dates
+                to choose from. The returned date will be a date that is
+                present in <date_series>.
+            date (``datetime``): The date to base the search on.
 
+        Returns:
+            date_closest: The closest date.
+            delta: The difference (in days) between <date> and <date_closest>.
+                 A positive delta indicates <date_closest> is in the past, and
+                 a negative delta indicates <date_closest> is in the future.
         '''
-        assert method == 'past', '<method> must be set to "past".'
+        msg = ("<method> must be one of ['past', 'future', 'nearest'].")
+        assert method in ['past', 'future', 'nearest'], msg
+        if date is None:
+            date = self.date
+        if method == 'nearest':
+            date_closest = min(date_series, key=lambda x: abs(x - date))
+        elif method == 'past':
+            date_closest = max(i for i in date_series if i <= date)
+        elif method == 'future':
+            date_closest = min(i for i in date_series if i >= date)
+        delta = (date - date_closest).days
+        return date_closest, delta
+
+    def _find_nearest_date(self, method='past'):
+        '''
+        Finds the image with the closest date to <Predict.date>.
+
+        Parameters:
+            method (``str``): How to search for the "nearest" date. Must be
+                one of ['nearest', 'past', 'future']. "past" returns the image
+                captured closest in the past, "future" returns the image
+                captured closest in the future, and "nearest" returns the image
+                captured closest, either in the past or future.
+
+        field_id = 'c-06'
+        from datetime import datetime
+        date = datetime(2020, 7, 13)
+        '''
+        # get a list of all raster images in DB
+        table_names = self.engine.table_names(schema=self.db.db_schema)
+        # tables_s2 = get_table_names(handler.engine, handler.db_schema, col_filter='rast', row_filter={'field_id': field_id}, return_empty=False)
+        tables_s2 = spatial_utils.get_table_names(
+            self.db.engine, self.db.db_schema, col_filter='rast',
+            row_filter={'field_id': self.field_id}, return_empty=False)
+        df_date = self._get_image_dates()
+        # compare <date> to df_date and match image date based on method
+        date_closest, delta = self._match_date(df_date['date'], self.date,
+                                               method)
+        raster_name = df_date[
+            df_date['date'] == date_closest]['raster_name'].item()
+        return raster_name
 
 
-        raster_name = 's2a_20180521t172901_msi_r20m_css_farms_dalhart'
+    def _get_X_map(self, method='past'):
+        '''
+        Retrieves the feature data in the X matrix as a georeferenced map.
+
         field_id = 'c-08'
-        ds, df_metadata = self.db.get_raster(raster_name, field_id=field_id)
+        '''
+        # get most recent raster
+        raster_name = self.find_nearest_date(method)
+
+        # load raster as array
+        ds, df_metadata = self.db.get_raster(raster_name, field_id=self.field_id)
         array_img = ds.read()
         array_pred = np.empty(array_img.shape[1:], dtype=float)
 
-    def _get_X_map(self):
-        '''
-        Retrieves the feature data in the X matrix as a georeferenced map.
-        '''
 
 # Steps
 # 0. In the Training class, pass the image_name and the field_bounds for a single
