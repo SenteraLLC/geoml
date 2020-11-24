@@ -183,6 +183,10 @@ config_dict = {
         'rank_scoring': 'neg_mean_absolute_error',
         'print_out_train': False},
     'Predict': {
+        'train': None,  # if train and loc_df_test are each passed, estimator and feats_x_select
+        'loc_df_test': None,  # will be overwritten by <train.df_test.loc[loc_df_test]>
+        'estimator': None,  # can be a scikitlearn regressor of a pandas series following the format of df_test columns
+        'feats_x_select': None,
         'date_predict': datetime(2020, 7, 13),
         'gdf_pred': None,  # if left to None, <primary_keys_pred> should be set
         'primary_keys_pred': {'owner': 'css-farms-dalhart',
@@ -190,6 +194,14 @@ config_dict = {
                               'field_id': 'c-06',
                               'year': 2020},  # year isn't necessary; overwritten by date_predict.year
         'image_search_method': 'past',  # must be one of ['past', 'future', 'nearest']
+        'refit_X_full': True  # refits "estimator" on full X_train + X_test datasets
+        # 'db_name': 'db_test',
+        # 'db_host': 'localhost',
+        # 'db_user': 'postgres',
+        # 'password': None,  # Note: password does not have to be passsed if stored in local keyring
+        # 'db_schema': 'dev_client',
+        # 'db_port': 5432,
+        # 'db': None
         }
     }
 

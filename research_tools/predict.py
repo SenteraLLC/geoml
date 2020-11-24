@@ -15,12 +15,14 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
-from research_tools import Training
+from db import DBHandler
 import db.utilities as db_utils
 import spatial.utilities as spatial_utils
+from research_tools import Tables
+from research_tools import Training
 
 
-class Predict(Training):
+class Predict(Tables):
     '''
     ``Predict`` inherits from an instance of ``Training``, and consists of
     variables and functions to carry out predictions on new data with the
@@ -33,17 +35,35 @@ class Predict(Training):
             year and try to make predictions on each one?
             To start, just take a single field (it can be switched out for new
             predictions pretty easily).
-        2.
+        2.  Should we inherit from training, or just have the ability to pass
+            a ``Training`` instance to ``Predict``? Not having the dependence
+            on ``Training`` would be valuable so ``Predict`` could be used as
+            a standalone module where the only thing passed is the
+            tuned/trained estimator. With this, if ``Training`` is passed,
+            there might be deeper functionality not available if an estimator
+            is simply passed.
+        3.  Right now, predict() inherits from train, but we don't really want
+            the predict class to depend on train. For example, if we already
+            have a trained estimator and its corresponding params, we would like
+            to be able to run predict using that estimator. A way to implent
+            this is to have an optional parameter "train"
     '''
-    __allowed_params = ('date_predict', 'primary_keys_pred', 'gdf_pred',
-                        'image_search_method')
+    __allowed_params = ('train', 'estimator', 'feats_x_select', 'date_predict',
+                        'primary_keys_pred', 'gdf_pred',
+                        'image_search_method', 'refit_X_full')
 
     def __init__(self, **kwargs):
         '''
         '''
         super(Predict, self).__init__(**kwargs)
-        self.train(**kwargs)
+        self.load_tables()
+        # super(Predict, self).__init__(**kwargs)
+        # self.train(**kwargs)
 
+        self.train = None  # research_tools train object
+        self.loc_df_test = None
+        self.estimator = None
+        self.feats_x_select = None
         self.date_predict = datetime.now().date()  # when
         self.primary_keys_pred = {'owner': None,
                                   'farm': None,
@@ -51,9 +71,10 @@ class Predict(Training):
                                   'year': None}  # year isn't necessary; overwritten by date_predict.year
         self.gdf_pred = None  # where
         self.image_search_method = 'past'
+        self.refit_X_full = False
 
         self._set_params_from_kwargs_pred(**kwargs)
-        self._set_attributes_train()
+        self._set_attributes_pred()
 
     def _set_params_from_dict_pred(self, config_dict):
         '''
@@ -93,6 +114,17 @@ class Predict(Training):
                 raise ValueError('{0}.\nPlease either pass a datetime object, '
                                  'or a string in the "YYYY-mm-dd" format.'
                                  ''.format(e))
+
+        if isinstance(self.train, Training) and self.loc_df_test:
+            if self.estimator and self.feats_x_select:
+                print('<predict.estimator> and <predict.feats_x_select> are '
+                      'being overwritten by <predict.train.df_test.loc[loc_df_test]>')
+            self.estimator = self.train.df_test.loc[self.loc_df_test,'regressor']
+            self.feats_x_select = self.train.df_test.loc[self.loc_df_test,'feats_x_select']
+
+        if not self.db and isinstance(self.train, Training):
+            if self.train.db:
+                self.db = self.train.db
         if not isinstance(self.gdf_pred, gpd.GeoDataFrame):
             self._load_field_bounds()
 
@@ -218,13 +250,32 @@ class Predict(Training):
         # load raster as array
         ds, df_metadata = self.db.get_raster(raster_name, **primary_key_val)
         array_img = ds.read()
-        array_pred = np.empty(array_img.shape[1:], dtype=float)
+        # array_pred = np.empty(array_img.shape[1:], dtype=float)
+        return array_img, df_metadata
 
-        # load raster as array
-        ds, df_metadata = self.db.get_raster(raster_name, **primary_key_val)
-        array_img = ds.read()
-        array_pred = np.empty(array_img.shape[1:], dtype=float)
-        return array_img, array_pred
+    def _get_array_img_band_idx(self, df_metadata, names, col_header='wavelength'):
+        '''
+        Gets the index of the bands based on feature names from
+        <feats_x_select>.
+
+        Parameters:
+            df_metadata: The Sentinel metadata dataframe
+            names: The names of the Sentinel spectra features from
+                <feats_x_select>.
+            col_header: Look into why this is needed...
+
+        Returns:
+            keys (``dict``): Key/value pairs representing
+                <feats_x_select> names/<array_img> band index
+        '''
+        band_names, wavelengths = self.db._get_band_wl_from_metadata(
+            df_metadata)
+        wl_AB_sync = [self.db.sentinel_AB_sync[b] for b in band_names]
+        cols = band_names if col_header == 'bands' else wl_AB_sync
+        keys = dict(('wl_{0:.0f}'.format(col), i)
+                    for i, col in enumerate(cols)
+                    if 'wl_{0:.0f}'.format(col) in names)
+        return keys
 
     def predict(self, **kwargs):
         '''
@@ -233,9 +284,84 @@ class Predict(Training):
         print('Making predictions on new data...')
         self._set_params_from_kwargs_pred(**kwargs)
 
+        array_preds, array_imgs, df_metadatas = [], [], []
         for _, gdf_pred_s in self.gdf_pred.iterrows():
-            array_img, array_pred = self._get_X_map(gdf_pred_s)
-        return array_img, array_pred
+            subset = db_utils.get_primary_keys(gdf_pred_s)
+            array_img, df_metadata = self._get_X_map(gdf_pred_s)
+            array_imgs.append(array_img)
+            df_metadatas.append(df_metadata)
+            # 2. Enter the estimator "features" (columns in the ML X matrix) as
+            #    the 3rd dimension in a 3D array (D1 and D2 are the spatial
+            #    dimensions from <array_img>).
+
+            # 1. Get features for the model of interest
+            # How should we decide the model of interest?
+
+            cols_feats = subset + ['date']  # df must have primary keys
+            data_feats = list(gdf_pred_s[subset]) + [self.date_predict]
+            df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
+
+            feats_x_select = self.feats_x_select
+
+            if 'dap' in feats_x_select:
+                df_feats = self.dap(df_feats)
+            if 'dae' in feats_x_select:
+                df_feats = self.dae(df_feats)
+            if 'rate_ntd_kgha' in feats_x_select:
+                df_feats = self.rate_ntd(df_feats)
+            if any('wl_' in f for f in feats_x_select):
+                # For now, just add null placeholders as a new column
+                wl_names = [f for f in feats_x_select if 'wl_' in f]
+                keys = self._get_array_img_band_idx(df_metadata, wl_names)
+                for name in wl_names:
+                    df_feats[name] = keys[name]
+                # TODO: Figure out how to decipher between Sentinel and other sources
+                # grab bands from array_img according to df_metadata
+            # TODO: change when we get individual functions for each wx feature
+            if any([f for f in feats_x_select if f in self.weather_derived.columns]):
+                primary_key_val = dict((k, gdf_pred_s[k]) for k in subset)
+                primary_key_val['date'] = self.date_predict
+                weather_derived_filter = self.weather_derived.loc[
+                    (self.weather_derived[list(primary_key_val)] ==
+                     pd.Series(primary_key_val)).all(axis=1)]
+                for f in set(feats_x_select).intersection(self.weather_derived.columns):
+                    # get its value from weather_derived and add to df_feats
+                    df_feats[f] = weather_derived_filter[f].values[0]
+
+            # Now that we have all features in df_feats, populate array_feat
+            array_X_shape = (len(feats_x_select),) + array_img.shape[1:]
+            array_X = np.empty(array_X_shape, dtype=float)
+
+            for i, feat in enumerate(feats_x_select):
+                if 'wl_' in feat:
+                    array_X[i,:,:] = array_img[df_feats[feat],:,:] / 10000
+                else:
+                    array_X[i,:,:] = df_feats[feat]
+
+            # Reshape to 2d, predict, and reshape back to 3d
+            self.array_X = array_X
+            # print(self.array_X.shape)
+            # import numpy as np
+            array_X = self.array_X
+
+            array_X_move = np.moveaxis(array_X, 0, -1)  # move first axis to last
+            array_X_2d = array_X_move.reshape(-1, array_X_move.shape[2])
+
+            # a = array_X_2d[287].reshape(1, -1)
+            # b = predict.estimator.predict(array_X_2d)
+            # arr_pred = b.reshape(array_X_move.shape[:2])
+
+            # array_X_2d = array_X.reshape(0, array_X.shape[0])
+
+            array_pred_1d = self.estimator.predict(array_X_2d)
+            array_pred = array_pred_1d.reshape(array_X_move.shape[:2])
+
+            # Finally mask out invalid pixels (from geometry?)
+            array_preds.append(array_pred)
+        return array_preds, array_imgs, df_metadatas
+
+# plt.imshow(arr_pred, interpolation='nearest')
+# plt.show()
 
 def extra():
     # Steps

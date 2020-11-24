@@ -486,7 +486,7 @@ class Training(FeatureSelection):
             idx_max = self.df_test_full.index.max() + 1
         return int(idx_max + idx)
 
-    def train(self, **kwargs):
+    def fit(self, **kwargs):
         '''
         Perform tuning for each unique scenario from ``FeatureSelection``
         (i.e., for each row in <df_fs_params>).
