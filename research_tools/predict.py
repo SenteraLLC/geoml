@@ -249,9 +249,8 @@ class Predict(Tables):
 
         # load raster as array
         ds, df_metadata = self.db.get_raster(raster_name, **primary_key_val)
-        array_img = ds.read()
         # array_pred = np.empty(array_img.shape[1:], dtype=float)
-        return array_img, df_metadata
+        return ds, df_metadata
 
     def _get_array_img_band_idx(self, df_metadata, names, col_header='wavelength'):
         '''
@@ -277,165 +276,123 @@ class Predict(Tables):
                     if 'wl_{0:.0f}'.format(col) in names)
         return keys
 
-    def predict(self, **kwargs):
+    def _feats_x_select_data(self, df_feats, df_metadata):
         '''
-        Makes predictions.
+        Builds a dataframe with ``feats_x_select`` data.
+
+        Returns:
+            df_feats: DataFrame containing each of the feature names as
+                column names and the value (if not spatially aware) or
+                the array index (if spatially aware; e.g., sentinel image).
+        '''
+        if 'dap' in self.feats_x_select:
+            df_feats = self.dap(df_feats)
+        if 'dae' in self.feats_x_select:
+            df_feats = self.dae(df_feats)
+        if 'rate_ntd_kgha' in self.feats_x_select:
+            df_feats = self.rate_ntd(df_feats)
+        if any('wl_' in f for f in self.feats_x_select):
+            # For now, just add null placeholders as a new column
+            wl_names = [f for f in self.feats_x_select if 'wl_' in f]
+            keys = self._get_array_img_band_idx(df_metadata, wl_names)
+            for name in wl_names:
+                df_feats[name] = keys[name]
+            # TODO: Figure out how to decipher between Sentinel and other sources
+        return df_feats
+
+    def _fill_array_X(self, array_img, df_feats):
+        '''
+        Populates array_X with all the features in df_feats
+        '''
+        array_X_shape = (len(self.feats_x_select),) + array_img.shape[1:]
+        array_X = np.empty(array_X_shape, dtype=float)
+
+        for i, feat in enumerate(self.feats_x_select):
+            if 'wl_' in feat:
+                array_X[i,:,:] = array_img[df_feats[feat],:,:] / 10000
+            else:
+                array_X[i,:,:] = df_feats[feat]
+        return array_X
+
+    def _predict_and_reshape(self, array_X):
+        '''
+        Reshapes <array_X> to 2d, predicts, and reshapes back to 3d.
+        '''
+        array_X_move = np.moveaxis(array_X, 0, -1)  # move first axis to last
+        array_X_2d = array_X_move.reshape(-1, array_X_move.shape[2])
+
+        array_pred_1d = self.estimator.predict(array_X_2d)
+        array_pred = array_pred_1d.reshape(array_X_move.shape[:2])
+        return array_pred
+
+    def predict(self, gdf_pred_s=None, **kwargs):
+        '''
+        Makes predictions for a single geometry.
+
+        For spatially aware predictions. Builds a 3d array that contains
+        spatial data (x/y) as well as feaure data (z). The 3d array is reshaped
+        to 2d (x*y by z shape) and passed to the ``estimator.predict()``
+        function. After predictions are made, the 1d array is reshaped to 2d
+        and loaded as a rasterio object.
+
+        Parameters:
+            gdf_pred_s (``geopandas.GeoSeries``): The geometry to make the
+                prediction on.
+        '''
+        print('Making predictions on new data...')
+        self._set_params_from_kwargs_pred(**kwargs)
+
+        if not gdf_pred_s:
+            print('Using the first row ')
+            gdf_pred_s = self.gdf_pred.iloc[0]
+
+        subset = db_utils.get_primary_keys(gdf_pred_s)
+        ds, df_metadata = self._get_X_map(gdf_pred_s)
+
+        # 1. Get features for the model of interest
+        cols_feats = subset + ['date']  # df must have primary keys
+        data_feats = list(gdf_pred_s[subset]) + [self.date_predict]
+        df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
+        df_feats = self._feats_x_select_data(df_feats, df_metadata)
+        # TODO: change when we get individual functions for each wx feature
+        if any([f for f in self.feats_x_select if f in self.weather_derived.columns]):
+            primary_key_val = dict((k, gdf_pred_s[k]) for k in subset)
+            primary_key_val['date'] = self.date_predict
+            weather_derived_filter = self.weather_derived.loc[
+                (self.weather_derived[list(primary_key_val)] ==
+                 pd.Series(primary_key_val)).all(axis=1)]
+            for f in set(self.feats_x_select).intersection(self.weather_derived.columns):
+                # get its value from weather_derived and add to df_feats
+                df_feats[f] = weather_derived_filter[f].values[0]
+
+        array_X = self._fill_array_X(ds.read(), df_feats)
+        array_pred = self._predict_and_reshape(array_X)
+        # store as rasterio object
+        # get array_img
+
+        # TODO: Mmask out invalid pixels (from geometry?)
+        return array_pred, ds, df_metadata
+
+    def predict_many(self, **kwargs):
+        '''
+        Makes predictions for each geometry in ``gdf_pred``.
+
+        For spatially aware predictions. Builds a 3d array that contains
+        spatial data (x/y) as well as feaure data (z). The 3d array is reshaped
+        to 2d (x*y by z shape) and passed to the ``estimator.predict()``
+        function. After predictions are made, the 1d array is reshaped to 2d
+        and loaded as a rasterio object.
         '''
         print('Making predictions on new data...')
         self._set_params_from_kwargs_pred(**kwargs)
 
         array_preds, array_imgs, df_metadatas = [], [], []
         for _, gdf_pred_s in self.gdf_pred.iterrows():
-            subset = db_utils.get_primary_keys(gdf_pred_s)
-            array_img, df_metadata = self._get_X_map(gdf_pred_s)
-            array_imgs.append(array_img)
-            df_metadatas.append(df_metadata)
-            # 2. Enter the estimator "features" (columns in the ML X matrix) as
-            #    the 3rd dimension in a 3D array (D1 and D2 are the spatial
-            #    dimensions from <array_img>).
-
-            # 1. Get features for the model of interest
-            # How should we decide the model of interest?
-
-            cols_feats = subset + ['date']  # df must have primary keys
-            data_feats = list(gdf_pred_s[subset]) + [self.date_predict]
-            df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
-
-            feats_x_select = self.feats_x_select
-
-            if 'dap' in feats_x_select:
-                df_feats = self.dap(df_feats)
-            if 'dae' in feats_x_select:
-                df_feats = self.dae(df_feats)
-            if 'rate_ntd_kgha' in feats_x_select:
-                df_feats = self.rate_ntd(df_feats)
-            if any('wl_' in f for f in feats_x_select):
-                # For now, just add null placeholders as a new column
-                wl_names = [f for f in feats_x_select if 'wl_' in f]
-                keys = self._get_array_img_band_idx(df_metadata, wl_names)
-                for name in wl_names:
-                    df_feats[name] = keys[name]
-                # TODO: Figure out how to decipher between Sentinel and other sources
-                # grab bands from array_img according to df_metadata
-            # TODO: change when we get individual functions for each wx feature
-            if any([f for f in feats_x_select if f in self.weather_derived.columns]):
-                primary_key_val = dict((k, gdf_pred_s[k]) for k in subset)
-                primary_key_val['date'] = self.date_predict
-                weather_derived_filter = self.weather_derived.loc[
-                    (self.weather_derived[list(primary_key_val)] ==
-                     pd.Series(primary_key_val)).all(axis=1)]
-                for f in set(feats_x_select).intersection(self.weather_derived.columns):
-                    # get its value from weather_derived and add to df_feats
-                    df_feats[f] = weather_derived_filter[f].values[0]
-
-            # Now that we have all features in df_feats, populate array_feat
-            array_X_shape = (len(feats_x_select),) + array_img.shape[1:]
-            array_X = np.empty(array_X_shape, dtype=float)
-
-            for i, feat in enumerate(feats_x_select):
-                if 'wl_' in feat:
-                    array_X[i,:,:] = array_img[df_feats[feat],:,:] / 10000
-                else:
-                    array_X[i,:,:] = df_feats[feat]
-
-            # Reshape to 2d, predict, and reshape back to 3d
-            self.array_X = array_X
-            # print(self.array_X.shape)
-            # import numpy as np
-            array_X = self.array_X
-
-            array_X_move = np.moveaxis(array_X, 0, -1)  # move first axis to last
-            array_X_2d = array_X_move.reshape(-1, array_X_move.shape[2])
-
-            # a = array_X_2d[287].reshape(1, -1)
-            # b = predict.estimator.predict(array_X_2d)
-            # arr_pred = b.reshape(array_X_move.shape[:2])
-
-            # array_X_2d = array_X.reshape(0, array_X.shape[0])
-
-            array_pred_1d = self.estimator.predict(array_X_2d)
-            array_pred = array_pred_1d.reshape(array_X_move.shape[:2])
-
-            # Finally mask out invalid pixels (from geometry?)
+            array_pred, ds, df_metadata = self.predict(gdf_pred_s)
             array_preds.append(array_pred)
-        return array_preds, array_imgs, df_metadatas
+            df_metadatas.append(df_metadata)
+        return array_preds, df_metadatas
 
-# plt.imshow(arr_pred, interpolation='nearest')
-# plt.show()
-
-def extra():
-    # Steps
-    # 0. [DONE] In the Training class, pass the image_name and the field_bounds for a single
-    #    geometry.
-    # 1. [DONE] Find the most recent image that has valid pixels for that geometry.
-    # 2. [DONE] Load the image in, and use it to build the X matrix "map".
-    # 3. Make predictions for each "pixel" and output to a georeferenced raster to
-    #    be visualized.
-
-
-    import numpy
-    arr = numpy.random.rand(50,100,25)
-    arr_2d = arr.reshape(-1, arr.shape[-1])
-    print(arr_2d.shape)
-    arr_3d = arr_2d.reshape(arr.shape)
-    print(arr_2d.shape)
-    np.all(arr == arr_3d)
-
-    # to go from 1d pred to 2d array. arr_pred is what is expected from estimator.predict()
-    arr_pred = arr_2d[:,0]
-    arr_pred_2d = arr_pred.reshape(arr.shape[:2])
-
-    # In[Build X matrix for spatially-aware predictions]
-    # 1. [DONE] Get an empty raster with the shape of the RS data on that date (can be
-    #    resampled if desired).
-    import numpy as np
-
-    raster_name = 's2a_20180521t172901_msi_r20m_css_farms_dalhart'
-    field_id = 'c-08'
-    ds, df_metadata = handler.get_raster(raster_name, field_id=field_id)
-    array_img = ds.read()
-    array_pred = np.empty(array_img.shape[1:], dtype=float)
-
-    # 2. Processing one field_id at a time, treat the columns in the ML X matrix as
-    #    the 3rd dimension in a 3D array (where D1 and D2 are spatial dimensions)
-    #    that can be made into an image/geotiff.
-    col_header = 'wavelength'
-    band_names, wavelengths = handler._get_band_wl_from_pg_raster(raster_name, rid=1)
-    cols = band_names if col_header == 'bands' else wavelengths
-    wl_AB_sync = [handler.sentinel_AB_sync[b] for b in band_names]
-    cols = band_names if col_header == 'bands' else wl_AB_sync
-    keys = ['wl_{0:.0f}'.format(col) for col in cols]
-
-
-
-    feats_x_select = ('dap', 'rate_ntd_kgha', 'wl_665', 'wl_1612', 'wl_864',
-                      'gdd_cumsum_plant_to_date')
-    array_X_shape = array_img.shape[1:]
-    array_X_shape = (len(feats_x_select),) + array_img.shape[1:]
-    band_shape = (1,) + array_img.shape[1:]
-    array_X = np.empty(array_X_shape, dtype=float)
-    # array_X = None
-
-    for i, feat in enumerate(feats_x_select):
-        print(i, feat)
-        if 'wl_' in feat:  # grab reflectance band from ds.read(band_n)
-            idx = keys.index(feat)
-            array_band = np.expand_dims(array_img[idx,:,:], axis=0)
-        elif feat == 'dap':
-            array_band = np.empty(band_shape)
-        elif feat == 'dae':
-            array_band = np.empty(band_shape)
-        elif feat == 'gdd_cumsum_plant_to_date':
-            array_band = np.empty(band_shape)
-        else:
-            array_band = np.empty(band_shape)
-        array_X[i,:,:] = array_band
-    array_X.mean(axis=(1,2))
-
-    # 3. Pass the reshaped 3D array (now a 2D array where 3rd dimension is cols) to
-    #    the trained scikit-learn model to make new predictions.
-    # 4. Reshape back into the 3D array, making sure it's just the inverse of the
-    #    first reshape so spatial integrity is maintained.
     # 5. Save the resulting prediction array as a geotiff (and optionally save the
     #    input "Xarray" image).
     # 6. Consider storing another image providing an estimate of +/- of predicted

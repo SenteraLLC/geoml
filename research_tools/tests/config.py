@@ -101,12 +101,12 @@ biomass = {
 
 config_dict = {
     'Tables': {
-        'db_name': 'db_test',
+        'db_name': 'insight_dev',
         'db_host': 'localhost',
         'db_user': 'postgres',
-        'password': None,  # Note: password does not have to be passsed if stored in local keyring
+        'password': 'password',  # Note: password does not have to be passsed if stored in local keyring
         'db_schema': 'dev_client',
-        'db_port': 5432,
+        'db_port': 5431,
         'db': None,
         'base_dir_data': os.path.join(test_dir, 'testdata'),
         'table_names': {  # if not connected to a DB, these should point to files that contain the join data.
