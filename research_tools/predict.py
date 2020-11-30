@@ -13,9 +13,12 @@ from copy import deepcopy
 from datetime import datetime
 import geopandas as gpd
 import numpy as np
+import os
 import pandas as pd
+import rasterio as rio
 
 from db import DBHandler
+from spatial import Imagery
 import db.utilities as db_utils
 import spatial.utilities as spatial_utils
 from research_tools import Tables
@@ -50,7 +53,7 @@ class Predict(Tables):
     '''
     __allowed_params = ('train', 'estimator', 'feats_x_select', 'date_predict',
                         'primary_keys_pred', 'gdf_pred',
-                        'image_search_method', 'refit_X_full')
+                        'image_search_method', 'refit_X_full', 'dir_out_pred')
 
     def __init__(self, **kwargs):
         '''
@@ -72,6 +75,7 @@ class Predict(Tables):
         self.gdf_pred = None  # where
         self.image_search_method = 'past'
         self.refit_X_full = False
+        self.dir_out_pred = None
 
         self._set_params_from_kwargs_pred(**kwargs)
         self._set_attributes_pred()
@@ -323,9 +327,32 @@ class Predict(Tables):
 
         array_pred_1d = self.estimator.predict(array_X_2d)
         array_pred = array_pred_1d.reshape(array_X_move.shape[:2])
+        array_pred = np.expand_dims(array_pred, 0)
         return array_pred
 
-    def predict(self, gdf_pred_s=None, **kwargs):
+    def _mask_by_bounds(self, array_pred, profile, buffer_dist=0):
+        '''
+        Masks array by field bounds in ``predict.primary_keys_pred``
+
+        Returns:
+            array_pred (``numpy.ndarray``): Input array with masked pixels set
+                to 0.
+        '''
+        profile_copy = deepcopy(profile)
+        array_pred = array_pred.astype(profile_copy['dtype'])
+        gdf_bounds = self.db.get_table_df(  # load field bounds
+            'field_bounds', **self.primary_keys_pred)
+        profile_copy.update(driver='MEM')
+        with rio.io.MemoryFile() as memfile:  # load array_pred as memory object
+            with memfile.open(**profile_copy) as ds_temp:
+                ds_temp.write(array_pred)
+                geometry = gdf_bounds[gdf_bounds.geometry.name].to_crs(
+                    epsg=profile_copy['crs'].to_epsg()).buffer(buffer_dist)
+                array_pred, _ = rio.mask.mask(ds_temp, geometry, crop=True)
+        return array_pred
+
+    def predict(self, gdf_pred_s=None, mask_by_bounds=True,
+                buffer_dist=-40, **kwargs):
         '''
         Makes predictions for a single geometry.
 
@@ -338,16 +365,26 @@ class Predict(Tables):
         Parameters:
             gdf_pred_s (``geopandas.GeoSeries``): The geometry to make the
                 prediction on.
+            mask_by_bounds (``bool``): Whether prediction array should be
+                masked by field bounds (``True``) or not (``False``).
+            buffer_dist (``int`` or ``float``): The buffer distance to
+                apply to mask boundary. Negative ``buffer_dist`` results
+                in a smaller array/polygon, whereas a positive
+                ``buffer_dist`` results in a larger array/polygon. Units
+                should be equal to units used by the coordinate reference
+                system of the rasterio profile object from imagery. Ignored
+                if ``mask_by_bounds`` is ``False``.
         '''
         print('Making predictions on new data...')
         self._set_params_from_kwargs_pred(**kwargs)
 
-        if not gdf_pred_s:
+        if not isinstance(gdf_pred_s, pd.Series):
             print('Using the first row ')
             gdf_pred_s = self.gdf_pred.iloc[0]
 
         subset = db_utils.get_primary_keys(gdf_pred_s)
         ds, df_metadata = self._get_X_map(gdf_pred_s)
+        array_img = ds.read()
 
         # 1. Get features for the model of interest
         cols_feats = subset + ['date']  # df must have primary keys
@@ -365,17 +402,21 @@ class Predict(Tables):
                 # get its value from weather_derived and add to df_feats
                 df_feats[f] = weather_derived_filter[f].values[0]
 
-        array_X = self._fill_array_X(ds.read(), df_feats)
+        array_X = self._fill_array_X(array_img, df_feats)
         array_pred = self._predict_and_reshape(array_X)
-        # store as rasterio object
-        # get array_img
+        profile = deepcopy(ds.profile)
+        profile.update(count=1)
+        if mask_by_bounds == True:
+            array_pred = self._mask_by_bounds(array_pred, profile, buffer_dist)
+        return array_pred, profile
 
-        # TODO: Mmask out invalid pixels (from geometry?)
-        return array_pred, ds, df_metadata
-
-    def predict_many(self, **kwargs):
+    def predict_and_save(self, **kwargs):
         '''
-        Makes predictions for each geometry in ``gdf_pred``.
+        Makes predictions for each geometry in ``gdf_pred`` and saves output
+        as an image.
+
+        This function does 2 tasks in addition to predict(): batch predicts for
+        all geom in ``gdf_pred``, and saves predictions as an image.
 
         For spatially aware predictions. Builds a 3d array that contains
         spatial data (x/y) as well as feaure data (z). The 3d array is reshaped
@@ -386,11 +427,19 @@ class Predict(Tables):
         print('Making predictions on new data...')
         self._set_params_from_kwargs_pred(**kwargs)
 
-        array_preds, array_imgs, df_metadatas = [], [], []
+        array_preds, df_metadatas = [], []
+        imagery = Imagery()
+        imagery.driver = 'Gtiff'
         for _, gdf_pred_s in self.gdf_pred.iterrows():
             array_pred, ds, df_metadata = self.predict(gdf_pred_s)
             array_preds.append(array_pred)
             df_metadatas.append(df_metadata)
+
+            name_out = 'petno3_ppm_20200713_r20m_css-farms-dalhart_cabrillas_c-06.tif'
+
+            fname_out = os.path.join(self.dir_out_pred, name_out)
+            imagery._save_image(np.expand_dims(array_pred, axis=0), ds.profile, fname_out, keep_xml=False)
+
         return array_preds, df_metadatas
 
     # 5. Save the resulting prediction array as a geotiff (and optionally save the
@@ -398,3 +447,40 @@ class Predict(Tables):
     # 6. Consider storing another image providing an estimate of +/- of predicted
     #    value (based on where it lies in the "predicted" axis of the
     #    measured/predicted cross-validated test set.)
+
+#     def save_preds(self, fname_out):
+#         '''
+#         Saves a
+#         '''
+
+# fname_out = r'G:\Shared drives\Data\client_data\CSS Farms\preds_prototype\petiole-no3_20200714T172859_CSS-Farms-Dalhart_Cabrillas_C-18.tif'
+# my_imagery = Imagery()
+# my_imagery.driver = 'Gtiff'
+# rast = rio.open(fname_img)
+# metadata = rast.meta
+# my_imagery._save_image(array_pred, metadata, fname_out, keep_xml=False)
+
+# fname = r'G:\Shared drives\Data\client_data\CSS Farms\preds_prototype\petiole-no3_20200714T172859_CSS-Farms-Dalhart_Cabrillas_C-18.tif'
+# with rasterio.open(fname) as src:
+#     with rasterio.Env():
+#         profile = ds.profile
+#         profile = {'driver': 'GTiff',
+#                    'dtype': 'uint16',
+#                    'nodata': 0.0,
+#                    'width': 48,
+#                    'height': 24,
+#                    'count': 1,
+#                    'crs': CRS.from_epsg(32613),
+#                    'transform': Affine(20.0, 0.0, 695800.0, 0.0, -20.0, 3983280.0),
+#                    'tiled': False,
+#                    'interleave': 'band'}
+
+#     # And then change the band count to 1, set the
+#     # dtype to uint8, and specify LZW compression.
+#     profile.update(
+#         dtype=rasterio.uint8,
+#         count=1,
+#         compress='lzw')
+
+#     with rasterio.open('example.tif', 'w', **profile) as dst:
+#         dst.write(array.astype(rasterio.uint8), 1)

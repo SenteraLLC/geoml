@@ -101,12 +101,12 @@ biomass = {
 
 config_dict = {
     'Tables': {
-        'db_name': 'insight_dev',
+        'db_name': 'db_test',
         'db_host': 'localhost',
         'db_user': 'postgres',
-        'password': 'password',  # Note: password does not have to be passsed if stored in local keyring
+        'password': None,  # Note: password does not have to be passsed if stored in local keyring
         'db_schema': 'dev_client',
-        'db_port': 5431,
+        'db_port': 5432,
         'db': None,
         'base_dir_data': os.path.join(test_dir, 'testdata'),
         'table_names': {  # if not connected to a DB, these should point to files that contain the join data.
@@ -183,9 +183,9 @@ config_dict = {
         'rank_scoring': 'neg_mean_absolute_error',
         'print_out_train': False},
     'Predict': {
-        'train': None,  # if train and loc_df_test are each passed, estimator and feats_x_select
+        'train': None,  # if train and loc_df_test are each passed, estimator and feats_x_select are pulled from <train.df_test.loc[loc_df_test]>
         'loc_df_test': None,  # will be overwritten by <train.df_test.loc[loc_df_test]>
-        'estimator': None,  # can be a scikitlearn regressor of a pandas series following the format of df_test columns
+        'estimator': None,  # can be a scikit-learn regressor or a pandas series following the format of df_test columns
         'feats_x_select': None,
         'date_predict': datetime(2020, 7, 13),
         'gdf_pred': None,  # if left to None, <primary_keys_pred> should be set
@@ -194,7 +194,8 @@ config_dict = {
                               'field_id': 'c-06',
                               'year': 2020},  # year isn't necessary; overwritten by date_predict.year
         'image_search_method': 'past',  # must be one of ['past', 'future', 'nearest']
-        'refit_X_full': True  # refits "estimator" on full X_train + X_test datasets
+        'refit_X_full': True,  # refits "estimator" on full X_train + X_test datasets
+        'dir_out_pred': r'G:\Shared drives\Data\client_data\CSS Farms\preds_prototype'
         # 'db_name': 'db_test',
         # 'db_host': 'localhost',
         # 'db_user': 'postgres',
