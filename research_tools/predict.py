@@ -338,18 +338,26 @@ class Predict(Tables):
             array_pred (``numpy.ndarray``): Input array with masked pixels set
                 to 0.
         '''
-        profile_copy = deepcopy(profile)
-        array_pred = array_pred.astype(profile_copy['dtype'])
+        profile_out = deepcopy(profile)
+        array_pred = array_pred.astype(profile_out['dtype'])
         gdf_bounds = self.db.get_table_df(  # load field bounds
             'field_bounds', **self.primary_keys_pred)
-        profile_copy.update(driver='MEM')
+        profile_out.update(driver='MEM')
         with rio.io.MemoryFile() as memfile:  # load array_pred as memory object
-            with memfile.open(**profile_copy) as ds_temp:
+            with memfile.open(**profile_out) as ds_temp:
                 ds_temp.write(array_pred)
                 geometry = gdf_bounds[gdf_bounds.geometry.name].to_crs(
-                    epsg=profile_copy['crs'].to_epsg()).buffer(buffer_dist)
+                    epsg=profile_out['crs'].to_epsg()).buffer(buffer_dist)
                 array_pred, _ = rio.mask.mask(ds_temp, geometry, crop=True)
-        return array_pred
+                # adjust profile based on geometry bounds
+                # if int(geometry.crs.utm_zone[:-1]) <= 30:
+                #     west = geometry.bounds['maxx'].item()
+                # else:
+                #     west = geometry.bounds['minx'].item()
+                profile_out['transform'] = rio.transform.from_origin(
+                    geometry.bounds['minx'].item(), geometry.bounds['maxy'].item(),
+                    profile['transform'].a, -profile['transform'].e)
+        return array_pred, profile_out
 
     def predict(self, gdf_pred_s=None, mask_by_bounds=True,
                 buffer_dist=-40, **kwargs):
@@ -407,7 +415,8 @@ class Predict(Tables):
         profile = deepcopy(ds.profile)
         profile.update(count=1)
         if mask_by_bounds == True:
-            array_pred = self._mask_by_bounds(array_pred, profile, buffer_dist)
+            array_pred, profile = self._mask_by_bounds(array_pred, profile,
+                                                       buffer_dist)
         return array_pred, profile
 
     def predict_and_save(self, **kwargs):
