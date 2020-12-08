@@ -75,7 +75,8 @@ class Tables(object):
             'obs_soil': 'obs_soil.geojson',
             'rs_sentinel': 'rs_sentinel.geojson',
             'weather': 'weather.csv',
-            'weather_derived': 'calc_weather.csv'
+            'weather_derived': 'calc_weather.csv',
+            'weather_derived_res': 'calc_weather_res.csv'
             }
 
         self._set_params_from_kwargs_t(**kwargs)
@@ -167,6 +168,7 @@ class Tables(object):
         self.weather = None
 
         self.weather_derived = None  # Not sure if this will be a derived or stored table
+        self.weather_derived_res = None
 
     def _cr_rate_ntd(self, df):
         '''
@@ -338,7 +340,7 @@ class Tables(object):
 
     def _load_table_from_db(self, table_name):
         '''
-        Loads <table_name> from database via <Table.handler>
+        Loads <table_name> from database via <Table.db>
         '''
         inspector = inspect(self.db.engine)
         if table_name in inspector.get_table_names(schema=self.db.db_schema):
@@ -405,6 +407,8 @@ class Tables(object):
             return self.weather
         if table_name == 'weather_derived':
             return self.weather_derived
+        if table_name == 'weather_derived_res':
+            return self.weather_derived_res
 
     def _set_table_to_self(self, table_name, df):
         '''
@@ -443,6 +447,8 @@ class Tables(object):
             self.obs_tissue_res = df
         if table_name == 'obs_soil_res':
             self.obs_soil_res = df
+        if table_name == 'rs_cropscan_res':
+            self.rs_cropscan_res = df
         if table_name == 'field_bounds':
             self.field_bounds = df
         if table_name == 'as_planted':
@@ -461,6 +467,8 @@ class Tables(object):
             self.weather = df
         if table_name == 'weather_derived':
             self.weather_derived = df
+        if table_name == 'weather_derived_res':
+            self.weather_derived_res = df
 
     def _check_col_names(self, df, cols_require):
         '''
@@ -835,7 +843,7 @@ class Tables(object):
                                validate='many_to_one')
         elif 'plot_id' in subset:
             on = [i for i in subset if i != 'plot_id']
-            df_join = df.merge(self.df_dates, on=on,
+            df_join = df.merge(self.dates_res, on=on,
                                validate='many_to_one')
         df_join['dae'] = (df_join['date']-df_join['date_emerge']).dt.days
         df_out = df.merge(df_join[cols_require + ['dae']], on=cols_require)
@@ -890,7 +898,7 @@ class Tables(object):
                                validate='many_to_one')
         elif 'plot_id' in subset:
             on = [i for i in subset if i != 'plot_id']
-            df_join = df.merge(self.df_dates, on=on,
+            df_join = df.merge(self.dates_res, on=on,
                                validate='many_to_one')
         df_join['dap'] = (df_join['date']-df_join['date_plant']).dt.days
         df_out = df.merge(df_join[cols_require + ['dap']], on=cols_require)

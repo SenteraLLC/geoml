@@ -207,7 +207,7 @@ class FeatureData(Tables):
                 for c in cols:
                     labels_x = self._handle_wl_cols(c, wl_range, labels_x,
                                                     prefix='wl_')
-            elif 'bands' in key or 'weather_derived' in key:
+            elif 'bands' in key or 'weather_derived' in key or 'weather_derived_res' in key:
                 labels_x.extend(group_feats[key])
             elif 'rate_ntd' in key:
                 labels_x.append(group_feats[key]['col_out'])
@@ -234,10 +234,14 @@ class FeatureData(Tables):
             df = self.join_closest_date(  # join weather by closest date
                 df, self.weather_derived, left_on='date', right_on='date',
                 tolerance=0)
+        if 'weather_derived_res' in group_feats:
+            df = self.join_closest_date(  # join weather by closest date
+                df, self.weather_derived_res, left_on='date', right_on='date',
+                tolerance=0)
         for key in group_feats:  # necessary because 'cropscan_wl_range1' must be differentiated
             if 'cropscan' in key:
                 df = self.join_closest_date(  # join cropscan by closest date
-                    df, self.rs_cropscan, left_on='date', right_on='date',
+                    df, self.rs_cropscan_res, left_on='date', right_on='date',
                     tolerance=date_tolerance)
             if 'sentinel' in key:
                 df = self.join_closest_date(  # join sentinel by closest date
@@ -414,8 +418,8 @@ class FeatureData(Tables):
             measure_col (``str``): The column name from "obs_tissue.csv" to
                 look for ``measure``.
         '''
-        tissue_list = self.obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[tissue_col].tolist()
-        measure_list = self.obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False).first()[measure_col].tolist()
+        tissue_list = self.df_response.groupby(by=[measure_col, tissue_col], as_index=False).first()[tissue_col].tolist()
+        measure_list = self.df_response.groupby(by=[measure_col, tissue_col], as_index=False).first()[measure_col].tolist()
         avail_list = ['_'.join(map(str, i)) for i in zip(tissue_list, measure_list)]
         # avail_list = ["vine_n_pct", "pet_no3_ppm", "tuber_n_pct",
         #               "biomass_kgha"]
@@ -425,8 +429,8 @@ class FeatureData(Tables):
                ''.format(list(zip(tissue_list, measure_list))))
         assert '_'.join((tissue, measure)) in avail_list, msg
 
-        df = self.obs_tissue[(self.obs_tissue[measure_col] == measure) &
-                             (self.obs_tissue[tissue_col] == tissue)]
+        df = self.df_response[(self.df_response[measure_col] == measure) &
+                             (self.df_response[tissue_col] == tissue)]
         return df
 
     def _stratify_set(self, stratify_cols=['owner', 'farm', 'year'],
@@ -663,6 +667,10 @@ class FeatureData(Tables):
             return X
         X_out = imp.fit_transform(X)
         return X_out
+        # if X.shape == X_out.shape:
+        #     return X_out  # does not impute if all nan columns (helps debug)
+        # else:
+        #     return X
 
     def _get_X_and_y(self, df, impute_method='iterative'):
         '''
@@ -690,13 +698,32 @@ class FeatureData(Tables):
         df_train = df[df['train_test'] == 'train']
         df_test = df[df['train_test'] == 'test']
 
+        # If number of cols are different, then remove from both and update labels_x
+        cols_nan_train = df_train.columns[df_train.isnull().all(0)]  # gets columns with all nan
+        cols_nan_test = df_test.columns[df_test.isnull().all(0)]
+        if len(cols_nan_train) > 0:
+            df.drop(cols_nan_train, axis='columns', inplace=True)
+            df_train = df[df['train_test'] == 'train']
+            df_test = df[df['train_test'] == 'test']
+            labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+        if len(cols_nan_test) > 0:
+            df.drop(cols_nan_test, axis='columns', inplace=True)
+            df_train = df[df['train_test'] == 'train']
+            df_test = df[df['train_test'] == 'test']
+            labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+
         X_train = df_train[labels_x].values
         X_test = df_test[labels_x].values
         y_train = df_train[self.label_y].values
         y_test = df_test[self.label_y].values
 
+
         X_train = self._impute_missing_data(X_train, method=impute_method)
         X_test = self._impute_missing_data(X_test, method=impute_method)
+
+        msg = ('There is a different number of columns in <X_train> than in '
+               '<X_test>.')
+        assert X_train.shape[1] == X_test.shape[1], msg
 
         self.X_train = X_train
         self.X_test = X_test

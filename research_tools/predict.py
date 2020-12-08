@@ -411,7 +411,11 @@ class Predict(Tables):
                 df_feats[f] = weather_derived_filter[f].values[0]
 
         array_X = self._fill_array_X(array_img, df_feats)
+        mask = array_img[0] == 0
+
         array_pred = self._predict_and_reshape(array_X)
+        array_pred[np.expand_dims(mask, 0)] = 0
+        # array_pred = np.ma.masked_array(data=array_pred, mask=mask_2d)
         profile = deepcopy(ds.profile)
         profile.update(count=1)
         if mask_by_bounds == True:

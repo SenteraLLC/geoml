@@ -45,13 +45,14 @@ rosen_trts = {
     'rate_ntd': {'col_rate_n': 'rate_n_kgha',
                  'col_out': 'rate_ntd_kgha'},
     'cropscan_wl_range1': [400, 900],
-    'wx': ['gdd_cumsum_plant_to_date', 'precip_cumsum_plant_to_date',
-            'et_rs_cumsum_plant_to_date', 'solar_rad_cumsum_plant_to_date',
-            'gdd_diff_cumsum_plant_to_date', 'precip_diff_cumsum_plant_to_date',
-            'et_rs_diff_cumsum_plant_to_date',
-            'solar_rad_diff_cumsum_plant_to_date',
-            'temp_diff_cummean_plant_to_date',
-            'temp_diff_diff_cummean_plant_to_date',
+    'weather_derived_res': [
+        'gdd_cumsum_plant_to_date', 'precip_cumsum_plant_to_date',
+        'et_rs_cumsum_plant_to_date', 'solar_rad_cumsum_plant_to_date',
+        'gdd_diff_cumsum_plant_to_date', 'precip_diff_cumsum_plant_to_date',
+        'et_rs_diff_cumsum_plant_to_date',
+        'solar_rad_diff_cumsum_plant_to_date',
+        'temp_diff_cummean_plant_to_date',
+        'temp_diff_diff_cummean_plant_to_date',
            # 'gdd_cumsum_emerge_to_date',
            # 'precip_cumsum_emerge_to_date', 'et_rs_cumsum_emerge_to_date',
            # 'solar_rad_cumsum_emerge_to_date', 'gdd_diff_cumsum_emerge_to_date',
@@ -126,7 +127,8 @@ config_dict = {
             'obs_soil': 'obs_soil.geojson',
             'rs_sentinel': 'rs_sentinel.geojson',
             'weather': 'weather.csv',
-            'weather_derived': 'calc_weather.csv'}
+            'weather_derived': 'calc_weather.csv',
+            'weather_derived_res': 'calc_weather_res.csv'}
         },
     'FeatureData': {
         'random_seed': 999,
@@ -158,7 +160,7 @@ config_dict = {
         # 'cv_method_tune': RepeatedKFold,
         # 'cv_method_tune_kwargs': {'n_splits': 4, 'n_repeats': 2},
         # 'cv_split_tune_kwargs': None,
-        # 'cv_method_tune': LeavePGroupsOut, # if method is a "group" method, then split_tune_kwargs should have a "gropus" parameter
+        # 'cv_method_tune': LeavePGroupsOut, # if method is a "group" method, then split_tune_kwargs should have a "groups" parameter
         # 'cv_method_tune_kwargs': {'n_groups': 1},
         # 'cv_split_tune_kwargs': {'groups': 'df["year"] != 2019'},
         'print_out_fd': False,
