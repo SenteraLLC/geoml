@@ -389,6 +389,8 @@ class Tables(object):
             return self.obs_tissue_res
         if table_name == 'obs_soil_res':
             return self.obs_soil_res
+        if table_name == 'rs_cropscan_res':
+            return self.rs_cropscan_res
         if table_name == 'field_bounds':
             return self.field_bounds
         if table_name == 'dates':
@@ -847,6 +849,7 @@ class Tables(object):
                                validate='many_to_one')
         df_join['dae'] = (df_join['date']-df_join['date_emerge']).dt.days
         df_out = df.merge(df_join[cols_require + ['dae']], on=cols_require)
+        df_out = df_out.drop_duplicates()
         return df_out.reset_index(drop=True)
 
         # if isinstance(df_join, gpd.GeoDataFrame):
