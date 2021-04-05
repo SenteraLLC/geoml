@@ -727,8 +727,20 @@ class Tables(object):
         # obs_tissue observations or whatever the response variable is.
         if self.rs_cropscan_res is not None:
             subset = db_utils.get_primary_keys(self.rs_cropscan_res)
-            self.rs_cropscan_res = self.rs_cropscan_res.groupby(
+            df_cs = self.rs_cropscan_res.groupby(
                 subset + ['date']).mean().reset_index()
+
+            # TODO: the groupby() function removes geometry - add geometry
+            # column back in by copying relevant info from rs_cropscan_res
+
+            # in the meantime, chnage to regular DataFrame if there isn't valid geometry
+            if isinstance(df_cs, gpd.GeoDataFrame):
+                try:
+                    _ = any(df_cs.geom_type)
+                except AttributeError:  # if geometry has not been set, AttributeError will be raised.
+                    df_cs_regular = pd.DataFrame(df_cs)  # change to regular pandas
+
+            self._set_table_to_self('rs_cropscan_res', df_cs_regular)
 
     def join_closest_date(
             self, df_left, df_right, left_on='date', right_on='date',
