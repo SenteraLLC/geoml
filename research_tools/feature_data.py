@@ -9,6 +9,7 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+from copy import deepcopy
 import inspect
 import numpy as np
 import os
@@ -865,9 +866,9 @@ class FeatureData(Tables):
     def get_tuning_splitter(self, **kwargs):
         self._set_params_from_kwargs_fd(**kwargs)
 
-        cv_method = self.cv_method_tune
-        cv_method_kwargs = self.cv_method_tune_kwargs
-        cv_split_kwargs = self.cv_split_tune_kwargs
+        cv_method = deepcopy(self.cv_method_tune)
+        cv_method_kwargs = deepcopy(self.cv_method_tune_kwargs)
+        cv_split_kwargs = deepcopy(self.cv_split_tune_kwargs)
         cv_method_kwargs = self._cv_method_check_random_seed(
             cv_method, cv_method_kwargs)
 
@@ -903,6 +904,7 @@ class FeatureData(Tables):
             if 'X' not in cv_split_kwargs_eval:  # sets X
                 cv_split_kwargs_eval['X'] = df_X_train
 
+        # print(len(cv_split_kwargs_eval['X']))
         if self.print_splitter_info == True:
             n_train = []
             n_val = []
