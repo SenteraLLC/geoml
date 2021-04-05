@@ -701,13 +701,8 @@ class FeatureData(Tables):
         # If number of cols are different, then remove from both and update labels_x
         cols_nan_train = df_train.columns[df_train.isnull().all(0)]  # gets columns with all nan
         cols_nan_test = df_test.columns[df_test.isnull().all(0)]
-        if len(cols_nan_train) > 0:
-            df.drop(cols_nan_train, axis='columns', inplace=True)
-            df_train = df[df['train_test'] == 'train']
-            df_test = df[df['train_test'] == 'test']
-            labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
-        if len(cols_nan_test) > 0:
-            df.drop(cols_nan_test, axis='columns', inplace=True)
+        if len(cols_nan_train) > 0 or len(cols_nan_test) > 0:
+            df.drop(list(cols_nan_train) + list(cols_nan_test), axis='columns', inplace=True)
             df_train = df[df['train_test'] == 'train']
             df_test = df[df['train_test'] == 'test']
             labels_x = self._get_labels_x(self.group_feats, cols=df.columns)

@@ -735,12 +735,12 @@ class Tables(object):
 
             # in the meantime, chnage to regular DataFrame if there isn't valid geometry
             if isinstance(df_cs, gpd.GeoDataFrame):
+                gdf_cs = df_cs.copy()
                 try:
-                    _ = any(df_cs.geom_type)
+                    _ = any(gdf_cs.geom_type)
                 except AttributeError:  # if geometry has not been set, AttributeError will be raised.
-                    df_cs_regular = pd.DataFrame(df_cs)  # change to regular pandas
-
-            self._set_table_to_self('rs_cropscan_res', df_cs_regular)
+                    df_cs = pd.DataFrame(gdf_cs)  # change to regular pandas
+            self._set_table_to_self('rs_cropscan_res', df_cs)
 
     def join_closest_date(
             self, df_left, df_right, left_on='date', right_on='date',
