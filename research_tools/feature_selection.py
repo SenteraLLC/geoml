@@ -9,6 +9,7 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+from copy import deepcopy
 import numpy as np
 import pandas as pd
 from scipy.stats import rankdata
@@ -81,7 +82,7 @@ class FeatureSelection(FeatureData):
             return
         for k, v in params_fd.items():
             if k in self.__class__.__allowed_params:
-                setattr(self, k, v)
+                setattr(self, k, deepcopy(v))
         if 'model_fs' in params_fd.keys():
             self._set_model_fs()
 
@@ -97,7 +98,7 @@ class FeatureSelection(FeatureData):
         if len(kwargs) > 0:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
-                    setattr(self, k, v)
+                    setattr(self, k, deepcopy(v))
             if 'model_fs' in kwargs.keys():
                 self._set_model_fs()
 

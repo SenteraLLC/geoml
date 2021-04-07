@@ -49,6 +49,7 @@ class Training(FeatureSelection):
         '''
         '''
         super(Training, self).__init__(**kwargs)
+
         self.fs_find_params(**kwargs)
 
         # Training defaults

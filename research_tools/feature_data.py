@@ -87,7 +87,8 @@ class FeatureData(Tables):
             raise ValueError('<base_dir_data> must be set to access data '
                              'tables, either with <config_dict> or via '
                              '<**kwargs>.')
-        self._load_df_response()
+        if not 'ground_truth_tissue' not in kwargs or 'ground_truth_measure' not in kwargs:
+            self._load_df_response()
         if self.dir_results is not None:
             os.makedirs(self.dir_results, exist_ok=True)
         self._get_random_seed()
@@ -106,12 +107,12 @@ class FeatureData(Tables):
         if config_dict is not None and 'FeatureData' in config_dict:
             params_fd = config_dict['FeatureData']
         elif config_dict is not None and 'FeatureData' not in config_dict:
-            params_fd = config_dict
+            params_fd = deepcopy(config_dict)
         else:  # config_dict is None
             return
         for k, v in params_fd.items():
             if k in self.__class__.__allowed_params:
-                setattr(self, k, v)
+                setattr(self, k, deepcopy(v))
 
     def _set_params_from_kwargs_fd(self, **kwargs):
         '''
@@ -125,7 +126,9 @@ class FeatureData(Tables):
         if len(kwargs) > 0:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
-                    setattr(self, k, v)
+                    setattr(self, k, deepcopy(v))
+                    if k == 'ground_truth_tissue' or k == 'ground_truth_measure':
+                        self._load_df_response()
 
     def _set_attributes_fd(self):
         '''
@@ -601,12 +604,11 @@ class FeatureData(Tables):
             (<n_splits> greater than 1), only the first iteration is used to
             split between train and test sets.
         '''
-        cv_method = self.cv_method
-        cv_method_kwargs = self.cv_method_kwargs
-        cv_split_kwargs = self.cv_split_kwargs
+        cv_method = deepcopy(self.cv_method)
+        cv_method_kwargs = deepcopy(self.cv_method_kwargs)
+        cv_split_kwargs = deepcopy(self.cv_split_kwargs)
         cv_method_kwargs = self._cv_method_check_random_seed(
             cv_method, cv_method_kwargs)
-
         if cv_method.__name__ == 'train_test_split':
             # Because train_test_split has **kwargs for options, random_state is not caught, so it should be set explicitly
             cv_method_kwargs['random_state'] = self.random_seed
@@ -640,8 +642,11 @@ class FeatureData(Tables):
 
             train_idx, test_idx = next(cv.split(**cv_split_kwargs_eval))
             df_train, df_test = df.loc[train_idx], df.loc[test_idx]
-        print('\nNumber of observations in the "training" set: {0}'.format(len(df_train)))
-        print('Number of observations in the "test" set: {0}\n'.format(len(df_test)))
+
+        train_pct = (len(df_train) / (len(df_train) + len(df_test))) * 100
+        test_pct = (len(df_test) / (len(df_train) + len(df_test))) * 100
+        print('\nNumber of observations in the "training" set: {0} ({1:.1f}%)'.format(len(df_train), train_pct))
+        print('Number of observations in the "test" set: {0} ({1:.1f}%)\n'.format(len(df_test), test_pct))
 
         df_train.insert(0, 'train_test', 'train')
         df_test.insert(0, 'train_test', 'test')
@@ -845,10 +850,16 @@ class FeatureData(Tables):
         '''
         print('Getting feature data...')
         self._set_params_from_kwargs_fd(**kwargs)
-
         df = self._get_response_df(self.ground_truth_tissue,
                                    self.ground_truth_measure)
         df = self._join_group_feats(df, self.group_feats, self.date_tolerance)
+        msg = ('After joining feature data with response data and filtering '
+               'by <date_tolerance={0}>, there are no observations left. '
+               'Check that there are a sufficient number of observations with '
+               'both feature and response data within the date tolerance.'
+               ''.format(self.date_tolerance))
+        assert len(df) > 0, msg
+
         df = self._train_test_split_df(df)
 
         X_train, X_test, y_train, y_test, df = self._get_X_and_y(
@@ -912,7 +923,9 @@ class FeatureData(Tables):
                 n_train.append(len(idx_train))
                 n_val.append(len(idx_val))
             print('Tuning splitter: number of cross-validation splits: {0}'.format(cv.get_n_splits(**cv_split_kwargs_eval)))
-            print('Number of observations in the (tuning) train set (avg): {0:.1f}'.format(np.mean(n_train)))
-            print('Number of observations in the (tuning) validation set (avg): {0:.1f}\n'.format(np.mean(n_val)))
+            train_pct = (np.mean(n_train) / (np.mean(n_train) + np.mean(n_val))) * 100
+            val_pct = (np.mean(n_val) / (np.mean(n_train) + np.mean(n_val))) * 100
+            print('Number of observations in the (tuning) train set (avg): {0:.1f} ({1:.1f}%)'.format(np.mean(n_train), train_pct))
+            print('Number of observations in the (tuning) validation set (avg): {0:.1f} ({1:.1f}%)\n'.format(np.mean(n_val), val_pct))
 
         return cv.split(**cv_split_kwargs_eval)
