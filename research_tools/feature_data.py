@@ -247,6 +247,14 @@ class FeatureData(Tables):
                 df = self.join_closest_date(  # join cropscan by closest date
                     df, self.rs_cropscan_res, left_on='date', right_on='date',
                     tolerance=date_tolerance)
+            if 'micasense' in key:
+                df = self.join_closest_date(  # join cropscan by closest date
+                    df, self.rs_micasense_res, left_on='date', right_on='date',
+                    tolerance=date_tolerance)
+            if 'spad' in key:
+                df = self.join_closest_date(  # join cropscan by closest date
+                    df, self.rs_spad_res, left_on='date', right_on='date',
+                    tolerance=date_tolerance)
             if 'sentinel' in key:
                 df = self.join_closest_date(  # join sentinel by closest date
                     df, self.rs_sentinel, left_on='date',

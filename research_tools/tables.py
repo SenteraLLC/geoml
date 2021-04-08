@@ -67,6 +67,8 @@ class Tables(object):
             'obs_tissue_res': 'obs_tissue_res.geojson',
             'obs_soil_res': 'obs_soil_res.geojson',
             'rs_cropscan_res': 'rs_cropscan.csv',
+            'rs_micasense_res': 'rs_micasense.csv',
+            'rs_spad_res': 'rs_spad.csv',
             'field_bounds': 'field_bounds.geojson',
             'dates': 'dates.csv',
             'as_planted': 'as_planted.geojson',
@@ -158,6 +160,8 @@ class Tables(object):
         self.obs_tissue_res = None
         self.obs_soil_res = None
         self.rs_cropscan_res = None
+        self.rs_micasense_res = None
+        self.rs_spad_res = None
         self.field_bounds = None
         self.dates = None
         self.as_planted = None
@@ -391,6 +395,10 @@ class Tables(object):
             return self.obs_soil_res
         if table_name == 'rs_cropscan_res':
             return self.rs_cropscan_res
+        if table_name == 'rs_micasense_res':
+            return self.rs_micasense_res
+        if table_name == 'rs_spad_res':
+            return self.rs_spad_res
         if table_name == 'field_bounds':
             return self.field_bounds
         if table_name == 'dates':
@@ -418,7 +426,7 @@ class Tables(object):
         '''
         msg = ('The following columns are required in "{0}". Missing columns: '
                '"{1}".')
-        print(table_name)
+        # print(table_name)
         if self.db is not None:
             engine = self.db.engine
             db_schema = self.db.db_schema
@@ -451,6 +459,10 @@ class Tables(object):
             self.obs_soil_res = df
         if table_name == 'rs_cropscan_res':
             self.rs_cropscan_res = df
+        if table_name == 'rs_micasense_res':
+            self.rs_micasense_res = df
+        if table_name == 'rs_spad_res':
+            self.rs_spad_res = df
         if table_name == 'field_bounds':
             self.field_bounds = df
         if table_name == 'as_planted':
@@ -551,6 +563,7 @@ class Tables(object):
         df_dup = df_delta[df_delta.duplicated(subset=subset, keep=False)]
         # Next, find row with lowest date_delta; if same, just get first.
         df_keep = pd.DataFrame(data=[], columns=df_dup.columns)  # df for selected entries
+        df_keep = df_keep.astype(df_dup.dtypes.to_dict())
         df_unique = df_dup.drop_duplicates(subset=subset, keep='first')[subset]
         for idx, row in df_unique.iterrows():  # Unique subset cols only
             # The magic to get duplicate of a particular unique non-null group
@@ -808,7 +821,13 @@ class Tables(object):
             if tolerance == 0:
                 df_join.dropna(inplace=True)
             elif tolerance > 0:
-                df_join.insert(idx_delta+1, 'date_delta', None)
+                if 'date_delta' not in df_join.columns:
+                    date_delta_str = 'date_delta'
+                elif 'date_delta2' not in df_join.columns:
+                    date_delta_str = 'date_delta2'
+                elif 'date_delta3' not in df_join.columns:
+                    date_delta_str = 'date_delta3'
+                df_join.insert(idx_delta+1, date_delta_str, None)
                 df_join['date_delta'] = (df_join[left_on2]-df_join[right_on2]).astype('timedelta64[D]')
                 df_join = df_join[pd.notnull(df_join['date_delta'])]
             df_join = df_join.rename(columns={left_on2:left_on})
@@ -992,12 +1011,14 @@ class Tables(object):
             # if isinstance(df, gpd.GeoDataFrame):
             #     cols_require += [df.geometry.name]
         elif 'plot_id' in subset:
-            df_join = df.merge(self.experiments, on=subset)
-            on = [i for i in subset if i != 'plot_id']
-            df_join = df_join.merge(self.trt[on + ['trt_id', 'trt_n']], on=on)
-            df_join = df_join.merge(
-                self.trt_n[on + ['trt_n', 'date_applied', col_rate_n]],
-                on=on + ['trt_n'], validate='many_to_many')
+            df_join = df.merge(self.experiments, on=subset).merge(
+                self.trt, on=['owner', 'study', 'year', 'trt_id'], validate='many_to_many').merge(
+                    self.trt_n, on=['owner', 'study', 'year', 'trt_n'], validate='many_to_many')
+            # on = [i for i in subset if i != 'plot_id']
+            # df_join = df_join.merge(self.trt[on + ['trt_id', 'trt_n']], on=on)
+            # df_join = df_join.merge(
+            #     train.trt_n[subset + ['date_applied', col_rate_n]],
+            #     on=subset, validate='many_to_many')
 
         # remove all rows where date_applied is after date
         df_join = df_join[df_join['date'] >= df_join['date_applied']]
