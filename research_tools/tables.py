@@ -839,7 +839,7 @@ class Tables(object):
                 df_right.rename(columns={right_on:right_on2}),
                 left_on=left_on2, right_on=right_on2, by=subset_left,
                 tolerance=pd.Timedelta(tolerance, unit='D'),
-                direction=direction)
+                direction=direction, suffixes=("_l", "_r"))
             if isinstance(df_left, gpd.GeoDataFrame):
                 df_join = gpd.GeoDataFrame(
                     df_join, geometry=df_left.geometry.name)
@@ -853,9 +853,11 @@ class Tables(object):
             df_join, delta_label_out = self._add_date_delta(
                 df_join, left_on=left_on2, right_on=right_on2,
                 delta_label=delta_label)
-            df_join.dropna(inplace=True)
+            # df_join.dropna(inplace=True)
             df_join = df_join.rename(columns={left_on2:left_on})
-            df_join.drop(columns=[right_on2], inplace=True)
+            cols_drop = [c+side for side in ['_l', '_r'] for c in ['id']
+                         if c+side in df_join.columns] + [right_on2]
+            df_join.drop(columns=cols_drop, inplace=True)
         return df_join.reset_index(drop=True)
 
     def dae(self, df):

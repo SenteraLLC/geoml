@@ -868,7 +868,6 @@ class FeatureData(Tables):
                'both feature and response data within the date tolerance.'
                ''.format(self.date_tolerance))
         assert len(df) > 0, msg
-
         df = self._train_test_split_df(df)
 
         X_train, X_test, y_train, y_test, df = self._get_X_and_y(
