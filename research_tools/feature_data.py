@@ -543,7 +543,9 @@ class FeatureData(Tables):
         If 'random_state' is a valid parameter in <cv_method>, sets from
         <random_seed>.
         '''
-        cv_method_args = inspect.getfullargspec(cv_method)[0]
+        # cv_method_args = inspect.getfullargspec(cv_method)[0]
+        # TODO: Add tests for all supported <cv_method>s
+        cv_method_args = inspect.signature(cv_method).parameters
         if 'random_state' in cv_method_args:  # ensure random_seed is set correctly
             cv_method_kwargs['random_state'] = self.random_seed  # if this will get passed to eval(), should be fine since it gets passed to str() first
         return cv_method_kwargs
