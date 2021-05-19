@@ -17,7 +17,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 
-from research_tools import FeatureSelection
+from geoml import FeatureSelection
 
 
 class Training(FeatureSelection):
@@ -494,8 +494,8 @@ class Training(FeatureSelection):
         (i.e., for each row in <df_fs_params>).
 
         Example:
-            >>> from research_tools import Training
-            >>> from research_tools.tests import config
+            >>> from geoml import Training
+            >>> from geoml.tests import config
 
             >>> my_train = Training(config_dict=config.config_dict)
             >>> my_train.train()

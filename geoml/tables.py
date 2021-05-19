@@ -873,9 +873,9 @@ class Tables(object):
         Example:
             >>> import os
             >>> import pandas as pd
-            >>> from research_tools import Tables
+            >>> from geoml import Tables
 
-            >>> base_dir_data = os.path.join(os.getcwd(), 'research_tools', 'tests', 'testdata')
+            >>> base_dir_data = os.path.join(os.getcwd(), 'geoml', 'tests', 'testdata')
             >>> fname_petiole = os.path.join(base_dir_data, 'tissue_petiole_NO3_ppm.csv')
             >>> my_join = Tables(base_dir_data=base_dir_data)
             >>> df_pet_no3 = pd.read_csv(fname_petiole)
@@ -929,9 +929,9 @@ class Tables(object):
         Example:
             >>> import os
             >>> import pandas as pd
-            >>> from research_tools import Tables
+            >>> from geoml import Tables
 
-            >>> base_dir_data = os.path.join(os.getcwd(), 'research_tools', 'tests', 'testdata')
+            >>> base_dir_data = os.path.join(os.getcwd(), 'geoml', 'tests', 'testdata')
             >>> fname_petiole = os.path.join(base_dir_data, 'tissue_petiole_NO3_ppm.csv')
             >>> my_join = Tables(base_dir_data=base_dir_data)
             >>> df_pet_no3 = pd.read_csv(fname_petiole)
@@ -1004,9 +1004,9 @@ class Tables(object):
         Example:
             >>> import os
             >>> import pandas as pd
-            >>> from research_tools import Tables
+            >>> from geoml import Tables
 
-            >>> base_dir_data = os.path.join(os.getcwd(), 'research_tools', 'tests', 'testdata')
+            >>> base_dir_data = os.path.join(os.getcwd(), 'geoml', 'tests', 'testdata')
             >>> fname_petiole = os.path.join(base_dir_data, 'tissue_petiole_NO3_ppm.csv')
             >>> my_join = Tables(base_dir_data=base_dir_data)
             >>> df_pet_no3 = pd.read_csv(fname_petiole)

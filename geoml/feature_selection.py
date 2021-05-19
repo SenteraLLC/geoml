@@ -17,7 +17,7 @@ from scipy import optimize
 from sklearn.linear_model import Lasso
 from sklearn.feature_selection import SelectFromModel
 
-from research_tools import FeatureData
+from geoml import FeatureData
 
 
 class FeatureSelection(FeatureData):
@@ -422,8 +422,8 @@ class FeatureSelection(FeatureData):
                 selection scenario (``dict``).
 
         Example:
-            >>> from research_tools import FeatureSelection
-            >>> from research_tools.tests import config
+            >>> from geoml import FeatureSelection
+            >>> from geoml.tests import config
 
             >>> myfs = FeatureSelection(config_dict=config.config_dict)
             >>> myfs.fs_find_params()
@@ -469,8 +469,8 @@ class FeatureSelection(FeatureData):
                 column).
 
         Example:
-            >>> from research_tools import FeatureSelection
-            >>> from research_tools.tests import config
+            >>> from geoml import FeatureSelection
+            >>> from geoml.tests import config
 
             >>> myfs = FeatureSelection(config_dict=config.config_dict)
             >>> myfs.fs_find_params()

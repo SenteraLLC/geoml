@@ -130,7 +130,7 @@ dmypy.json
 .pyre/
 
 # Scripts
-research_tools/scripts
+geoml/scripts
 
 # Docker work
 docker

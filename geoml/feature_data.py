@@ -25,8 +25,8 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
 import db.utilities as db_utils
-# from research_tools import feature_groups
-from research_tools import Tables
+# from geoml import feature_groups
+from geoml import Tables
 
 
 class FeatureData(Tables):
@@ -845,8 +845,8 @@ class FeatureData(Tables):
             <cv_method_kwargs> and <cv_split_kwargs>.
 
         Example:
-            >>> from research_tools import FeatureData
-            >>> from research_tools.tests import config
+            >>> from geoml import FeatureData
+            >>> from geoml.tests import config
 
             >>> fd = FeatureData(config_dict=config.config_dict)
             >>> fd.get_feat_group_X_y(test_size=0.1)

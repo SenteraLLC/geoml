@@ -6,7 +6,7 @@ orbs:
 
 jobs:
   build-and-test:
-    working_directory: ~/research_tools
+    working_directory: ~/geoml
     docker:
       - image: circleci/python:3.8.2
     steps:
@@ -40,7 +40,7 @@ jobs:
              source /home/circleci/miniconda/etc/profile.d/conda.sh
              conda activate test
              mkdir test-results
-             pytest --junitxml=test-results/junit.xml --cov=research_tools --cov-report=xml
+             pytest --junitxml=test-results/junit.xml --cov=geoml --cov-report=xml
 
       - run:
           name: Upload code coverage

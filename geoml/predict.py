@@ -21,8 +21,8 @@ from db import DBHandler
 from spatial import Imagery
 import db.utilities as db_utils
 import spatial.utilities as spatial_utils
-from research_tools import Tables
-from research_tools import Training
+from geoml import Tables
+from geoml import Training
 
 
 class Predict(Tables):
@@ -63,7 +63,7 @@ class Predict(Tables):
         # super(Predict, self).__init__(**kwargs)
         # self.train(**kwargs)
 
-        self.train = None  # research_tools train object
+        self.train = None  # geoml train object
         self.loc_df_test = None
         self.estimator = None
         self.feats_x_select = None

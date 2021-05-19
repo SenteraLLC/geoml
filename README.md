@@ -1,21 +1,21 @@
-# research_tools
+# GeoML
 
 API to retrieve training data, create X matrix, and perform feature selection, hyperparameter tuning, training, and model testing.
 
 ## Build and test status
 
 ### master
-[![codecov](https://codecov.io/gh/insight-sensing/research_tools/branch/master/graph/badge.svg?token=45FYM8VS7H)](https://codecov.io/gh/insight-sensing/research_tools)
-[![build](https://circleci.com/gh/insight-sensing/research_tools/tree/master.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/research_tools?branch=dev)
+[![codecov](https://codecov.io/gh/insight-sensing/geoml/branch/master/graph/badge.svg?token=45FYM8VS7H)](https://codecov.io/gh/insight-sensing/geoml)
+[![build](https://circleci.com/gh/insight-sensing/geoml/tree/master.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/geoml?branch=dev)
 
 ### dev
-[![codecov](https://codecov.io/gh/insight-sensing/research_tools/branch/dev/graph/badge.svg?token=45FYM8VS7H)](https://codecov.io/gh/insight-sensing/research_tools)
-[![build](https://circleci.com/gh/insight-sensing/research_tools/tree/dev.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/research_tools?branch=dev)
+[![codecov](https://codecov.io/gh/insight-sensing/geoml/branch/dev/graph/badge.svg?token=45FYM8VS7H)](https://codecov.io/gh/insight-sensing/geoml)
+[![build](https://circleci.com/gh/insight-sensing/geoml/tree/dev.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/geoml?branch=dev)
 
 ## Setup and Installation
 There is an *environment.yml* file that can be used to create the environment and install the dependencies. After cloning from Github, create the environment:
 
-`conda env create -n insight -f .research_tools\environment.yml`
+`conda env create -n insight -f .geoml\environment.yml`
 
 ### Testing
 To perfrom testing, a few other packages are required
@@ -29,13 +29,13 @@ pip install pytest_pgsql
 Note: On Windows, the `postgis` dependency must be installed via `pip` since it is not available on conda-forge. Also not that the `find_program` function of `testing.postgresql` should also be modified if using Windows (see [db issue #10](https://github.com/insight-sensing/db/issues/10)).
 
 Run tests to be sure everything is installed appropriately:
-`pytest research_tools\tests`
+`pytest geoml\tests`
 
 ### Use
 ```
 from copy import deepcopy
-from research_tools import Training
-from research_tools.tests import config
+from geoml import Training
+from geoml.tests import config
 
 config_dict = deepcopy(config.config_dict)
 config_dict['Tables']['base_dir_data'] = r'G:\Shared drives\Data\client_data\CSS Farms\db_tables\from_db'
