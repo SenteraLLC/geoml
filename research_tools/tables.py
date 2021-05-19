@@ -67,6 +67,8 @@ class Tables(object):
             'obs_tissue_res': 'obs_tissue_res.geojson',
             'obs_soil_res': 'obs_soil_res.geojson',
             'rs_cropscan_res': 'rs_cropscan.csv',
+            'rs_micasense_res': 'rs_micasense.csv',
+            'rs_spad_res': 'rs_spad.csv',
             'field_bounds': 'field_bounds.geojson',
             'dates': 'dates.csv',
             'as_planted': 'as_planted.geojson',
@@ -158,6 +160,8 @@ class Tables(object):
         self.obs_tissue_res = None
         self.obs_soil_res = None
         self.rs_cropscan_res = None
+        self.rs_micasense_res = None
+        self.rs_spad_res = None
         self.field_bounds = None
         self.dates = None
         self.as_planted = None
@@ -391,6 +395,10 @@ class Tables(object):
             return self.obs_soil_res
         if table_name == 'rs_cropscan_res':
             return self.rs_cropscan_res
+        if table_name == 'rs_micasense_res':
+            return self.rs_micasense_res
+        if table_name == 'rs_spad_res':
+            return self.rs_spad_res
         if table_name == 'field_bounds':
             return self.field_bounds
         if table_name == 'dates':
@@ -418,7 +426,7 @@ class Tables(object):
         '''
         msg = ('The following columns are required in "{0}". Missing columns: '
                '"{1}".')
-        print(table_name)
+        # print(table_name)
         if self.db is not None:
             engine = self.db.engine
             db_schema = self.db.db_schema
@@ -451,6 +459,10 @@ class Tables(object):
             self.obs_soil_res = df
         if table_name == 'rs_cropscan_res':
             self.rs_cropscan_res = df
+        if table_name == 'rs_micasense_res':
+            self.rs_micasense_res = df
+        if table_name == 'rs_spad_res':
+            self.rs_spad_res = df
         if table_name == 'field_bounds':
             self.field_bounds = df
         if table_name == 'as_planted':
@@ -501,7 +513,22 @@ class Tables(object):
         #     df[col_date] = df[col_date].to_datetime64()
         return df
 
-    def _join_geom_date(self, df_left, df_right, left_on, right_on, tolerance=3):
+    def _add_date_delta(self, df_join, left_on, right_on, delta_label=None):
+        '''
+        Adds "date_delta" column to <df_join>
+        '''
+        idx_delta = df_join.columns.get_loc(right_on)
+        if delta_label is None:
+            date_delta_str = 'date_delta'
+        else:
+            date_delta_str = 'date_delta_{0}'.format(delta_label)
+        df_join.insert(idx_delta+1, date_delta_str, None)
+        df_join[date_delta_str] = (df_join[left_on]-df_join[right_on]).astype('timedelta64[D]')
+        df_join = df_join[pd.notnull(df_join[date_delta_str])]
+        return df_join, date_delta_str
+
+    def _join_geom_date(self, df_left, df_right, left_on, right_on,
+                        tolerance=3, delta_label=None):
         '''
         Merges on geometry, then keeps only closest date.
 
@@ -520,6 +547,12 @@ class Tables(object):
             3. Remove all rows whose left date is outside the tolerance of the
             right date.
             4. Finally, choose the columns to keep and tidy up df.
+
+        Parameters:
+            delta_label (``str``): Used to set the column name of the
+                "delta_date" by appending <delta_label> to "delta_date"
+                (e.g., "delta_date_mylabel"). Will only be set if <tolerance>
+                is greater than zero.
         '''
         subset_left = db_utils.get_primary_keys(df_left)
         subset_right = db_utils.get_primary_keys(df_right)
@@ -539,32 +572,42 @@ class Tables(object):
         right_on2 = right_on + '_r'
         df_sjoin2.rename(columns={left_on:left_on2, right_on:right_on2}, inplace=True)
         # Add "date_delta" column
-        idx_delta = df_sjoin2.columns.get_loc(left_on2)
-        df_sjoin2.insert(
-            idx_delta+1, 'date_delta',
-            (df_sjoin2[left_on2]-df_sjoin2[right_on2]).astype('timedelta64[D]'))
+        # if tolerance == 0:
+        #     df_sjoin2.dropna(inplace=True)
+        # elif tolerance > 0:
+        df_sjoin2, delta_label_out = self._add_date_delta(
+            df_sjoin2, left_on=left_on2, right_on=right_on2,
+            delta_label=delta_label)
+        df_sjoin2.dropna(inplace=True)
+        # idx_delta = df_sjoin2.columns.get_loc(left_on2)
+        # df_sjoin2.insert(
+        #     idx_delta+1, 'date_delta',
+        #     (df_sjoin2[left_on2]-df_sjoin2[right_on2]).astype('timedelta64[D]'))
         # Remove rows whose left date is outside tolerance of the right date.
-        df_delta = df_sjoin2[abs(df_sjoin2['date_delta']) <= tolerance]
+        df_delta = df_sjoin2[abs(df_sjoin2[delta_label_out]) <= tolerance]
+
         # Because a left row may have multiple matches with the right <df>,
         # keep only the one that is the closest. First, find duplicate rows.
         subset = subset_left + [left_on2, geom_r]
         df_dup = df_delta[df_delta.duplicated(subset=subset, keep=False)]
         # Next, find row with lowest date_delta; if same, just get first.
         df_keep = pd.DataFrame(data=[], columns=df_dup.columns)  # df for selected entries
+        df_keep = df_keep.astype(df_dup.dtypes.to_dict())
         df_unique = df_dup.drop_duplicates(subset=subset, keep='first')[subset]
         for idx, row in df_unique.iterrows():  # Unique subset cols only
             # The magic to get duplicate of a particular unique non-null group
             df_filtered = df_dup[df_dup[row.index].isin(row.values).all(1)]
             # Find index where delta is min and append it to df_keep
-            idx_min = abs(df_filtered['date_delta']).idxmin(axis=0, skipna=True)
+            idx_min = abs(df_filtered[delta_label_out]).idxmin(axis=0, skipna=True)
             df_keep = df_keep.append(df_filtered.loc[idx_min, :])
         df_join = df_delta.drop_duplicates(subset=subset, keep=False)
         df_join = df_join.append(df_keep)
-        df_join = df_join[pd.notnull(df_join['date_delta'])]
+        df_join = df_join[pd.notnull(df_join[delta_label_out])]
         # drop right join columns,
         if geom_l in df_join.columns:
             df_join = gpd.GeoDataFrame(df_join, geometry=geom_l)
-            df_join.rename(columns={geom_l: 'geometry'}, inplace=True)
+            df_join.rename(columns={geom_l: 'geom'}, inplace=True)
+            df_join.set_geometry(col='geom', inplace=True)
         df_join.rename(columns={left_on2:left_on}, inplace=True)
         cols_drop = [c+side for side in ['_l', '_r'] for c in ['id', 'geom', 'geometry']
                      if c+side in df_join.columns] + [right_on2]
@@ -744,7 +787,7 @@ class Tables(object):
 
     def join_closest_date(
             self, df_left, df_right, left_on='date', right_on='date',
-            tolerance=0, direction='nearest'):
+            tolerance=0, direction='nearest', delta_label=None):
         '''
         Joins ``df_left`` to ``df_right`` by the closest date (after first
         joining by the ``by`` columns)
@@ -781,10 +824,10 @@ class Tables(object):
         self._check_col_names(df_right, cols_require_r)
         df_left = self._dt_or_ts_to_date(df_left, left_on)
         df_right = self._dt_or_ts_to_date(df_right, right_on)
-
         if isinstance(df_left, gpd.GeoDataFrame) and isinstance(df_right, gpd.GeoDataFrame):
-            df_join = self._join_geom_date(df_left, df_right, left_on,
-                                           right_on, tolerance=tolerance)
+            df_join = self._join_geom_date(
+                df_left, df_right, left_on, right_on, tolerance=tolerance,
+                delta_label=delta_label)
         else:
             df_left.sort_values(left_on, inplace=True)
             df_right.sort_values(right_on, inplace=True)
@@ -796,7 +839,7 @@ class Tables(object):
                 df_right.rename(columns={right_on:right_on2}),
                 left_on=left_on2, right_on=right_on2, by=subset_left,
                 tolerance=pd.Timedelta(tolerance, unit='D'),
-                direction=direction)
+                direction=direction, suffixes=("_l", "_r"))
             if isinstance(df_left, gpd.GeoDataFrame):
                 df_join = gpd.GeoDataFrame(
                     df_join, geometry=df_left.geometry.name)
@@ -804,15 +847,17 @@ class Tables(object):
                 df_join = gpd.GeoDataFrame(
                     df_join, geometry=df_right.geometry.name)
 
-            idx_delta = df_join.columns.get_loc(left_on2)
-            if tolerance == 0:
-                df_join.dropna(inplace=True)
-            elif tolerance > 0:
-                df_join.insert(idx_delta+1, 'date_delta', None)
-                df_join['date_delta'] = (df_join[left_on2]-df_join[right_on2]).astype('timedelta64[D]')
-                df_join = df_join[pd.notnull(df_join['date_delta'])]
+            # if tolerance == 0:
+            #     df_join.dropna(inplace=True)
+            # elif tolerance > 0:
+            df_join, delta_label_out = self._add_date_delta(
+                df_join, left_on=left_on2, right_on=right_on2,
+                delta_label=delta_label)
+            # df_join.dropna(inplace=True)
             df_join = df_join.rename(columns={left_on2:left_on})
-            df_join.drop(columns=[right_on2], inplace=True)
+            cols_drop = [c+side for side in ['_l', '_r'] for c in ['id']
+                         if c+side in df_join.columns] + [right_on2]
+            df_join.drop(columns=cols_drop, inplace=True)
         return df_join.reset_index(drop=True)
 
     def dae(self, df):
@@ -992,12 +1037,14 @@ class Tables(object):
             # if isinstance(df, gpd.GeoDataFrame):
             #     cols_require += [df.geometry.name]
         elif 'plot_id' in subset:
-            df_join = df.merge(self.experiments, on=subset)
-            on = [i for i in subset if i != 'plot_id']
-            df_join = df_join.merge(self.trt[on + ['trt_id', 'trt_n']], on=on)
-            df_join = df_join.merge(
-                self.trt_n[on + ['trt_n', 'date_applied', col_rate_n]],
-                on=on + ['trt_n'], validate='many_to_many')
+            df_join = df.merge(self.experiments, on=subset).merge(
+                self.trt, on=['owner', 'study', 'year', 'trt_id'], validate='many_to_many').merge(
+                    self.trt_n, on=['owner', 'study', 'year', 'trt_n'], validate='many_to_many')
+            # on = [i for i in subset if i != 'plot_id']
+            # df_join = df_join.merge(self.trt[on + ['trt_id', 'trt_n']], on=on)
+            # df_join = df_join.merge(
+            #     train.trt_n[subset + ['date_applied', col_rate_n]],
+            #     on=subset, validate='many_to_many')
 
         # remove all rows where date_applied is after date
         df_join = df_join[df_join['date'] >= df_join['date_applied']]

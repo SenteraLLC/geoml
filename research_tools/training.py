@@ -206,7 +206,8 @@ class Training(FeatureSelection):
                               'cv': self.get_tuning_splitter(),
                               'refit': self.refit,
                               'return_train_score': True}
-        clf = GridSearchCV(**kwargs_grid_search)
+        clf = GridSearchCV(**kwargs_grid_search, verbose=0)
+
         try:
             clf.fit(self.X_train_select, self.y_train)
             df_tune = pd.DataFrame(clf.cv_results_)

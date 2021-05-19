@@ -360,16 +360,24 @@ class FeatureSelection(FeatureData):
         information for the ``Tuning`` class to achieve the specific number of
         features determined by the ``FeatureSelection`` class.
         '''
-        self._find_features_min()
-        self._find_features_max()
+        if self.n_feats > 1:
+            self._find_features_min()
+            self._find_features_max()
 
-        # self._find_features_max(
-        #     self.n_feats, step_pct=self.step_pct,
-        #     exit_on_stagnant_n=self.exit_on_stagnant_n)
-        params_max = np.log(self.model_fs_params_feats_max['alpha'])
-        params_min = np.log(self.model_fs_params_feats_min['alpha'])
-        param_val_list = list(np.logspace(params_min, params_max,
-                                          num=self.n_linspace, base=np.e))
+            # self._find_features_max(
+            #     self.n_feats, step_pct=self.step_pct,
+            #     exit_on_stagnant_n=self.exit_on_stagnant_n)
+            params_max = np.log(self.model_fs_params_feats_max['alpha'])
+            params_min = np.log(self.model_fs_params_feats_min['alpha'])
+            param_val_list = list(np.logspace(params_min, params_max,
+                                              num=self.n_linspace, base=np.e))
+        else:
+            self.model_fs_params_feats_max = {'alpha': 1e-4}
+            self.model_fs_params_feats_min = {'alpha': 10}
+            params_max = np.log(self.model_fs_params_feats_max['alpha'])
+            params_min = np.log(self.model_fs_params_feats_min['alpha'])
+            param_val_list = list(np.logspace(params_min, params_max,
+                                              num=self.n_linspace, base=np.e) / 10)
 
         # minimization is the first point where minimum is reached; thus, when
         # using with logspace, it may not quite reach the max feats desired

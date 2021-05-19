@@ -237,20 +237,29 @@ class FeatureData(Tables):
         if 'weather_derived' in group_feats:
             df = self.join_closest_date(  # join weather by closest date
                 df, self.weather_derived, left_on='date', right_on='date',
-                tolerance=0)
+                tolerance=0, delta_label=None)
         if 'weather_derived_res' in group_feats:
             df = self.join_closest_date(  # join weather by closest date
                 df, self.weather_derived_res, left_on='date', right_on='date',
-                tolerance=0)
+                tolerance=0, delta_label=None)
         for key in group_feats:  # necessary because 'cropscan_wl_range1' must be differentiated
             if 'cropscan' in key:
                 df = self.join_closest_date(  # join cropscan by closest date
                     df, self.rs_cropscan_res, left_on='date', right_on='date',
-                    tolerance=date_tolerance)
+                    tolerance=date_tolerance, delta_label='cropscan')
+            if 'micasense' in key:
+                df = self.join_closest_date(  # join micasense by closest date
+                    df, self.rs_micasense_res, left_on='date', right_on='date',
+                    tolerance=date_tolerance, delta_label='micasense')
+            if 'spad' in key:
+                df = self.join_closest_date(  # join spad by closest date
+                    df, self.rs_spad_res, left_on='date', right_on='date',
+                    tolerance=date_tolerance, delta_label='spad')
             if 'sentinel' in key:
                 df = self.join_closest_date(  # join sentinel by closest date
                     df, self.rs_sentinel, left_on='date',
-                    right_on='acquisition_time', tolerance=date_tolerance)
+                    right_on='acquisition_time', tolerance=date_tolerance,
+                    delta_label='sentinel')
         return df
 
     def _get_primary_keys(self, df):
@@ -861,7 +870,6 @@ class FeatureData(Tables):
                'both feature and response data within the date tolerance.'
                ''.format(self.date_tolerance))
         assert len(df) > 0, msg
-
         df = self._train_test_split_df(df)
 
         X_train, X_test, y_train, y_test, df = self._get_X_and_y(
