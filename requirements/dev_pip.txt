@@ -1,1 +1,1 @@
-git+git://github.com/sentinelsat/sentinelsat@master
+git+git://github.com/sentinelsat/sentinelsat@main
