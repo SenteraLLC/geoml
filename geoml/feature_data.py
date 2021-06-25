@@ -10,6 +10,7 @@ Insight Sensing Corporation. All rights reserved.
 @contributors: [Tyler J. Nigon]
 """
 from copy import deepcopy
+from datetime import datetime
 import inspect
 import numpy as np
 import os
@@ -39,7 +40,7 @@ class FeatureData(Tables):
     __allowed_params = (
         'fname_obs_tissue', 'fname_cropscan', 'fname_sentinel',
         'random_seed', 'dir_results', 'group_feats',
-        'ground_truth_tissue', 'ground_truth_measure',
+        'ground_truth_tissue', 'ground_truth_measure', 'date_train',
         'date_tolerance', 'cv_method', 'cv_method_kwargs', 'cv_split_kwargs',
         'impute_method', 'cv_method_tune', 'cv_method_tune_kwargs',
         'cv_split_tune_kwargs',
@@ -64,6 +65,7 @@ class FeatureData(Tables):
         # self.ground_truth = 'vine_n_pct'
         self.ground_truth_tissue = 'vine'
         self.ground_truth_measure = 'n_pct'
+        self.date_train = datetime.now().date()
         self.date_tolerance = 3
         self.cv_method = train_test_split
         self.cv_method_kwargs = {'arrays': 'df', 'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'}
@@ -83,10 +85,10 @@ class FeatureData(Tables):
         self._set_params_from_kwargs_fd(**kwargs)
         self._set_attributes_fd()
 
-        if self.base_dir_data is None:
-            raise ValueError('<base_dir_data> must be set to access data '
-                             'tables, either with <config_dict> or via '
-                             '<**kwargs>.')
+        # if self.base_dir_data is None:
+        #     raise ValueError('<base_dir_data> must be set to access data '
+        #                      'tables, either with <config_dict> or via '
+        #                      '<**kwargs>.')
         if not 'ground_truth_tissue' not in kwargs or 'ground_truth_measure' not in kwargs:
             self._load_df_response()
         if self.dir_results is not None:
@@ -220,6 +222,12 @@ class FeatureData(Tables):
         self.labels_x = labels_x
         return self.labels_x
 
+    def _check_empty_geom(self, df):
+        if isinstance(df, gpd.GeoDataFrame):
+            if all(df[~df[df.geometry.name].is_empty]):
+                df = pd.DataFrame(df.drop(columns=[df.geometry.name]))
+        return df
+
     def _join_group_feats(self, df, group_feats, date_tolerance):
         '''
         Joins predictors to ``df`` based on the contents of group_feats
@@ -235,6 +243,7 @@ class FeatureData(Tables):
             df = self.rate_ntd(df, col_rate_n=col_rate_n,
                                col_rate_ntd_out=col_rate_ntd_out)
         if 'weather_derived' in group_feats:
+            self.weather_derived = self._check_empty_geom(self.weather_derived)
             df = self.join_closest_date(  # join weather by closest date
                 df, self.weather_derived, left_on='date', right_on='date',
                 tolerance=0, delta_label=None)
@@ -256,6 +265,7 @@ class FeatureData(Tables):
                     df, self.rs_spad_res, left_on='date', right_on='date',
                     tolerance=date_tolerance, delta_label='spad')
             if 'sentinel' in key:
+                # self.rs_sentinel = self._check_empty_geom(self.rs_sentinel)
                 df = self.join_closest_date(  # join sentinel by closest date
                     df, self.rs_sentinel, left_on='date',
                     right_on='acquisition_time', tolerance=date_tolerance,
@@ -414,6 +424,22 @@ class FeatureData(Tables):
             self.random_seed = int(self.random_seed)
         self._write_to_readme('Random seed: {0}'.format(self.random_seed))
 
+    def _add_empty_geom(self, gdf):
+        '''Adds field_bounds geometry to all Empty gdf geometries'''
+        subset = db_utils.get_primary_keys(gdf)
+        field_bounds = self.db.get_table_df('field_bounds')
+
+        # Split gdf into geom/no-geom
+        gdf_geom = gdf[~gdf[gdf.geometry.name].is_empty]
+        gdf_nogeom = gdf[gdf[gdf.geometry.name].is_empty]
+
+        # Get field bounds where owner, farm, field_id, and year match obs_tissue_no_geom
+
+        gdf_nogeom.drop(columns=[gdf.geometry.name], inplace=True)
+        field_bounds.drop(columns=['id'], inplace=True)
+        gdf_out = gdf_geom.append(gdf_nogeom.merge(field_bounds, on=subset))
+        return gdf_out
+
     def _get_response_df(self, tissue, measure,
                          tissue_col='tissue', measure_col='measure'):
                          # ground_truth='vine_n_pct'):
@@ -444,6 +470,7 @@ class FeatureData(Tables):
 
         df = self.df_response[(self.df_response[measure_col] == measure) &
                              (self.df_response[tissue_col] == tissue)]
+        df = self._add_empty_geom(df)
         return df
 
     def _stratify_set(self, stratify_cols=['owner', 'farm', 'year'],
@@ -863,12 +890,16 @@ class FeatureData(Tables):
         self._set_params_from_kwargs_fd(**kwargs)
         df = self._get_response_df(self.ground_truth_tissue,
                                    self.ground_truth_measure)
-        df = self._join_group_feats(df, self.group_feats, self.date_tolerance)
+        df = self._join_group_feats(df, group_feats=self.group_feats,
+                                    date_tolerance=self.date_tolerance)
         msg = ('After joining feature data with response data and filtering '
                'by <date_tolerance={0}>, there are no observations left. '
                'Check that there are a sufficient number of observations with '
                'both feature and response data within the date tolerance.'
                ''.format(self.date_tolerance))
+
+        df = df[df['date'] < self.date_train].reset_index()
+
         assert len(df) > 0, msg
         df = self._train_test_split_df(df)
 

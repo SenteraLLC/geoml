@@ -14,6 +14,7 @@ import os
 import pandas as pd
 import geopandas as gpd
 from sqlalchemy import inspect
+import warnings
 
 from db import DBHandler
 from db.table_templates import table_templates
@@ -101,9 +102,19 @@ class Tables(object):
             params_jt = config_dict
         else:  # config_dict is None
             return
+
         for k, v in params_jt.items():
             if k in self.__class__.__allowed_params:
                 setattr(self, k, v)
+
+        if params_jt['db'] is not None:  # db takes precedence over all db settings
+            setattr(self, 'db_name', params_jt['db'].db_name)
+            setattr(self, 'db_host', params_jt['db'].db_host)
+            setattr(self, 'db_user', params_jt['db'].db_user)
+            setattr(self, 'db_schema', params_jt['db'].db_schema)
+            setattr(self, 'db_port', params_jt['db'].db_port)
+        else:
+            self._connect_to_db()
 
     def _set_params_from_kwargs_t(self, **kwargs):
         '''
@@ -114,17 +125,25 @@ class Tables(object):
         '''
         if 'config_dict' in kwargs:
             self._set_params_from_dict_t(kwargs.get('config_dict'))
-            self._connect_to_db()
+            # self._connect_to_db()
+
         db_creds_old = [self.db_name, self.db_host, self.db_user,
                         self.db_schema, self.db_port]
         if len(kwargs) > 0:  # this evaluates to False if empty dict ({})
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
-            db_creds_new = [self.db_name, self.db_host, self.db_user,
-                            self.db_schema, self.db_port]
-            if db_creds_new != db_creds_old:  # Only connects/reconnects if something changed
-                self._connect_to_db()
+            if 'db' in kwargs:
+                setattr(self, 'db_name', kwargs['db'].db_name)
+                setattr(self, 'db_host', kwargs['db'].db_host)
+                setattr(self, 'db_user', kwargs['db'].db_user)
+                setattr(self, 'db_schema', kwargs['db'].db_schema)
+                setattr(self, 'db_port', kwargs['db'].db_port)
+            else:
+                db_creds_new = [self.db_name, self.db_host, self.db_user,
+                                self.db_schema, self.db_port]
+                if db_creds_new != db_creds_old:  # Only connects/reconnects if something changed
+                    self._connect_to_db()
 
     def _connect_to_db(self):
         '''
@@ -527,6 +546,20 @@ class Tables(object):
         df_join = df_join[pd.notnull(df_join[date_delta_str])]
         return df_join, date_delta_str
 
+    def _check_empty_geom(self, df):
+        '''Issues a warning if there is empty geometry in <df>.'''
+        msg1 = ('Some geometries are empty and will not result in joins on those '
+                'rows. Either pass as a normal dataframe with no geometry, or add '
+                'the appropriate geometry for all rows.')
+        msg2 = ('A geodataframe was passed to ``join_closest_date()``, but all '
+                'geometries are empty and thus no rows will be joined. Please '
+                'either pass as a normal dataframe with no geometry, or add in '
+                'the appropriate geometry.')
+        if all(df[df.geometry.name].is_empty):
+            raise ValueError(msg2)
+        if any(df[df.geometry.name].is_empty):
+            warnings.warn(msg1, category=RuntimeWarning, stacklevel=1)
+
     def _join_geom_date(self, df_left, df_right, left_on, right_on,
                         tolerance=3, delta_label=None):
         '''
@@ -626,6 +659,26 @@ class Tables(object):
         df_id = df_id[['id'] + [c for c in df_id.columns if c != 'id' ]]
         return df_id
 
+    def _find_unique_geom(self, df):
+        '''
+        Finds the unique geometries in <df> and adds a new column as UID.
+
+        GeoML utilities?
+        '''
+        df = df.reset_index(drop=True)
+        df_copy = df.copy()
+        df_copy.loc[:, 'unique_geom'] = None
+
+        uid = 0
+        for i, r in df.iterrows():
+            # break
+            if df_copy.loc[i, 'unique_geom'] is not None:
+                continue  # skip if already found
+            else:
+                df_copy.loc[df_copy.geom_almost_equals(r.geom, align=False), 'unique_geom'] = uid
+                uid += 1
+        return df_copy
+
     def _calc_ntd_with_geom(self, df, df_join, col_rate_n, col_rate_ntd_out,
                             col_id='id'):
         '''
@@ -648,7 +701,7 @@ class Tables(object):
         cols_require = subset + ['date']  # Unique subset for which to calculate NTD
 
         if col_id not in df_join.columns:  # required for multiple geometries
-            self._add_id_by_subset(df_join, subset=cols_require, col_id=col_id)
+            df_join = self._add_id_by_subset(df_join, subset=cols_require, col_id=col_id)
 
         # 1. Get all unique geometries for each year
         # subgeom = subset + [df_join.geometry.name]
@@ -671,6 +724,8 @@ class Tables(object):
         # 4. Calculate N applied to date, and merge with original <df>
         # df_ntd = df_join_single_mult.groupby(
         #     cols_require + [col_id])[col_rate_n].sum().reset_index()
+
+        # TODO: merge geom and sum 'rate_n_kgha'
         df_ntd = df_join.groupby(
             cols_require + [col_id])[col_rate_n].sum().reset_index()
         df_ntd = df_ntd.sort_values(by=col_id).reset_index(drop=True)
@@ -679,6 +734,78 @@ class Tables(object):
                           validate='many_to_one')  # col_id required because it is unique for each observation
         return df_out
 
+    def _fill_empty_geom(self, df):
+        '''Fills/replaces empty geometry with field_bounds geometry'''
+        if self.field_bounds is not None:
+           subset = db_utils.get_primary_keys(self.as_planted)
+
+           df_geom = df[~df[df.geometry.name].is_empty]
+           df_empty = df[df[df.geometry.name].is_empty]
+           df_empty.drop(columns=[df_empty.geometry.name], inplace=True)
+
+           df_fill = df_geom.append(df_empty.merge(
+               self.field_bounds[subset + [self.field_bounds.geometry.name]],
+               on=subset))
+           return df_fill
+
+    def _spatial_join_clean_keys(self, df_left, df_right):
+        '''
+        Performs spatial join, then only keeps matched primary keys.
+
+        Deletes any rows whose primary keys in the joined dataframes do not
+        match, then renames primary keys with standard naming.
+        '''
+
+        df_join_s = gpd.tools.sjoin(df_left, df_right.to_crs(df_left.crs.to_epsg()), how='inner')
+
+        subset = db_utils.get_primary_keys(df_left)
+        if 'field_id' in subset:
+            keys = [['owner_left', 'owner_right'],
+                    ['farm_left', 'farm_right'],
+                    ['field_id_left', 'field_id_right'],
+                    ['year_left', 'year_right']]
+        else:
+            keys = [['owner_left', 'owner_right'],
+                    ['study_left', 'study_right'],
+                    ['plot_id_left', 'plot_id_right'],
+                    ['year_left', 'year_right']]
+        # keys = [['{0}_left'.format(k), '{0}_right'.format(k)] for k in subset]
+
+        df_join = df_join_s.loc[(df_join_s[keys[0][0]] == df_join_s[keys[0][1]]) &
+                                (df_join_s[keys[1][0]] == df_join_s[keys[1][1]]) &
+                                (df_join_s[keys[2][0]] == df_join_s[keys[2][1]]) &
+                                (df_join_s[keys[3][0]] == df_join_s[keys[3][1]])]
+
+        # df_join = df_join_s.loc[(df_join_s['owner_left'] == df_join_s['owner_right']) &
+        #                         (df_join_s['farm_left'] == df_join_s['farm_right']) &
+        #                         (df_join_s['field_id_left'] == df_join_s['field_id_right']) &
+        #                         (df_join_s['year_left'] == df_join_s['year_right'])]
+        df_join.rename(columns={
+            keys[0][0]: keys[0][0].split('_left')[0],
+            keys[1][0]: keys[1][0].split('_left')[0],
+            keys[2][0]: keys[2][0].split('_left')[0],
+            keys[3][0]: keys[3][0].split('_left')[0]},
+            inplace=True)
+        df_join.drop(columns={
+            keys[0][1]: keys[0][1].split('_right')[0],
+            keys[1][1]: keys[1][1].split('_right')[0],
+            keys[2][1]: keys[2][1].split('_right')[0],
+            keys[3][1]: keys[3][1].split('_right')[0]},
+            # 'owner_right': 'owner', 'farm_right': 'farm',
+            # 'field_id_right': 'field_id', 'year_right': 'year'},
+            inplace=True)
+        return df_join
+
+    def _get_geom_from_primary_keys(self, df):
+        '''Adds field_bounds geom to <df> based on primary keys'''
+        for g in ['goem', 'geometry']:
+            if g in df.columns:
+                df.drop(columns=[g], inplace=True)
+        subset = db_utils.get_primary_keys(df)
+        gdf = gpd.GeoDataFrame(
+            df.merge(self.field_bounds[subset + [self.field_bounds.geometry.name]],
+                     on=subset), geometry='geom')
+        return gdf
 # ##############
 #         # 1. Get all unique geometries
 #         subgeom = subset + [df_join.geometry.name]
@@ -755,14 +882,23 @@ class Tables(object):
                    'pass <base_dir_data>.')
             assert self.base_dir_data is not None, msg
 
-        print('\nLoading tables from <base_dir_data>...')
-        for table_name, fname in self.table_names.items():
-            if self._get_table_from_self(table_name) is None and fname is not None:
-                df = self._load_table_from_file(table_name, fname)
-                if df is not None:
-                    # print(table_name)
-                    df = db_utils.cols_to_datetime(df)
-                    self._set_table_to_self(table_name, df)
+        if self.base_dir_data is not None:
+            print('\nLoading tables from <base_dir_data>...')
+            for table_name, fname in self.table_names.items():
+                if (self._get_table_from_self(table_name) is None and
+                    fname is not None):
+                    df = self._load_table_from_file(table_name, fname)
+                    if df is not None:
+                        # print(table_name)
+                        df = db_utils.cols_to_datetime(df)
+                        self._set_table_to_self(table_name, df)
+
+        # Now that tables are loaded, fill in empty geometry for tables that
+        # we assume take on field_bounds geom if empty: as-planted, n_applications, obs_tissue
+        for t in ['as_planted', 'n_applications', 'obs_tissue']:
+            df = self._get_table_from_self(t)
+            df_fill = self._fill_empty_geom(df)
+            self._set_table_to_self(t, df_fill)
 
         # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
         # TODO: Do any groupby() function for cropscan (and all data for that
@@ -824,7 +960,28 @@ class Tables(object):
         self._check_col_names(df_right, cols_require_r)
         df_left = self._dt_or_ts_to_date(df_left, left_on)
         df_right = self._dt_or_ts_to_date(df_right, right_on)
+
+        # 0. Goal here is to join closest date, but when geometry exists, it
+        # gets a bit more complicated. When both are geodataframe, any missing
+        # geometry is filtered out, then tables are joined on geometry and only
+        # the closest date is kept.
+
+        # The problem is when there is empty geometry, then nothing gets joined.
+
+        # Choices:
+        # 1. Fill in any missing geometry before the join_closest_date()
+        # function is called.
+        # 2. Dynamically fill in missing geometry from df_left to df_right
+        # during join_closest_date()
+        # 3. Raise a warning if both are geodataframes and there is empty
+        # geometry.
+
+
         if isinstance(df_left, gpd.GeoDataFrame) and isinstance(df_right, gpd.GeoDataFrame):
+            self._check_empty_geom(df_left)
+            self._check_empty_geom(df_right)
+
+            # 2. Case where some geometries are empty, but some are not
             df_join = self._join_geom_date(
                 df_left, df_right, left_on, right_on, tolerance=tolerance,
                 delta_label=delta_label)
@@ -862,7 +1019,11 @@ class Tables(object):
 
     def dae(self, df):
         '''
-        Adds a days after emergence (DAE) column to df
+        Adds a days after emergence (DAE) column to df.
+
+        Retrieves emergence dates from as_planted table, so <df> should be a
+        GeoDataFrame to properly account for multiple as_planted rows for the
+        same set of primary keys.
 
         Parameters:
             df (``pandas.DataFrame``): The input dataframe to add DAE column
@@ -897,13 +1058,25 @@ class Tables(object):
                         if isinstance(df, gpd.GeoDataFrame)
                         else subset + ['date']][0]
         self._check_col_names(df, cols_require)
+        df.loc[:, 'date'] = df.loc[:, 'date'].apply(pd.to_datetime, errors='coerce')
+        if not isinstance(df, gpd.GeoDataFrame):
+            df = self._get_geom_from_primary_keys(df)  # Returns GeoDataFrame
+
         if 'field_id' in subset:
-            df_join = df.merge(self.dates, on=subset,
-                               validate='many_to_one')
+            df_join = self._spatial_join_clean_keys(df, self.as_planted)
+        # elif 'field_id' in subset and isinstance(df, pd.DataFrame):
+        #     df_join = df.merge(predict.dates, on=subset,
+        #                         validate='many_to_one')
         elif 'plot_id' in subset:
             on = [i for i in subset if i != 'plot_id']
             df_join = df.merge(self.dates_res, on=on,
                                validate='many_to_one')
+        if len(df_join) == 0:
+            raise RuntimeError(
+                'Unable to calculate DAE. Check that "date_emerge" is set in '
+                '<as_planted> table for primary keys:\n{0}'.format(df[subset]))
+
+        df_join.loc[:, 'date_emerge'] = df_join.loc[:, 'date_emerge'].apply(pd.to_datetime, errors='coerce')
         df_join['dae'] = (df_join['date']-df_join['date_emerge']).dt.days
         df_out = df.merge(df_join[cols_require + ['dae']], on=cols_require)
         df_out = df_out.drop_duplicates()
@@ -919,6 +1092,10 @@ class Tables(object):
     def dap(self, df):
         '''
         Adds a days after planting (DAP) column to df
+
+        Retrieves planting dates from as_planted table, so <df> should be a
+        GeoDataFrame to properly account for multiple as_planted rows for the
+        same set of primary keys.
 
         Parameters:
             df (``pandas.DataFrame``): The input dataframe to add DAP column
@@ -953,13 +1130,27 @@ class Tables(object):
                         if isinstance(df, gpd.GeoDataFrame)
                         else subset + ['date']][0]
         self._check_col_names(df, cols_require)
+        df.loc[:, 'date'] = df.loc[:, 'date'].apply(pd.to_datetime, errors='coerce')
+        if not isinstance(df, gpd.GeoDataFrame):
+            df = self._get_geom_from_primary_keys(df)  # Returns GeoDataFrame
+
         if 'field_id' in subset:
-            df_join = df.merge(self.dates, on=subset,
-                               validate='many_to_one')
+            df_join = self._spatial_join_clean_keys(df, self.as_planted)
+        # elif 'field_id' in subset and isinstance(df, pd.DataFrame):
+        #     df_join = df.merge(self.dates, on=subset,
+        #                         validate='many_to_one')
         elif 'plot_id' in subset:
             on = [i for i in subset if i != 'plot_id']
             df_join = df.merge(self.dates_res, on=on,
                                validate='many_to_one')
+        if len(df_join) == 0:
+            raise RuntimeError(
+                'Unable to calculate DAP. Check that "date_plant" is set in '
+                '<as_planted> table for primary keys:\n{0}'.format(df[subset]))
+
+        # print(df_join.columns)
+        # df_join.loc[:, 'date'] = df_join.loc[:, 'date'].apply(pd.to_datetime, errors='coerce')
+        df_join.loc[:, 'date_plant'] = df_join.loc[:, 'date_plant'].apply(pd.to_datetime, errors='coerce')
         df_join['dap'] = (df_join['date']-df_join['date_plant']).dt.days
         df_out = df.merge(df_join[cols_require + ['dap']], on=cols_require)
         return df_out.reset_index(drop=True)
@@ -1027,33 +1218,90 @@ class Tables(object):
         cols_require = subset + ['date']
         self._check_col_names(df, cols_require)
         self._cr_rate_ntd(df)  # raises an error if data aren't suitable
+
+        if 'id' not in df.columns:  # required for multiple geometries
+            df = self._add_id_by_subset(df, subset=cols_require)
+
         if 'field_id' in subset:
-            df_join = df.merge(self.field_bounds[subset], on=subset)
-            # on = [i for i in subset if i != 'field_id']
-            # df_join = df_join.merge(self.n_applications[on + ['trt_n']], on=on)
-            df_join = df_join.merge(
-                self.n_applications[subset + ['date_applied', col_rate_n]],
-                on=subset, validate='many_to_many')
-            # if isinstance(df, gpd.GeoDataFrame):
-            #     cols_require += [df.geometry.name]
+            # We need spatial join, but then have to remove excess columns and rename
+            subset_n_apps = ['date_applied', 'source_n', 'rate_n_kgha']
+            df_join = None
+            for y in sorted(df['year'].unique()):
+                df_y = df[df['year'] == y]
+                n_apps_y = self.n_applications[self.n_applications['year'] == y]
+                if df_join is None:
+                    # df_join = gpd.tools.sjoin(
+                    #     n_apps_y[subset_n_apps + ['geom']], df_y[cols_require + ['geom']], how='inner')
+                    # df_join = gpd.tools.sjoin(
+                    #     df_y[['id'] + cols_require + ['geom']], n_apps_y[subset_n_apps + ['geom']], how='inner')
+                    df_join = gpd.overlay(df_y[['id'] + cols_require + ['geom']],
+                                          n_apps_y[subset_n_apps + ['geom']], how='intersection')
+                else:
+                    # df_join = df_join.append(gpd.tools.sjoin(
+                    #     n_apps_y[subset_n_apps + ['geom']], df_y[cols_require + ['geom']], how='inner'))
+                    df_join = df_join.append(gpd.overlay(df_y[['id'] + cols_require + ['geom']],
+                                             n_apps_y[subset_n_apps + ['geom']], how='intersection'))
+
+            # Don't drop index_right? Becasue it defines the duplicates from the right df
+            if 'index_right' in df_join.columns:
+                df_join.drop(columns='index_right', inplace=True)
+            # df_join_s = gpd.tools.sjoin(fd.n_applications[subset_n_apps + ['geom']], df[cols_require + ['geom']], how='inner')
+
+            # df_join = df_join_s.drop_duplicates(
+            #     subset=cols_require + subset_n_apps + ['geom'], keep='first')
+
+            # remove all rows where date_applied is after date
+            df_join = df_join[df_join['date_applied'] <= df_join['date']]
+
+
+            # df_join = df_join_s.loc[(df_join_s['owner_left'] == df_join_s['owner_right']) &
+            #                         (df_join_s['farm_left'] == df_join_s['farm_right']) &
+            #                         (df_join_s['field_id_left'] == df_join_s['field_id_right']) &
+            #                         (df_join_s['year_left'] == df_join_s['year_right'])]
+            # df_join = df_join.rename(columns={
+            #     'owner_left': 'owner', 'farm_left': 'farm',
+            #     'field_id_left': 'field_id', 'year_left': 'year'})
+            # cols_drop = ['index_right', 'owner_right', 'farm_right', 'field_id_right', 'year_right']
+            # # if 'id_right' in df_join.columns:
+            # #     cols_drop = cols_drop + ['id_right']
+            # if 'id_left' in df_join.columns:
+            #     cols_drop = cols_drop + ['id_left']
+            # df_join.drop(columns=cols_drop, inplace=True)
+
+
+            df_join.loc[~df_join.geometry.is_valid, df_join.geometry.name] = df_join.loc[~df_join.geometry.is_valid].buffer(0)
+
+            # df_unique = fd._find_unique_geom(df_join)
+
+            df_dissolve = df_join.dissolve(by=['id'] + cols_require, as_index=False, aggfunc='sum')
+
+            df_out = df.merge(df_dissolve[cols_require + ['rate_n_kgha']], on=cols_require, how='left', indicator=True)
+            df_out = df_out[df_out['_merge'] == 'both'].drop(columns='_merge').drop_duplicates()
+            df_out.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
+
+            # df_out = fd._calc_ntd_with_geom(df, df_join, col_rate_n,
+            #                                   col_rate_ntd_out, col_id='id')
+
+
+        # The following adds extra N apps due to multiple n_app geometries within a field
+        # if 'field_id' in subset:
+        #     df_join = df.merge(self.field_bounds[subset], on=subset)
+        #     df_join = df_join.merge(
+        #         self.n_applications[subset + ['date_applied', col_rate_n]],
+        #         on=subset, validate='many_to_many')
         elif 'plot_id' in subset:
             df_join = df.merge(self.experiments, on=subset).merge(
                 self.trt, on=['owner', 'study', 'year', 'trt_id'], validate='many_to_many').merge(
                     self.trt_n, on=['owner', 'study', 'year', 'trt_n'], validate='many_to_many')
-            # on = [i for i in subset if i != 'plot_id']
-            # df_join = df_join.merge(self.trt[on + ['trt_id', 'trt_n']], on=on)
-            # df_join = df_join.merge(
-            #     train.trt_n[subset + ['date_applied', col_rate_n]],
-            #     on=subset, validate='many_to_many')
 
-        # remove all rows where date_applied is after date
-        df_join = df_join[df_join['date'] >= df_join['date_applied']]
+            # remove all rows where date_applied is after date
+            df_join = df_join[df_join['date_applied'] <= df_join['date']]
         # if isinstance(df, gpd.GeoDataFrame):
-        df_single_geom = df[~df.duplicated(subset=cols_require, keep=False)][cols_require]
-        if len(df_single_geom) != len(df):  # assume there are multiple geometries in some fields
-            df_out = self._calc_ntd_with_geom(df, df_join, col_rate_n,
-                                              col_rate_ntd_out, col_id='id')
-        else:
+        # df_single_geom = df[~df.duplicated(subset=cols_require, keep=False)][cols_require]
+        # if len(df_single_geom) != len(df):  # assume there are multiple geometries in some fields
+        #     df_out = train._calc_ntd_with_geom(df, df_join, col_rate_n,
+        #                                       col_rate_ntd_out, col_id='id')
+        # else:
             df_sum = df_join.groupby(cols_require)[col_rate_n].sum().reset_index()
             df_sum.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
             df_out = df.merge(df_sum, on=cols_require)

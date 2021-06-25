@@ -77,8 +77,8 @@ class Predict(Tables):
         self.refit_X_full = False
         self.dir_out_pred = None
 
-        self._set_params_from_kwargs_pred(**kwargs)
         self._set_attributes_pred()
+        self._set_params_from_kwargs_pred(**kwargs)
 
     def _set_params_from_dict_pred(self, config_dict):
         '''
@@ -86,12 +86,12 @@ class Predict(Tables):
         are in the ``__allowed_params`` list
         '''
         if config_dict is not None and 'Predict' in config_dict:
-            params_fd = config_dict['Predict']
+            params_p = config_dict['Predict']
         elif config_dict is not None and 'Predict' not in config_dict:
-            params_fd = config_dict
+            params_p = config_dict
         else:  # config_dict is None
             return
-        for k, v in params_fd.items():
+        for k, v in params_p.items():
             if k in self.__class__.__allowed_params:
                 setattr(self, k, v)
 
@@ -103,11 +103,23 @@ class Predict(Tables):
         passed to ``Prediction`` more explicitly.
         '''
         if 'config_dict' in kwargs:
-            self._set_params_from_dict_pred(kwargs.get('config_dict'))
+            config_dict = kwargs.get('config_dict')
+            self._set_params_from_dict_pred(config_dict)
+        else:
+            config_dict = None
+
+        if config_dict is not None and 'Predict' in config_dict:
+            params_p = config_dict['Predict']
+        elif config_dict is not None and 'Predict' not in config_dict:
+            params_p = config_dict
+        else:
+            params_p = deepcopy(kwargs)
+
         if len(kwargs) > 0:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
+
         if self.date_predict is None:
             self.date_predict = datetime.now().date()
         elif isinstance(self.date_predict, str):
@@ -115,9 +127,9 @@ class Predict(Tables):
                 self.date_predict = datetime.strptime(self.date_predict,
                                                       '%Y-%m-%d')
             except ValueError as e:
-                raise ValueError('{0}.\nPlease either pass a datetime object, '
-                                 'or a string in the "YYYY-mm-dd" format.'
-                                 ''.format(e))
+                raise ValueError(
+                    '{0}.\nPlease either pass a datetime object, or a string '
+                    'in the "YYYY-mm-dd" format.'.format(e))
 
         if isinstance(self.train, Training) and self.loc_df_test:
             if self.estimator and self.feats_x_select:
@@ -129,15 +141,22 @@ class Predict(Tables):
         if not self.db and isinstance(self.train, Training):
             if self.train.db:
                 self.db = self.train.db
-        if not isinstance(self.gdf_pred, gpd.GeoDataFrame):
+        if (not isinstance(self.gdf_pred, gpd.GeoDataFrame) or
+                'primary_keys_pred' in kwargs or
+                'primary_keys_pred' in params_p):
             self._load_field_bounds()
+
+        if self.refit_X_full is True:
+            if 'estimator' in kwargs or 'estimator' in params_p:
+                self._refit_on_full_X()
 
     def _set_attributes_pred(self):
         '''
         Sets any class attribute to ``None`` that will be created in one of the
         user functions from the ``feature_selection`` class
         '''
-        print('add variable here.')
+        self.X_full = None
+        self.y_full = None
 
     def _load_field_bounds(self):
         '''
@@ -162,6 +181,28 @@ class Predict(Tables):
             for _, r in gdf_pred[subset].iterrows():
                 print(r.to_string()+'\n')
         self.gdf_pred = gdf_pred
+
+    def _refit_on_full_X(self):
+        '''
+        Refits
+        '''
+        msg = ('To refit the estimator on the full X matrix, an instance '
+               'of the ``Train`` class must be passed as a parameter to '
+               '``Predict`` so that ``X_full`` and ``y_full`` can be '
+               'created.')
+        assert self.train is not None, msg
+        print('Refitting estimator on full X matrix.')
+        X_full = np.concatenate(
+            [self.train.X_train, self.train.X_test], axis=0)
+
+        # get index of labels_x_select in labels_x
+        feats_x_select_idx = [i for i in range(len(self.train.labels_x))
+                              if self.train.labels_x[i] in self.feats_x_select]
+
+        self.X_full_select = X_full[:,feats_x_select_idx]
+        self.y_full = np.concatenate(
+            [self.train.y_train, self.train.y_test], axis=0)
+        self.estimator.fit(self.X_full_select, self.y_full)
 
     def _get_image_dates(self, tables_s2):
         '''
@@ -208,7 +249,7 @@ class Predict(Tables):
             date_closest = max(i for i in date_series if i <= date)
         elif image_search_method == 'future':
             date_closest = min(i for i in date_series if i >= date)
-        delta = (date - date_closest).days
+        delta = (datetime.combine(date, datetime.min.time()) - date_closest).days
         return date_closest, delta
 
     def _find_nearest_raster(self, primary_key_val, image_search_method='past'):
@@ -387,7 +428,7 @@ class Predict(Tables):
         self._set_params_from_kwargs_pred(**kwargs)
 
         if not isinstance(gdf_pred_s, pd.Series):
-            print('Using the first row ')
+            # print('Using the first row ')
             gdf_pred_s = self.gdf_pred.iloc[0]
 
         subset = db_utils.get_primary_keys(gdf_pred_s)
@@ -395,9 +436,15 @@ class Predict(Tables):
         array_img = ds.read()
 
         # 1. Get features for the model of interest
-        cols_feats = subset + ['date']  # df must have primary keys
-        data_feats = list(gdf_pred_s[subset]) + [self.date_predict]
-        df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
+        cols_feats = subset + ['geom', 'date']  # df must have primary keys
+        # data_feats = list(gdf_pred_s[subset]) + [self.date_predict]
+
+        df_feats = gpd.GeoDataFrame(
+            [list(gdf_pred_s[subset]) + [gdf_pred_s.geom, self.date_predict]],
+            columns=cols_feats, geometry='geom', crs=self.gdf_pred.crs)
+        # df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
+
+
         df_feats = self._feats_x_select_data(df_feats, df_metadata)
         # TODO: change when we get individual functions for each wx feature
         if any([f for f in self.feats_x_select if f in self.weather_derived.columns]):

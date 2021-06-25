@@ -136,6 +136,7 @@ config_dict = {
         'group_feats': sentinel_test1,
         'ground_truth_tissue': 'petiole',  # must coincide with obs_tissue.csv "tissue" column
         'ground_truth_measure': 'no3_ppm',  # must coincide with obs_tissue.csv "measure" column
+        'date_train': datetime.now().date(),  # ignores training data after this date
         'date_tolerance': 3,
         'cv_method': LeavePGroupsOut,
         'cv_method_kwargs': {'n_groups': 1},  # will be passed as ['cv_method'](**['cv_method_kwargs'])
@@ -189,7 +190,7 @@ config_dict = {
         'loc_df_test': None,  # will be overwritten by <train.df_test.loc[loc_df_test]>
         'estimator': None,  # can be a scikit-learn regressor or a pandas series following the format of df_test columns
         'feats_x_select': None,
-        'date_predict': datetime(2020, 7, 13),
+        'date_predict': datetime.now().date(),
         'gdf_pred': None,  # if left to None, <primary_keys_pred> should be set
         'primary_keys_pred': {'owner': 'css-farms-dalhart',
                               'farm': 'cabrillas',
