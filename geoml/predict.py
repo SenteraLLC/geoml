@@ -293,9 +293,9 @@ class Predict(Tables):
             primary_key_val, self.image_search_method)
 
         # load raster as array
-        ds, df_metadata = self.db.get_raster(raster_name, **primary_key_val)
+        array_img, profile, df_metadata = self.db.get_raster(raster_name, **primary_key_val)
         # array_pred = np.empty(array_img.shape[1:], dtype=float)
-        return ds, df_metadata
+        return array_img, profile, df_metadata
 
     def _get_array_img_band_idx(self, df_metadata, names, col_header='wavelength'):
         '''
@@ -432,8 +432,7 @@ class Predict(Tables):
             gdf_pred_s = self.gdf_pred.iloc[0]
 
         subset = db_utils.get_primary_keys(gdf_pred_s)
-        ds, df_metadata = self._get_X_map(gdf_pred_s)
-        array_img = ds.read()
+        array_img, profile, df_metadata = self._get_X_map(gdf_pred_s)
 
         # 1. Get features for the model of interest
         cols_feats = subset + ['geom', 'date']  # df must have primary keys
@@ -463,7 +462,6 @@ class Predict(Tables):
         array_pred = self._predict_and_reshape(array_X)
         array_pred[np.expand_dims(mask, 0)] = 0
         # array_pred = np.ma.masked_array(data=array_pred, mask=mask_2d)
-        profile = deepcopy(ds.profile)
         profile.update(count=1)
         if mask_by_bounds == True:
             array_pred, profile = self._mask_by_bounds(array_pred, profile,
