@@ -19,7 +19,7 @@ jobs:
              conda activate base
              conda config --set always_yes yes --set auto_update_conda false
              conda update conda
-             # conda create -n test_env python=$PYTHON_VERSION  # Create test environment
+             conda create -n test_env python=$PYTHON_VERSION  # Create test environment
       - run:
           name: Grant CircleCI access to dependency locations
           command: |
