@@ -32,8 +32,8 @@ jobs:
           name: Install Python dependencies
           command: |
              source "$HOME"/miniconda/etc/profile.d/conda.sh
-             conda env create -f requirements/environment_test.yml
-             conda install -n test_env -c conda-forge postgis
+             # conda env create -f requirements/environment_test.yml
+             # conda install -n test_env -c conda-forge postgis
 
              conda activate test_env
              pip install -r requirements/dev_pip.txt
