@@ -15,7 +15,7 @@ import pandas as pd
 
 from geoml.tests import config
 
-base_dir_data = config.config_dict['JoinTables']['base_dir_data']
+base_dir_data = config.config_dict['Tables']['base_dir_data']
 fname_obs_tissue = os.path.join(
     base_dir_data, config.config_dict['FeatureData']['fname_obs_tissue'])
 fname_cropscan = os.path.join(

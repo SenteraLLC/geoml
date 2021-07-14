@@ -45,20 +45,103 @@ Run tests to be sure everything is installed appropriately:
 `pytest geoml\tests`
 
 ## Use
+
+### Step 1:
+`GeoML` can be used via either flat files loaded from a local directory or via tables in a database connection. To connect to a database:
+
 ```
 from copy import deepcopy
+from datetime import datetime, date
+from db import DBHandler
 from geoml import Training
-from geoml.tests import config
+from geoml import Predict
+from geoml.tests import config as geoml_config
 
-config_dict = deepcopy(config.config_dict)
-config_dict['Tables']['base_dir_data'] = r'G:\Shared drives\Data\client_data\CSS Farms\db_tables\from_db'
-config_dict['FeatureData']['group_feats'] = config.sentinel_test1
+db_name = 'insight_dev'
+db_host = 'localhost'
+db_user = 'postgres'
+password = 'bnEtP7C$qKFc'
+db_schema = 'dev_client'
+db_port = 5432
+base_dir_google = ('G:/Shared drives/Data')
+
+db = DBHandler(database=db_name, host=db_host, user=db_user,
+               password=password, port=db_port, schema=db_schema)
+
+base_dir_google = ('G:/Shared drives/Data')
+preds_dir = os.path.join(
+    base_dir_google, 'client_data/CSS Farms/preds_{0}'.format(year))
+```
+
+### Step 2:
+This assumes all the necessary tables have been loaded into `db` already. Next, add configuration settings and train a model:
+
+```
+date_master = datetime(2021, 7, 14)
+
+config_dict = deepcopy(geoml_config.config_dict)
+config_dict['Tables']['db'] = db
+config_dict['Tables']['base_dir_data'] = None
+config_dict['FeatureData']['group_feats'] = geoml_config.sentinel_test1
+config_dict['FeatureData']['group_feats']['weather_derived'] = ['gdd_c_ptd_cum']
 config_dict['FeatureData']['impute_method'] = None
-config_dict['FeatureSelection']['n_feats'] = 11
+config_dict['FeatureData']['date_train'] = date_master
+config_dict['FeatureSelection']['n_feats'] = 6
 
 train = Training(config_dict=config_dict)
-train.train()
+train.fit()
 ```
+
+### Step 3:
+Grab an estimator to make prdictions with:
+```
+date_predict = date_master.date()
+year = date_predict.year
+config_dict['Predict']['train'] = train
+config_dict['Predict']['date_predict'] = date_predict
+# config_dict['Predict']['dir_out_pred'] = preds_dir
+config_dict['Predict']['dir_out_pred'] = os.path.join(preds_dir, 'tyler_local')
+config_dict['Predict']['refit_X_full'] = True
+config_dict['Predict']['primary_keys_pred'] = {'owner': 'css-farms-dalhart',
+                                               'farm': 'cabrillas',
+                                               'field_id': 'c-08',
+                                               'year': 2021}  # dummy keys
+
+estimator = train.df_test.loc[
+    train.df_test[train.df_test['feat_n'] == config_dict['FeatureSelection']['n_feats']].index,
+    'regressor'].item()
+feats_x_select = train.df_test.loc[
+    train.df_test[train.df_test['feat_n'] == config_dict['FeatureSelection']['n_feats']].index,
+    'feats_x_select'].item()
+
+predict = Predict(estimator=estimator, feats_x_select=feats_x_select,
+                  config_dict=config_dict)
+```
+
+### Step 4:
+Make a prediction for each field and save output as a geotiff raster:
+
+```
+os.chdir(preds_dir)  # predict_functions helper functions are located here
+import predict_functions as p
+
+field_bounds = db.get_table_df('field_bounds', year=year)
+
+for idx, row in field_bounds.iterrows():
+    print(row['field_id'])
+    try:
+        predict = p.predict_and_save_as_raster(row, predict, date_predict)
+    except RuntimeError as e1:
+        print('\n{0}'.format(e1))
+        print('Missing data, so {0} will be skipped.\n'.format(row['field_id']))
+        continue
+    except AttributeError as e2:
+        print('\n{0}'.format(e2))
+        print('Missing N application data, so {0} will be skipped.\n'.format(row['field_id']))
+        continue
+```
+
+![Alt text](outputs/petiole-no3-ppm_2021-07-12_css-farms-dalhart_cabrillas_c-24_raw.png?raw=true "Petiole nitrate prediction from July 12, 2021")
 
 ## Classes
 There are multiple classes that work together to perform all the necessary steps for training supervised regression estimators. Here is a brief summary:
