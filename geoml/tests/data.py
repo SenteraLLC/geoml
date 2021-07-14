@@ -19,7 +19,7 @@ base_dir_data = config.config_dict['Tables']['base_dir_data']
 fname_obs_tissue = os.path.join(
     base_dir_data, config.config_dict['Tables']['table_names']['obs_tissue'])
 fname_cropscan = os.path.join(
-    base_dir_data, config.config_dict['Tables']['table_names']['rs_cropscan'])
+    base_dir_data, config.config_dict['Tables']['table_names']['rs_cropscan_res'])
 
 df_obs_tissue = pd.read_csv(fname_obs_tissue)
 
