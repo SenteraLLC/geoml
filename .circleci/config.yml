@@ -2,17 +2,16 @@ version: 2.1
 
 orbs:
   python: circleci/python@0.2.1
-  # codecov: codecov/codecov@1.0.5
 
 jobs:
   build-and-test:
     working_directory: ~/geoml
     docker:
-      - image: circleci/python:3.8.2
+      - image: circleci/python:3.8.10
     steps:
       - checkout
       - run:
-          name: Install dependencies
+          name: Create virtual environment
           command: |
              wget https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
              bash miniconda.sh -b -p "$HOME"/miniconda
@@ -20,38 +19,53 @@ jobs:
              conda activate base
              conda config --set always_yes yes --set auto_update_conda false
              conda update conda
-             # Create test environment
-             conda create -n test python=$PYTHON_VERSION
-             conda activate test
-             conda install -n test --file requirements.txt
-             conda install -n test pytest pytest-cov
-             conda install -n test -c conda-forge codecov
+             # conda create -n test_env python=$PYTHON_VERSION  # Create test environment
+      - run:
+          name: Grant CircleCI access to dependency locations
+          command: |
+              sudo chown -R circleci:circleci /usr/local/bin
+              sudo chown -R circleci:circleci /usr/local/lib/python3.8/site-packages
+      - restore_cache:
+          name: Restoring cache
+          key: v1-deps-{{ .Branch }}-{{ checksum "requirements/environment_test.yml" }}
+      - run:
+          name: Install Python dependencies
+          command: |
+             source "$HOME"/miniconda/etc/profile.d/conda.sh
+             conda env create -f requirements/environment_test.yml
+             conda install -n test_env -c conda-forge postgis
+
+             conda activate test_env
+             pip install -r requirements/dev_pip.txt
+             pip install -r requirements/testing_pip.txt
+      - save_cache:
+          name: Saving cache
+          key: v1-deps-{{ .Branch }}-{{ checksum "requirements/environment_test.yml" }}
+          paths:
+            - "requirements/environment_test.yml"
       - run:
           name: Conda information
           command: |
-             source /home/circleci/miniconda/etc/profile.d/conda.sh
-             conda activate test
+             source "$HOME"/miniconda/etc/profile.d/conda.sh
+             conda activate test_env
              conda info
              conda config --show
              conda list --show-channel-urls
       - run:
           name: Run tests
           command: |
-             source /home/circleci/miniconda/etc/profile.d/conda.sh
-             conda activate test
+             source "$HOME"/miniconda/etc/profile.d/conda.sh
+             # find "$HOME" -name postgis.control
+             conda activate test_env
              mkdir test-results
              pytest --junitxml=test-results/junit.xml --cov=geoml --cov-report=xml
 
       - run:
           name: Upload code coverage
           command: |
-             source /home/circleci/miniconda/etc/profile.d/conda.sh
-             conda activate test
+             source "$HOME"/miniconda/etc/profile.d/conda.sh
+             conda activate test_env
              codecov -t 59dd1844-ad4a-46d7-88a0-27372244bacd
-
-      # - codecov/upload:
-      #     file: .coverage
-          # token: 59dd1844-ad4a-46d7-88a0-27372244bacd
 
       - store_test_results:
           path: test-results
