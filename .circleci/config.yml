@@ -19,7 +19,7 @@ jobs:
              conda activate base
              conda config --set always_yes yes --set auto_update_conda false
              conda update conda
-             conda create -n test_env python=$PYTHON_VERSION  # Create test environment
+             # conda create -n test_env python=$PYTHON_VERSION  # Create test environment
       - run:
           name: Grant CircleCI access to dependency locations
           command: |
@@ -32,9 +32,8 @@ jobs:
           name: Install Python dependencies
           command: |
              source "$HOME"/miniconda/etc/profile.d/conda.sh
-             # conda env create -f requirements/environment_test.yml
-             # conda install -n test_env -c conda-forge postgis
-
+             conda env create -f requirements/environment_test.yml
+             conda install -n test_env -c conda-forge postgis
              conda activate test_env
              pip install -r requirements/dev_pip.txt
              pip install -r requirements/testing_pip.txt
