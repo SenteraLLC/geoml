@@ -141,6 +141,7 @@ for idx, row in field_bounds.iterrows():
         continue
 ```
 
+By loading the output raster for CSS Farms - Cabrillas - C-24 into QGIS, we can see the spatial variation in predicted petiole nitrate:
 ![Alt text](outputs/petiole-no3-ppm_2021-07-12_css-farms-dalhart_cabrillas_c-24_raw.png?raw=true "Petiole nitrate prediction from July 12, 2021")
 
 ## Classes
@@ -157,6 +158,10 @@ There are multiple classes that work together to perform all the necessary steps
 
 ### Training
 `Training` inherits from an instance of `FeatureSelection` and consists of functions to carry out the hyperparameter tuning and chooses the most suitable hyperparameters for each unique number of features. Testing is then performed using the chosen hyperparameters and results recorded, then each estimator (i.e., for each number of features) is fit using the full dataset (i.e., train and test sets), being sure to use the hyperparameters and features selected from cross validation. After `Training.train()` is executed, each trained estimator is stored in `Training.df_test` under the "regressor" column. The full set of estimators (i.e., for all feature selection combinations, with potential duplicate estimators for the same number of features) is stored in `Training.df_test_full`. These estimators are fully trained and cross validated, and can be safely distributed to predict new observations. Care must be taken to ensure information about input features is tracked (not only the number of features, but specifications) so new data can be preocessed to be ingested by the estimator to make new predictions. Also note that care must be taken to ensure the cross-validation strategy (indicated via `cv_method`, `cv_method_kwargs`, and `cv_split_kwargs`) is suitable for your application and that it does not inadvertenly lead to model overfitting - for this reason, multiple cross-validation methods are encouraged.
+
+### Prediction
+`Predict` inherits from an instance of `Training`, and consists of variables and functions to make predictions on new data with the previously trained models. `Predict` accesses the appropriate data from the connected database to make predictions (e.g., as_planted, weather, sentinel reflectance images, etc.), and a prediction is made for each observation via the features in the feature set.
+
 
 ## License
 TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
