@@ -13,7 +13,7 @@ Insight Sensing Corporation. All rights reserved.
 import os
 import pandas as pd
 
-from research_tools.tests import config
+from geoml.tests import config
 
 base_dir_data = config.config_dict['JoinTables']['base_dir_data']
 fname_obs_tissue = os.path.join(

@@ -13,7 +13,7 @@ API to retrieve training data, create X matrix, and perform feature selection, h
 [![build](https://circleci.com/gh/insight-sensing/geoml/tree/dev.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/geoml?branch=dev)
 
 ## Setup and Installation (Windows)
-There is an *environment.yml* file that can be used to create the environment and install the dependencies. After cloning from Github, create the environment:
+There is an *environment_test.yml* file that can be used to create the environment and install the dependencies. After cloning from Github, create the environment:
 
 `conda env create -n test_env -f .geoml\requirements\environment_test.yml`
 
