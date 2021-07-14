@@ -11,11 +11,11 @@ Insight Sensing Corporation. All rights reserved.
 """
 
 import pandas as pd
-from research_tools import JoinTables
+from geoml import JoinTables
 
 import pytest
-from research_tools.tests import config
-from research_tools.tests import data
+from geoml.tests import config
+from geoml.tests import data
 
 
 @pytest.fixture(scope="class")

@@ -13,8 +13,8 @@ import numpy as np
 import os
 import pandas as pd
 
-from research_tools.tests import config
-from research_tools import FeatureData
+from geoml.tests import config
+from geoml import FeatureData
 import pytest
 
 
