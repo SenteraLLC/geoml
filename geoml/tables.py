@@ -113,8 +113,8 @@ class Tables(object):
             setattr(self, 'db_user', params_jt['db'].db_user)
             setattr(self, 'db_schema', params_jt['db'].db_schema)
             setattr(self, 'db_port', params_jt['db'].db_port)
-        else:
-            self._connect_to_db()
+        # else:
+        #     self._connect_to_db()
 
     def _set_params_from_kwargs_t(self, **kwargs):
         '''
@@ -127,8 +127,8 @@ class Tables(object):
             self._set_params_from_dict_t(kwargs.get('config_dict'))
             # self._connect_to_db()
 
-        db_creds_old = [self.db_name, self.db_host, self.db_user,
-                        self.db_schema, self.db_port]
+        # db_creds_old = [self.db_name, self.db_host, self.db_user,
+        #                 self.db_schema, self.db_port]
         if len(kwargs) > 0:  # this evaluates to False if empty dict ({})
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
@@ -139,11 +139,13 @@ class Tables(object):
                 setattr(self, 'db_user', kwargs['db'].db_user)
                 setattr(self, 'db_schema', kwargs['db'].db_schema)
                 setattr(self, 'db_port', kwargs['db'].db_port)
-            else:
-                db_creds_new = [self.db_name, self.db_host, self.db_user,
-                                self.db_schema, self.db_port]
-                if db_creds_new != db_creds_old:  # Only connects/reconnects if something changed
-                    self._connect_to_db()
+            # else:
+            #     db_creds_new = [self.db_name, self.db_host, self.db_user,
+            #                     self.db_schema, self.db_port]
+            #     if db_creds_new != db_creds_old:  # Only connects/reconnects if something changed
+            #         self._connect_to_db()
+        if self.db is None:
+            self._connect_to_db()
 
     def _connect_to_db(self):
         '''
