@@ -128,7 +128,7 @@ config_dict = {
             'rs_sentinel': 'rs_sentinel.geojson',
             'weather': 'weather.csv',
             'weather_derived': 'calc_weather.csv',
-            'weather_derived_res': 'calc_weather_res.csv'}
+            'weather_derived_res': 'weather_derived_res.csv'}
         },
     'FeatureData': {
         'random_seed': 999,
