@@ -32,7 +32,7 @@ def test_fd_init_fixture():
     base_dir_data = config.config_dict['Tables']['base_dir_data']
     # base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
     feat_data_cs = FeatureData(
-        config_dict=config.config_dict, base_dir_data=base_dir_data,
+        config_dict=config.config_dict, db_name=None, base_dir_data=base_dir_data,
         random_seed=0)
     return feat_data_cs
 
@@ -59,7 +59,7 @@ def test_fd_init_config_dict_simple_fixture():
         'print_out_fd': False,
         'print_splitter_info': False}
     feat_data_cs = FeatureData(
-        config_dict=config_dict_fd, random_seed=0)
+        config_dict=config_dict_fd, db_name=None, random_seed=0)
     return feat_data_cs
 
 @pytest.fixture(scope="function")
@@ -68,7 +68,7 @@ def test_fd_dir_results_fixture(tmp_path):
     base_dir_data = os.path.join(test_dir, 'testdata')
     dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
     feat_data_cs = FeatureData(
-        config_dict=config.config_dict, base_dir_data=base_dir_data,
+        config_dict=config.config_dict, db_name=None, base_dir_data=base_dir_data,
         random_seed=0, dir_results=dir_results)
     return feat_data_cs
 
@@ -77,7 +77,7 @@ def test_fd_get_feat_group_X_y_fixture():
     test_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir_data = os.path.join(test_dir, 'testdata')
     feat_data_cs = FeatureData(
-        config_dict=config.config_dict, base_dir_data=base_dir_data,
+        config_dict=config.config_dict, db_name=None, base_dir_data=base_dir_data,
         random_seed=0)
     group_feats = config.cs_test2
     feat_data_cs.get_feat_group_X_y(
@@ -92,7 +92,7 @@ def test_fd_get_feat_group_X_y_dir_results_fixture(tmp_path):
     base_dir_data = os.path.join(test_dir, 'testdata')
     dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
     feat_data_cs = FeatureData(
-        config_dict=config.config_dict, base_dir_data=base_dir_data,
+        config_dict=config.config_dict, db_name=None, base_dir_data=base_dir_data,
         random_seed=0, dir_results=dir_results)
     group_feats = config.cs_test2
     feat_data_cs.get_feat_group_X_y(
