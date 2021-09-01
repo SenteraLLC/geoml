@@ -16,8 +16,8 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.preprocessing import PowerTransformer
 from sklearn.compose import TransformedTargetRegressor
 
-from research_tools.tests import config
-from research_tools import Training
+from geoml.tests import config
+from geoml import Training
 import pytest
 
 

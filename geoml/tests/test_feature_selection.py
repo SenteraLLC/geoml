@@ -14,8 +14,8 @@ from sklearn.linear_model import Lasso
 from sklearn.cross_decomposition import PLSRegression
 
 import pytest
-from research_tools.tests import config
-from research_tools import FeatureSelection
+from geoml.tests import config
+from geoml import FeatureSelection
 
 
 @pytest.fixture(scope="class")

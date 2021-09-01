@@ -17,7 +17,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 
-from research_tools import FeatureSelection
+from geoml import FeatureSelection
 
 
 class Training(FeatureSelection):
@@ -49,9 +49,7 @@ class Training(FeatureSelection):
         '''
         '''
         super(Training, self).__init__(**kwargs)
-        # self._set_params_from_kwargs_fs(**kwargs)
-        # self._set_attributes_fs()
-        # self._set_model_fs()
+
         self.fs_find_params(**kwargs)
 
         # Training defaults
@@ -65,7 +63,6 @@ class Training(FeatureSelection):
         self.refit = self.scoring[0]
         self.rank_scoring = self.scoring[0]
         self.print_out_train = False
-        # self.base_dir_results = None
 
         self._set_params_from_kwargs_train(**kwargs)
         self._set_attributes_train()
@@ -96,7 +93,7 @@ class Training(FeatureSelection):
         '''
         if 'config_dict' in kwargs:
             self._set_params_from_dict_train(kwargs.get('config_dict'))
-        if kwargs is not None:
+        if len(kwargs) > 0:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
@@ -205,16 +202,18 @@ class Training(FeatureSelection):
                               'scoring': self.scoring,
                               'n_jobs': self.n_jobs_tune,
                               'pre_dispatch': pre_dispatch,
-                              'cv': self.kfold_repeated_stratified(),
+                              # 'cv': self.kfold_repeated_stratified(),
+                              'cv': self.get_tuning_splitter(),
                               'refit': self.refit,
                               'return_train_score': True}
-        clf = GridSearchCV(**kwargs_grid_search)
+        clf = GridSearchCV(**kwargs_grid_search, verbose=0)
+
         try:
             clf.fit(self.X_train_select, self.y_train)
             df_tune = pd.DataFrame(clf.cv_results_)
             return df_tune
         except ValueError as e:
-            print('Estimator was unable to fit due to {0}'.format(e))
+            print('Estimator was unable to fit due to "{0}"'.format(e))
             return None
 
     def _get_df_tune_cols(self):
@@ -489,14 +488,14 @@ class Training(FeatureSelection):
             idx_max = self.df_test_full.index.max() + 1
         return int(idx_max + idx)
 
-    def train(self, **kwargs):
+    def fit(self, **kwargs):
         '''
         Perform tuning for each unique scenario from ``FeatureSelection``
         (i.e., for each row in <df_fs_params>).
 
         Example:
-            >>> from research_tools import Training
-            >>> from research_tools.tests import config
+            >>> from geoml import Training
+            >>> from geoml.tests import config
 
             >>> my_train = Training(config_dict=config.config_dict)
             >>> my_train.train()
@@ -508,9 +507,12 @@ class Training(FeatureSelection):
         df_test_full = self.df_test_full
         df_pred = self.df_pred
         df_pred_full = self.df_pred_full
+        print_splitter_info = self.print_splitter_info
+        _ = self.get_tuning_splitter(print_splitter_info=True)  # prints the number of obs
+        self.print_splitter_info = print_splitter_info
         for idx in self.df_fs_params.index:
             X_train_select, X_test_select = self.fs_get_X_select(idx)
-            n_feats = len(self.df_fs_params.iloc[idx]['feats_x_select'])
+            n_feats = len(self.df_fs_params.loc[idx]['feats_x_select'])
             if self.print_out_train == True:
                 print('Number of features: {0}'.format(n_feats))
             df_tune_grid = self._tune_grid_search()
@@ -536,34 +538,13 @@ class Training(FeatureSelection):
                 df_pred = self.df_y[self.df_y['train_test'] == 'test'].copy()
                 df_pred_full = self.df_y.copy()
 
-                # col_idx = [self.df_y.columns, self.df_y.columns]
-                # df_pred.columns = pd.MultiIndex.from_arrays(col_idx, names=('full', 'filtered'))
-
             if y_pred_test is not None:  # have to store y_pred while we have it
                 df_pred[uid] = y_pred_test
                 df_pred_full[uid] = np.concatenate([y_pred_train, y_pred_test])
                 # df_pred[(uid, np.nan)] = y_pred
 
-        # df_tune = df_tune.sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
-        # df_test_full = df_test_full.sort_values(['regressor_name', 'feat_n']).reset_index(drop=True)
         self.df_tune = df_tune
         self.df_test_full = df_test_full
         self.df_pred = df_pred
         self.df_pred_full = df_pred_full
         self._filter_test_results(scoring='test_neg_mae')
-
-    # def set_regressor(self, feat_n=None, **kwargs):
-    #     '''
-    #     Sets the regressor for a given <feat_n> from <Tuning.df_test>.
-
-    #     Parameters:
-    #         feat_n (``int``): The DataFrame to get the regressor from
-    #             (default: ``Training.df_test``).
-    #     '''
-    #     self._set_params_from_kwargs_train(**kwargs)
-    #     if feat_n is None:
-    #         feat_n = X.sha
-    #     params = df[df['feat_n'] == feat_n]['params_regressor'].values[0]
-    #     my_train.regressor.set_params(**params)
-
-

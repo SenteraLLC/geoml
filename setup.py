@@ -31,13 +31,13 @@ test_requirements = [
     # TODO: put package test requirements here
 ]
 
-setuptools.setup(name='research_tools',
+setuptools.setup(name='geoml',
                  version='0.0.1',
                  description=('Insight Sensing API for processing and '
                               'analizing research data.'),
                  long_description=readme(),
                  long_description_content_type="text/markdown",
-                 url='https://github.com/insight-sensing/research_tools',
+                 url='https://github.com/insight-sensing/geoml',
                  author='Tyler J. Nigon',
                  author_email='tyler@insight-sensing.com',
                  copyright=('Copyright (c) Insight Sensing Corporation, 2020. '
@@ -55,6 +55,6 @@ setuptools.setup(name='research_tools',
                  package_data={},
                  include_package_data=False,
                  install_requires=requirements,
-#                 test_suite='research_tools/tests',
+#                 test_suite='geoml/tests',
                  tests_require=test_requirements,
                  zip_safe=False)

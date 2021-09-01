@@ -9,6 +9,7 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+from copy import deepcopy
 import numpy as np
 import pandas as pd
 from scipy.stats import rankdata
@@ -16,7 +17,7 @@ from scipy import optimize
 from sklearn.linear_model import Lasso
 from sklearn.feature_selection import SelectFromModel
 
-from research_tools import FeatureData
+from geoml import FeatureData
 
 
 class FeatureSelection(FeatureData):
@@ -44,7 +45,8 @@ class FeatureSelection(FeatureData):
     def __init__(self, **kwargs):
         super(FeatureSelection, self).__init__(**kwargs)
         self.get_feat_group_X_y()
-        cv_rep_strat = self.kfold_repeated_stratified()
+        # cv_rep_strat = self.kfold_repeated_stratified()
+        _ = self.get_tuning_splitter()  # Just to test to make sure it works
         # FeatureData defaults
         # self.base_data_dir = None
         self.model_fs = Lasso()  # params below are specific to this model
@@ -80,7 +82,7 @@ class FeatureSelection(FeatureData):
             return
         for k, v in params_fd.items():
             if k in self.__class__.__allowed_params:
-                setattr(self, k, v)
+                setattr(self, k, deepcopy(v))
         if 'model_fs' in params_fd.keys():
             self._set_model_fs()
 
@@ -93,10 +95,10 @@ class FeatureSelection(FeatureData):
         '''
         if 'config_dict' in kwargs:
             self._set_params_from_dict_fs(kwargs.get('config_dict'))
-        if kwargs is not None:
+        if len(kwargs) > 0:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
-                    setattr(self, k, v)
+                    setattr(self, k, deepcopy(v))
             if 'model_fs' in kwargs.keys():
                 self._set_model_fs()
 
@@ -358,16 +360,24 @@ class FeatureSelection(FeatureData):
         information for the ``Tuning`` class to achieve the specific number of
         features determined by the ``FeatureSelection`` class.
         '''
-        self._find_features_min()
-        self._find_features_max()
+        if self.n_feats > 1:
+            self._find_features_min()
+            self._find_features_max()
 
-        # self._find_features_max(
-        #     self.n_feats, step_pct=self.step_pct,
-        #     exit_on_stagnant_n=self.exit_on_stagnant_n)
-        params_max = np.log(self.model_fs_params_feats_max['alpha'])
-        params_min = np.log(self.model_fs_params_feats_min['alpha'])
-        param_val_list = list(np.logspace(params_min, params_max,
-                                          num=self.n_linspace, base=np.e))
+            # self._find_features_max(
+            #     self.n_feats, step_pct=self.step_pct,
+            #     exit_on_stagnant_n=self.exit_on_stagnant_n)
+            params_max = np.log(self.model_fs_params_feats_max['alpha'])
+            params_min = np.log(self.model_fs_params_feats_min['alpha'])
+            param_val_list = list(np.logspace(params_min, params_max,
+                                              num=self.n_linspace, base=np.e))
+        else:
+            self.model_fs_params_feats_max = {'alpha': 1e-4}
+            self.model_fs_params_feats_min = {'alpha': 10}
+            params_max = np.log(self.model_fs_params_feats_max['alpha'])
+            params_min = np.log(self.model_fs_params_feats_min['alpha'])
+            param_val_list = list(np.logspace(params_min, params_max,
+                                              num=self.n_linspace, base=np.e) / 10)
 
         # minimization is the first point where minimum is reached; thus, when
         # using with logspace, it may not quite reach the max feats desired
@@ -412,8 +422,8 @@ class FeatureSelection(FeatureData):
                 selection scenario (``dict``).
 
         Example:
-            >>> from research_tools import FeatureSelection
-            >>> from research_tools.tests import config
+            >>> from geoml import FeatureSelection
+            >>> from geoml.tests import config
 
             >>> myfs = FeatureSelection(config_dict=config.config_dict)
             >>> myfs.fs_find_params()
@@ -423,7 +433,7 @@ class FeatureSelection(FeatureData):
              [ 57.         358.672        0.67396667]
              [ 63.         246.587        0.48595   ]]
         '''
-        print('Performing feature selection...')
+        print('\nPerforming feature selection...')
         self._set_params_from_kwargs_fs(**kwargs)
 
         if self.n_feats is None:
@@ -459,8 +469,8 @@ class FeatureSelection(FeatureData):
                 column).
 
         Example:
-            >>> from research_tools import FeatureSelection
-            >>> from research_tools.tests import config
+            >>> from geoml import FeatureSelection
+            >>> from geoml.tests import config
 
             >>> myfs = FeatureSelection(config_dict=config.config_dict)
             >>> myfs.fs_find_params()
@@ -471,13 +481,13 @@ class FeatureSelection(FeatureData):
                 '``get_X_select()``.')
         assert isinstance(self.df_fs_params, pd.DataFrame), msg1
 
-        feats_x_select = self.df_fs_params.iloc[df_fs_params_idx]['feats_x_select']
+        feats_x_select = self.df_fs_params.loc[df_fs_params_idx]['feats_x_select']
 
         X_train_select = self.X_train[:,feats_x_select]
         X_test_select = self.X_test[:,feats_x_select]
         self.X_train_select = X_train_select
         self.X_test_select = X_test_select
-        self.labels_x_select = self.df_fs_params.iloc[df_fs_params_idx]['labels_x_select']
-        self.rank_x_select = self.df_fs_params.iloc[df_fs_params_idx]['rank_x_select']
+        self.labels_x_select = self.df_fs_params.loc[df_fs_params_idx]['labels_x_select']
+        self.rank_x_select = self.df_fs_params.loc[df_fs_params_idx]['rank_x_select']
         return X_train_select, X_test_select
 

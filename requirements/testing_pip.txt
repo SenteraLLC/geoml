@@ -1,0 +1,2 @@
+git+git://github.com/tk0miya/testing.postgresql.git@c81ded434d00ec8424de0f9e1f4063c778c6aaa8#egg=testing.postgresql
+pytest_pgsql >= 1.1.2

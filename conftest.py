@@ -14,7 +14,7 @@ import pytest
 
 
 test_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        'research_tools', 'tests')
+                        'geoml', 'tests')
 data_dir = os.path.join(test_dir, 'testdata')
 
 

@@ -9,27 +9,30 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+from datetime import datetime
 import numpy as np
 import os
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RepeatedStratifiedKFold
 
-from research_tools.tests import config
-from research_tools import FeatureData
+from geoml.tests import config
+from geoml import FeatureData
 import pytest
 
 
 @pytest.fixture(scope="class")
 def test_fd_basic_args():
-    base_dir_data = config.config_dict['FeatureData']['base_dir_data']
+    base_dir_data = config.config_dict['Tables']['base_dir_data']
     # base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
     return base_dir_data
 
 @pytest.fixture(scope="class")
 def test_fd_init_fixture():
-    base_dir_data = config.config_dict['FeatureData']['base_dir_data']
+    base_dir_data = config.config_dict['Tables']['base_dir_data']
     # base_dir_data = r'I:\Shared drives\NSF STTR Phase I – Potato Remote Sensing\Historical Data\Rosen Lab\Small Plot Data\Data'
     feat_data_cs = FeatureData(
-        config_dict=config.config_dict, base_dir_data=base_dir_data,
+        config_dict=config.config_dict, db_name=None, base_dir_data=base_dir_data,
         random_seed=0)
     return feat_data_cs
 
@@ -37,24 +40,26 @@ def test_fd_init_fixture():
 def test_fd_init_config_dict_simple_fixture():
     test_dir = os.path.dirname(os.path.abspath(__file__))
     config_dict_fd = {
-        'base_dir_data': os.path.join(test_dir, 'testdata'),
+        # 'base_dir_data': os.path.join(test_dir, 'testdata'),
         'random_seed': 999,
-        'fname_obs_tissue': 'obs_tissue.csv',
-        'fname_cropscan': 'rs_cropscan.csv',
         'dir_results': None,
-        'group_feats': config.cs_test2,
-        'ground_truth_tissue': 'vine',
-        'ground_truth_measure': 'n_pct',
+        'group_feats': config.cs_test,
+        'ground_truth_tissue': 'vine',  # must coincide with obs_tissue.csv "tissue" column
+        'ground_truth_measure': 'n_pct',  # must coincide with obs_tissue.csv "measure" column
+        'date_train': datetime.now().date(),  # ignores training data after this date
         'date_tolerance': 3,
-        'test_size': 0.4,
-        'stratify': ['owner', 'study', 'date'],
+        'cv_method': train_test_split,
+        'cv_method_kwargs': {'test_size': '0.4', 'stratify': 'df[["owner", "year"]]'},
+        'cv_split_kwargs': None,
         'impute_method': 'iterative',
-        'n_splits': 4,
-        'n_repeats': 3,
         'train_test': 'train',
-        'print_out_fd': False}
+        'cv_method_tune': RepeatedStratifiedKFold,
+        'cv_method_tune_kwargs': {'n_splits': 4, 'n_repeats': 3},
+        'cv_split_tune_kwargs': {'y': ['farm', 'year']},
+        'print_out_fd': False,
+        'print_splitter_info': False}
     feat_data_cs = FeatureData(
-        config_dict=config_dict_fd, random_seed=0)
+        config_dict=config_dict_fd, db_name=None, random_seed=0)
     return feat_data_cs
 
 @pytest.fixture(scope="function")
@@ -63,7 +68,7 @@ def test_fd_dir_results_fixture(tmp_path):
     base_dir_data = os.path.join(test_dir, 'testdata')
     dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
     feat_data_cs = FeatureData(
-        config_dict=config.config_dict, base_dir_data=base_dir_data,
+        config_dict=config.config_dict, db_name=None, base_dir_data=base_dir_data,
         random_seed=0, dir_results=dir_results)
     return feat_data_cs
 
@@ -72,7 +77,7 @@ def test_fd_get_feat_group_X_y_fixture():
     test_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir_data = os.path.join(test_dir, 'testdata')
     feat_data_cs = FeatureData(
-        config_dict=config.config_dict, base_dir_data=base_dir_data,
+        config_dict=config.config_dict, db_name=None, base_dir_data=base_dir_data,
         random_seed=0)
     group_feats = config.cs_test2
     feat_data_cs.get_feat_group_X_y(
@@ -87,7 +92,7 @@ def test_fd_get_feat_group_X_y_dir_results_fixture(tmp_path):
     base_dir_data = os.path.join(test_dir, 'testdata')
     dir_results = os.path.join(tmp_path, 'test_feature_data_dir_results')
     feat_data_cs = FeatureData(
-        config_dict=config.config_dict, base_dir_data=base_dir_data,
+        config_dict=config.config_dict, db_name=None, base_dir_data=base_dir_data,
         random_seed=0, dir_results=dir_results)
     group_feats = config.cs_test2
     feat_data_cs.get_feat_group_X_y(

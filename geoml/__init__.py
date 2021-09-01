@@ -25,15 +25,18 @@ __email__ = 'tyler@insight-sensing.com'
 
 
 from .join_tables import JoinTables
+from .tables import Tables
 from .feature_data import FeatureData
 from .feature_selection import FeatureSelection
 from .training import Training
+from .predict import Predict
 
 
-name = 'research_tools'
+name = 'geoml'
 __version__ = '0.0.1'
 
 __all__ = ['JoinTables',
+           'Tables',
            'FeatureData',
            'FeatureSelection',
            'Training']
