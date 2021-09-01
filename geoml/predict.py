@@ -401,7 +401,7 @@ class Predict(Tables):
         return array_pred, profile_out
 
     def predict(self, gdf_pred_s=None, mask_by_bounds=True,
-                buffer_dist=-40, **kwargs):
+                buffer_dist=-40, clip_min=0, clip_max=None, **kwargs):
         '''
         Makes predictions for a single geometry.
 
@@ -423,6 +423,11 @@ class Predict(Tables):
                 should be equal to units used by the coordinate reference
                 system of the rasterio profile object from imagery. Ignored
                 if ``mask_by_bounds`` is ``False``.
+            clip_min, clip_max (``int`` or ``float``): Minimum and maximum
+                value. If ``None``, clipping is not performed on the
+                corresponding edge. Only one of ``clip_min`` and ``clip_max``
+                may be ``None``. Passed to the ``numpy.clip()`` function as
+                ``min`` and ``max`` parameters, respectively.
         '''
         print('Making predictions on new data...')
         self._set_params_from_kwargs_pred(**kwargs)
@@ -461,6 +466,8 @@ class Predict(Tables):
 
         array_pred = self._predict_and_reshape(array_X)
         array_pred[np.expand_dims(mask, 0)] = 0
+        if any(v is not None for v in [clip_min, clip_max]):
+            array_pred = array_pred.clip(min=clip_min, max=clip_max)
         # array_pred = np.ma.masked_array(data=array_pred, mask=mask_2d)
         profile.update(count=1)
         if mask_by_bounds == True:
