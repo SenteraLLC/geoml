@@ -25,7 +25,6 @@ __email__ = 'tyler@insight-sensing.com'
 
 
 from .join_tables import JoinTables
-from .tables import Tables
 from .feature_data import FeatureData
 from .feature_selection import FeatureSelection
 from .training import Training
