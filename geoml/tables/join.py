@@ -1,6 +1,12 @@
-from typing import Set
+import pandas as pd
+import geopandas as gpd
 
-from . import util as table_utils
+import warnings
+from typing import Set, Optional, Tuple
+
+from ..utils import AnyDataFrame
+from ..utils import check_col_names
+from ...db.db import utilities as db_utils
 
 
 def check_empty_geom(df : AnyDataFrame):
@@ -192,8 +198,8 @@ def join_closest_date(df_left     : AnyDataFrame,
 
     cols_require_l = subset_left + [left_on]
     cols_require_r = subset_right + [right_on]
-    table_util.check_col_names(df_left, cols_require_l)
-    table_util.check_col_names(df_right, cols_require_r)
+    check_col_names(df_left, cols_require_l)
+    check_col_names(df_right, cols_require_r)
     df_left = dt_or_ts_to_date(df_left, left_on)
     df_right = dt_or_ts_to_date(df_right, right_on)
 

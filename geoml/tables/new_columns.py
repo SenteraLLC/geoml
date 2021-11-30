@@ -3,7 +3,7 @@ import geopandas as gpd  # type: ignore
 
 from ...db.db import utilities as db_utils
 
-from .types import AnyDataFrame
+from ..utils import AnyDataFrame
 from ..utils import check_col_names
 
 from typing import Optional
@@ -70,8 +70,8 @@ def spatial_join_clean_keys(df_left  : AnyDataFrame,
 
 def dae(df           : AnyDataFrame,
         field_bounds : AnyDataFrame,
-        as_planted   : AnyDataFrame,
-        dates_res    : AnyDataFrame,
+        as_planted   : Optional[AnyDataFrame],
+        dates_res    : Optional[AnyDataFrame],
        ) -> AnyDataFrame:
     subset = db_utils.get_primary_keys(df)
     cols_require = [subset + ['date', df.geometry.name]
@@ -83,11 +83,17 @@ def dae(df           : AnyDataFrame,
         df = get_geom_from_primary_keys(df, field_bounds)  # Returns GeoDataFrame
 
     if 'field_id' in subset:
-        df_join = spatial_join_clean_keys(df, as_planted)
+        if as_planted is not None:
+            df_join = spatial_join_clean_keys(df, as_planted)
+        else:
+            raise RuntimeError("Expected 'as_planted' data for dae")
     elif 'plot_id' in subset:
         on = [i for i in subset if i != 'plot_id']
-        df_join = df.merge(dates_res, on=on,
-                           validate='many_to_one')
+        if dates_res is not None:
+            df_join = df.merge(dates_res, on=on,
+                               validate='many_to_one')
+        else:
+            raise RuntimeError("Expected 'as_planted' data for dae")
     if len(df_join) == 0:
         raise RuntimeError(
             'Unable to calculate DAE. Check that "date_emerge" is set in '

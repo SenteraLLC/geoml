@@ -20,9 +20,10 @@ from sqlalchemy import inspect  # type: ignore
 from ...db.db import utilities as db_utils
 from ...db.db import DBHandler
 
-from .types import DBConfig, TableConfig, AnyDataFrame
+from ..config import Config, DBConfig, TableConfig
 # TODO: Move this
 from ..utils import check_col_names
+from ..utils import AnyDataFrame
 
 
 from typing import Optional, Union, Dict
@@ -113,12 +114,13 @@ def load_table(table_name    : str,
   if base_dir_data is not None:
       filename = config["table_names"][table_name]
       df = load_table_from_file(base_dir_data, filename)
-      if df is not None:
-          df = db_utils.cols_to_datetime(df)
   elif db is not None:
       df = load_table_from_db(db, table_name)
   else:
       raise Exception("No source provided for table data.")
+
+  if df is not None:
+    df = db_utils.cols_to_datetime(df)
 
   return df
 
@@ -143,7 +145,10 @@ def load_tables(db     : Optional[DBHandler],
                ) -> Dict[str, AnyDataFrame]:
     tables : Dict[str, AnyDataFrame] = {}
     for table_name in config["table_names"]:
-        tables[table_name] = load_table(table_name, db, base_dir_data, config)
+        maybe_table = load_table(table_name, db, base_dir_data, config)
+        if maybe_table is not None:
+            table = maybe_table
+            tables[table_name] = table
     try:
         field_bounds = tables["field_bounds"]
         for table_name, table in tables.items():
@@ -165,38 +170,4 @@ def load_tables(db     : Optional[DBHandler],
       pass
 
     return tables
-
-
-# TODO: Run-time arguments:
-# "password"      : Optional[str],  # TODO: Remove
-# "db"            : DBHandler,      # TODO: Remove
-# "base_dir_data" : str,            # TODO: Remove
-
-def main(base_dir_data     : str,
-         table_config_path : str,
-         password          : Optional[str],
-        ):
-  with open(table_config_path) as f:
-     config : TableConfig = json.load(f)
-
-     db = connect_to_db(config["database"], password=password)
-
-     tables = load_tables(db, config, base_dir_data)
-
-
-import argparse
-
-if __name__ == "__main__":
-  parser = argparse.ArgumentParser(description='Load a field and all of its input data as JSON')
-  parser.add_argument('--base_dir_data', type=str, help='Directory with data', required=True)
-  parser.add_argument('--config', type=str, help='Table config', required=True)
-  parser.add_argument('--password', type=str, help='Database password')
-  args = parser.parse_args()
-
-  main(args.base_dir_data, args.config, args.password)
-
-
-
-
-
 
