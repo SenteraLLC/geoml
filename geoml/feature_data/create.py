@@ -493,12 +493,12 @@ def _impute_missing_data(X           : AnyDataFrame,
     return X_out
 
 
-def _get_X_and_y(df            : AnyDataFrame,
-                 label_y       : str,
-                 group_feats   : GroupFeatures,
-                 random_seed   : int,
-                 impute_method : str = 'iterative'
-                ) -> Tuple[AnyDataFrame, AnyDataFrame, pd.Series, pd.Series, AnyDataFrame, List[str]]:
+def get_test_and_train(df            : AnyDataFrame,
+                       label_y       : str,
+                       group_feats   : GroupFeatures,
+                       random_seed   : int,
+                       impute_method : str = 'iterative'
+                      ) -> Tuple[AnyDataFrame, AnyDataFrame, pd.Series, pd.Series, AnyDataFrame, List[str]]:
     msg = ('``impute_method`` must be one of: ["iterative", "knn", None]')
     assert impute_method in ['iterative', 'knn', None], msg
 
@@ -559,15 +559,11 @@ def get_feat_group_X_y(df_response : AnyDataFrame,
                        group_feats : GroupFeatures,
                        date_tolerance : int,
                        date_train : date,
-                       label_y  : str,
-                       labels_y_id : List[str],
-                       dir_results : Optional[str],
                        random_seed : int,
-                       impute_method : str,
                        cv_method   : Any,
                        cv_method_kwargs : Dict[str, Any],
                        cv_split_kwargs  : Optional[Dict[str, Any]] = None,
-                      ) -> Tuple[AnyDataFrame, AnyDataFrame, List[str]]:
+                      ) -> AnyDataFrame:
     '''
     Retrieves all the necessary columns in ``group_feats``, then filters
     the dataframe so that it is left with only the identifying columns
@@ -601,10 +597,17 @@ def get_feat_group_X_y(df_response : AnyDataFrame,
     assert len(df) > 0, msg
 
     df = _train_test_split_df(df, random_seed, cv_method, cv_method_kwargs, cv_split_kwargs)
+    return df
 
-    X_train, X_test, y_train, y_test, df, labels_x, = _get_X_and_y(
-        df, label_y, group_feats, random_seed, impute_method)
-
+    #X_train, X_test, y_train, y_test, df, labels_x, = _get_X_and_y(
+    #    df, label_y, group_feats, random_seed, impute_method)
+def get_X_and_y(df : AnyDataFrame,
+                labels_x : List[str],
+                label_y  : str,
+                labels_y_id : List[str],
+                dir_results : Optional[str],
+                impute_method : str,
+              ) -> Tuple[AnyDataFrame, AnyDataFrame, List[str]]:
     subset = db_utils.get_primary_keys(df)
     labels_id = subset + ['date', 'train_test']
     df_X = df[labels_id + labels_x]
