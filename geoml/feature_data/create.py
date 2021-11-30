@@ -242,25 +242,6 @@ def load_df_response(tables               : Dict[str, AnyDataFrame],
     return result, labels_y_id, label_y
 
 
-def write_to_readme(msg         : str,
-                    dir_results : Optional[str],
-                    msi_run_id  : Optional[int] = None,
-                    row         : Any = None
-                   ) > None:
-    '''
-    Writes ``msg`` to the README.txt file
-    '''
-    # Note if I get here to modify foler_name or use msi_run_id:
-    # Try to keep msirun_id out of this class; instead, make all folder
-    # names, etc. be reflected in the dir_results variable (?)
-    if dir_results is None:
-        print('<dir_results> must be set to create README file.')
-        return
-    else:
-        with open(os.path.join(dir_results, 'README.txt'), 'a') as f:
-            f.write(str(msg) + '\n')k:243
-
-
 def _add_empty_geom(gdf          : AnyDataFrame,
                     field_bounds : AnyDataFrame
                    ) -> gpd.GeoDataFrame:
