@@ -1,0 +1,67 @@
+{
+  "table":
+  {
+      "database": {
+        "name": "insight_dev",
+        "host": "localhost",
+        "user": "joel",
+        "schema": "dev_client",
+        "port": 5432
+      },
+      "table_names": {
+          "experiments": "experiments.geojson",
+          "dates_res": "dates_research.csv",
+          "trt": "trt.csv",
+          "trt_n": "trt_n.csv",
+          "trt_n_crf": "trt_n_crf.csv",
+          "obs_tissue_res": "obs_tissue_research.csv",
+          "obs_soil_res": "obs_soil_research.geojson",
+          "rs_cropscan_res": "rs_cropscan_res.csv",
+          "field_bounds": "field_bounds.geojson",
+          "dates": "dates.csv",
+          "as_planted": "as_planted.geojson",
+          "n_applications": "n_applications.geojson",
+          "obs_tissue": "obs_tissue.geojson",
+          "obs_soil": "obs_soil.geojson",
+          "rs_sentinel": "rs_sentinel.geojson",
+          "weather": "weather.csv",
+          "weather_derived": "calc_weather.csv",
+          "weather_derived_res": "weather_derived_res.csv"
+      }
+   },
+   "feature_data":
+   {
+      "random_seed" : 999,
+      "dir_results" : null,
+      "group_feats" : {
+                        "dap": "dap",
+                        "rate_ntd": {"col_rate_n": "rate_n_kgha",
+                                     "col_out": "rate_ntd_kgha"
+                                    },
+                        "sentinel_wl_range": [400, 2200],
+                        "weather_derived": ["gdd_c_ptd_cum"]
+                       },
+      "ground_truth_tissue"   : "petiole",
+      "ground_truth_measure"  : "no3_ppm",
+      "date_tolerance"        : 3,
+      "cv_method"             : "LeavePGroupsOut",
+      "cv_method_kwargs"      : {"n_groups": 1},
+      "cv_split_kwargs"       : {"groups": "df[\"year\"] != 2020"},
+      "impute_method"         : "iterative",
+      "train_test"            : "train",
+      "cv_method_tune"        : "RepeatedStratifiedKFold",
+      "cv_method_tune_kwargs" : {"n_splits": 4, "n_repeats": 3},
+      "cv_split_tune_kwargs"  : {"y": ["farm", "year"]},
+      "print_out_fd"          : false,
+      "print_splitter_info"   : false
+
+   },
+   "feature_selection":
+   {
+      "model_fs_params_set": {"max_iter": 100000, "selection": "cyclic", "warm_start": true},
+      "model_fs_params_adjust_min": {"alpha": 1},
+      "model_fs_params_adjust_max": {"alpha": 1e-3},
+      "n_feats": 12,
+      "n_linspace": 150
+   }
+}
