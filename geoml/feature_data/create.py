@@ -45,7 +45,6 @@ from typing import cast
 #       dv_method LeavePGroupsOut
 #       cv_method_tune RepeatedStrafifiedKFold
 
-
 def _handle_wl_cols(c : str,
                     wl_range : Tuple[int, int],
                     labels_x : List[str],
@@ -247,19 +246,19 @@ def write_to_readme(msg         : str,
                     dir_results : Optional[str],
                     msi_run_id  : Optional[int] = None,
                     row         : Any = None
-                   ) -> None:
+                   ) > None:
     '''
     Writes ``msg`` to the README.txt file
     '''
     # Note if I get here to modify foler_name or use msi_run_id:
-    # Try to keep msi-run_id out of this class; instead, make all folder
+    # Try to keep msirun_id out of this class; instead, make all folder
     # names, etc. be reflected in the dir_results variable (?)
     if dir_results is None:
         print('<dir_results> must be set to create README file.')
         return
     else:
         with open(os.path.join(dir_results, 'README.txt'), 'a') as f:
-            f.write(str(msg) + '\n')
+            f.write(str(msg) + '\n')k:243
 
 
 def _add_empty_geom(gdf          : AnyDataFrame,
@@ -436,35 +435,6 @@ def _train_test_split_df(df               : AnyDataFrame,
                         ) -> AnyDataFrame:
     '''
     Splits <df> into train and test sets.
-
-    This function is designed to handle any of the many scikit-learn
-    "splitter classes". Documentation available at
-    https://scikit-learn.org/stable/modules/classes.html#splitter-classes.
-    All parameters used by the <cv_method> function or the
-    <cv_method.split> method should be set via
-    <cv_method_kwargs> and <cv_split_kwargs>.
-
-    Parameters:
-        df (``pandas.DataFrame``): The df to split between train and test
-            sets.
-        cv_method (``sklearn.model_selection.SplitterClass``): The
-            scikit-learn method to use to split into training and test
-            groups. In addition to <SplitterClass>(es), <cv_method> can be
-            <sklearn.model_selection.train_test_split>, in which case
-            <cv_split_kwargs> is ignored and <cv_method_kwargs> should be
-            used to pass <cv_method> parameters that will be evaluated via
-            the eval() function.
-        cv_method_kwargs (``dict``): Keyword arguments to be passed to
-            ``cv_method()``.
-        cv_split_kwargs (``dict``): Keyword arguments to be passed to
-            ``cv_method.split()``. Note that the <X> kwarg defaults to
-            ``df`` if not set.
-
-    Note:
-        If <n_splits> is set for any <SplitterClass>, it is generally
-        ignored. That is, if there are multiple splitting iterations
-        (<n_splits> greater than 1), only the first iteration is used to
-        split between train and test sets.
     '''
     cv_method = deepcopy(cv_method)
     cv_method_kwargs = deepcopy(cv_method_kwargs)
@@ -624,36 +594,6 @@ def get_feat_group_X_y(df_response : AnyDataFrame,
     observation belongs to the train or test set (i.e., train_test), and
     the feature columns indicated by ``group_feats``.
 
-    Parameters:
-        group_feats (``list`` or ``dict``): The column headings to include
-            in the X matrix. ``group_feats`` must follow the naming
-            conventions outlined in featuer_groups.py to ensure that the
-            intended features are joined to ``df_feat_group``.
-        ground_truth (``str``): Must be one of "vine_n_pct", "pet_no3_ppm",
-            or "tuber_n_pct"; dictates which table to access to retrieve
-            the relevant training data.
-        date_tolerance (``int``): Number of days away to still allow join
-            between response data and predictor features (if dates are
-            greater than ``date_tolerance``, the join will not occur and
-            data will be neglected). Only relevant if predictor features
-            were collected on a different day than response features.
-        cv_method (``sklearn.model_selection.SplitterClass``): The
-            scikit-learn method to use to split into training and test
-            groups.
-        cv_method_kwargs (``dict``): Keyword arguments to be passed to
-            ``cv_method()``.
-        cv_split_kwargs (``dict``): Keyword arguments to be passed to
-            ``cv_method.split()``. Note that the <X> kwarg defaults to
-            ``df`` if not set.
-        stratify (``list``): If not None, data is split in a stratified
-            fashion, using this as the class labels. Ignored if
-            ``cv_method`` is not "stratified". See
-            ``sklearn.model_selection.train_test_split()`` documentation
-            for more information. Note that if there are less than two
-            unique stratified "groups", an error will be raised.
-        impute_method (``str``): How to impute missing feature data. Must
-            be one of: ["iterative", "knn", None].
-
     Note:
         This function is designed to handle any of the many scikit-learn
         "splitter classes". Documentation available at
@@ -661,21 +601,6 @@ def get_feat_group_X_y(df_response : AnyDataFrame,
         All parameters used by the <cv_method> function or the
         <cv_method.split> method should be set via
         <cv_method_kwargs> and <cv_split_kwargs>.
-
-    Example:
-        >>> from geoml import FeatureData
-        >>> from geoml.tests import config
-
-        >>> fd = FeatureData(config_dict=config.config_dict)
-        >>> fd.get_feat_group_X_y(test_size=0.1)
-        >>> print('Shape of training matrix "X": {0}'.format(fd.X_train.shape))
-        >>> print('Shape of training vector "y": {0}'.format(fd.y_train.shape))
-        >>> print('Shape of testing matrix "X":  {0}'.format(fd.X_test.shape))
-        >>> print('Shape of testing vector "y":  {0}'.format(fd.y_test.shape))
-        Shape of training matrix "X": (579, 14)
-        Shape of training vector "y": (579,)
-        Shape of testing matrix "X":  (65, 14)
-        Shape of testing vector "y":  (65,)
     '''
     df = _get_response_df(df_response,
                           tables["field_bounds"],
