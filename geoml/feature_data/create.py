@@ -619,11 +619,12 @@ def get_X_and_y(df : AnyDataFrame,
     return df_X, df_y, labels_id
 
 
-def get_tuning_splitter(cv_method_tune        : Any,
+def get_tuning_splitter(df                    : AnyDataFrame,
+                        df_X                  : AnyDataFrame,
+                        cv_method_tune        : Any,
                         cv_method_tune_kwargs : Dict[str, Any],
                         cv_split_tune_kwargs  : Dict[str, Any],
                         random_seed           : int,
-                        df_X                  : AnyDataFrame,
                         print_splitter_info   : bool,
                        ) -> Any:
     cv_method = deepcopy(cv_method_tune)
@@ -654,7 +655,7 @@ def get_tuning_splitter(cv_method_tune        : Any,
                     # assume these are columns to group by and adjust kwargs
                     cv_split_kwargs[key] = _stratify_set(
                         stratify_cols=cv_split_kwargs[key],
-                        train_test='train')
+                        train_test='train', df=df)
 
         # Now cv_split_kwargs should be ready to be evaluated
         df_X_train = df_X[df_X['train_test'] == 'train']
