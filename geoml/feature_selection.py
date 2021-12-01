@@ -70,10 +70,7 @@ def _f_feat_n_df(model_fs     : Any,
     '''
     cols = ['model_fs', 'params_fs', 'feat_n', 'feats_x_select',
             'labels_x_select', 'rank_x_select']
-    print("Model params: ",model_params)
     model_fs.set_params(**model_params)
-    print("X train: ",X_train)
-    print("y train: ",y_train)
     model_fs.fit(X_train, y_train)
     model_bs = SelectFromModel(model_fs, prefit=True)
     feats = model_bs.get_support(indices=True)
@@ -100,39 +97,6 @@ def _params_adjust(config_dict : Dict[str, float],
         config_dict[key] = val/factor
     return config_dict
 
-# def _gradient_descent_step_pct_feat_max(
-#         self, feat_n_sel, feat_n_last, n_feats, step_pct):
-#     '''
-#     Adjusts step_pct dynamically based on progress of reaching n_feats
-
-#     Ideally, step_pct should be large if we're a long way from n_feats, and
-#     much smaller if we're close to n_feats
-#     '''
-#     # find relative distance in a single step
-#     n_feats_closer = feat_n_sel - feat_n_last
-#     pct_closer = n_feats_closer/n_feats
-#     pct_left = (n_feats-feat_n_sel)/n_feats
-#     # print(pct_closer)
-#     # print(pct_left)
-#     step_pct_old = step_pct
-#     if pct_closer < 0.08 and pct_left > 0.5 and step_pct * 10 < 1:  # if we've gotten less than 8% the way there
-#         step_pct *= 10
-#     elif pct_closer < 0.15 and pct_left > 0.4 and step_pct * 5 < 1:  # if we've gotten less than 15% the way there
-#         step_pct *= 5
-#     elif pct_closer < 0.3 and pct_left > 0.3 and step_pct * 2 < 1:  # if we've gotten less than 30% the way there
-#         step_pct *= 2
-
-#     elif pct_closer > 0.1 and pct_left < pct_closer*1.3:  # if % gain is 77% of what is left, slow down a bit
-#         step_pct /= 5
-#     elif pct_closer > 0.05 and pct_left < pct_closer*1.3:  # if % gain is 77% of what is left, slow down a bit
-#         step_pct /= 2
-#     else:  # keep step_pct the same
-#         pass
-#     if step_pct != step_pct_old and self.print_out_fs == True:
-#         print('<step_pct> adjusted from {0} to {1}'.format(step_pct_old, step_pct))
-#     # print('Old "step_pct": {0}'.format(step_pct))
-#     # print('New "step_pct": {0}'.format(step_pct))
-#     return step_pct
 
 def _f_opt_n_feats(x        : float,
                    n_feats  : int,
@@ -164,12 +128,9 @@ def _find_features_max(n_feats  : int,
     ``_f_feat_n_df()`` via ``**kwargs`` to return a dataframe with number of
     features, ranking, etc.
     '''
-    # Get bracket min and max to get in ballpark
-# for i in range(2,15):
-    # myfs.n_feats = i
+    # TODO: Get bracket min and max to get in ballpark
     alpha : float = 10000
-    # remember _f_opt_n_feats should return 0 at convergence
-    # while self._f_opt_n_feats(alpha) > np.abs(self.n_feats - self._f_opt_n_feats(alpha)):
+    # TODO: remember _f_opt_n_feats should return 0 at convergence
     while _f_opt_n_feats(alpha, n_feats, model_fs, X_train, y_train, labels_x) > 1:
         alpha *= 0.1
         if alpha < 1e-4:
@@ -190,7 +151,7 @@ def _find_features_max(n_feats  : int,
     if result['success'] is True:
         model_fs_params_feats_max = {'alpha': result['x']}
     elif result['success'] is False and result['fun'] == 0:
-       = {'alpha': result['x']}
+        model_fs_params_feats_max = {'alpha': result['x']}
 
     # TODO: Does any of this even get used?
     df = _f_feat_n_df(model_fs, model_fs_params_feats_max, X_train, y_train, labels_x)
@@ -200,77 +161,7 @@ def _find_features_max(n_feats  : int,
     print('Using up to {0} selected features\n'.format(feat_n_sel))
 
     return model_fs_params_feats_max
-    # print('n_feats: {0}'.format(myfs.n_feats))
-    # print('selected: {0}\n'.format(feat_n_sel))
 
-# def _find_features_max1(self, n_feats, step_pct=0.01, exit_on_stagnant_n=5):
-#     '''
-#     Finds the model parameters that will result in having the max number
-#     of features as indicated by <n_feats>. <model_fs_params_feats_max>
-#     can be passed to ``_f_feat_n_df()`` via ``**kwargs`` to return
-#     a dataframe with number of features, ranking, etc.
-
-#     Returns:
-#         self.model_fs_params_feats_max
-
-#     Parameters:
-#         n_feats (``int``):
-#         step_pct (``float``): indicates the percentage to adjust alpha by on each
-#             iteration.
-#         exit_on_stagnant_n (``int``): Will stop searching for minimum alpha value
-#             if number of selected features do not change after this many
-#             iterations.
-
-#     >>> n_feats = 14
-#     >>> step_pct = myfs.step_pct
-#     >>> exit_on_stagnant_n = myfs.exit_on_stagnant_n
-#     '''
-#     msg = ('Leaving while loop before finding the alpha value that achieves '
-#            'selection of {0} feature(s) ({1} alpha value to use).\nNumber '
-#            'features to use: {2}')
-#     feat_n_sel = n_feats+1  # initialize to enter the while loop
-#     while feat_n_sel > n_feats:  # adjust the parameter(s) that control n_feats
-#         df = self._f_feat_n_df(**self.model_fs_params_adjust_max)
-#         feat_n_sel = df['feat_n'].values[0]
-#         self.model_fs_params_adjust_max = self._params_adjust(
-#             self.model_fs_params_adjust_max, key='alpha', increase=True,
-#             factor=10)
-
-#     same_n = 0
-#     while feat_n_sel != n_feats:
-#         feat_n_last = feat_n_sel
-#         df = self._f_feat_n_df(**self.model_fs_params_adjust_max)
-#         feat_n_sel = df['feat_n'].values[0]
-#         same_n += 1 if feat_n_last == feat_n_sel else -same_n
-#         if same_n > exit_on_stagnant_n:
-#             print(msg.format(n_feats, 'minimum', feat_n_sel))
-#             break
-#         elif feat_n_sel == n_feats:
-#             break
-#         elif feat_n_sel < n_feats:
-#             step_pct = self._gradient_descent_step_pct_feat_max(
-#                 feat_n_sel, feat_n_last, n_feats, step_pct)
-#             self.model_fs_params_adjust_max = self._params_adjust(
-#                 self.model_fs_params_adjust_max, key='alpha',
-#                 increase=True, factor=(1-step_pct))
-#         else:  # we went over; go back to prvious step, make much smaller, and adjust alpha down a bit
-#             self.model_fs_params_adjust_max = self._params_adjust(
-#                 self.model_fs_params_adjust_max, key='alpha',
-#                 increase=False, factor=(1-step_pct))
-#             step_pct /= 10
-#             self.model_fs_params_adjust_max = self._params_adjust(
-#                 self.model_fs_params_adjust_max, key='alpha',
-#                 increase=True, factor=(1-step_pct))
-#         if self.print_out_fs == True:
-#             print('Adjusted parameters: {0}'.format(self.model_fs_params_adjust_max))
-#             print('Features selected: {0}\n'.format(feat_n_sel))
-#             # print('Iterations without progress: {0}\n'.format(same_n))
-#     if feat_n_sel != n_feats:
-#         print(msg.format(n_feats, 'minimum', feat_n_sel))
-#     if self.print_out_fs == True:
-#         print('Using up to {0} selected features\n'.format(feat_n_sel))
-#     self.model_fs_params_feats_max = self.model_fs_params_adjust_max
-#     self.step_pct = step_pct
 
 def _find_features_min(model_fs     : Any,
                        model_fs_params_adjust_min : Dict[str, float],
@@ -313,14 +204,6 @@ def _lasso_fs_df(model_fs     : Any,
                  n_feats    : int,
                  n_linspace : int,
                 ) -> AnyDataFrame:
-    print("Lasso")
-    print("Model fs: ",model_fs)
-    print("Params: ",model_fs_params_adjust_min)
-    print("X: ",X_train)
-    print("Y: ",y_train)
-    print("Labels: ",labels_x)
-    print("N feat: ",n_feats)
-    print("N lin: ",n_linspace)
     '''
     Creates a "template" dataframe that provides all the necessary
     information for the ``Tuning`` class to achieve the specific number of
@@ -330,9 +213,6 @@ def _lasso_fs_df(model_fs     : Any,
         model_fs_params_feats_min = _find_features_min(model_fs, model_fs_params_adjust_min, X_train, y_train, labels_x)
         model_fs_params_feats_max = _find_features_max(n_feats, model_fs, X_train, y_train, labels_x)
 
-        # self._find_features_max(
-        #     self.n_feats, step_pct=self.step_pct,
-        #     exit_on_stagnant_n=self.exit_on_stagnant_n)
         params_max = np.log(model_fs_params_feats_max['alpha'])
         params_min = np.log(model_fs_params_feats_min['alpha'])
         param_val_list = list(np.logspace(params_min, params_max,
@@ -388,7 +268,7 @@ def fs_find_params(X_train      : AnyDataFrame,
     to repeat the methods to derive any specific number of features.
 
     Returns:
-        self.df_fs_params (``pd.DataFrame``): A "template" dataframe that
+        df_fs_params (``pd.DataFrame``): A "template" dataframe that
             provides the sklearn model (``str``), the number of features
             (``int``), the feature indices (``list``), the feature ranking
             (``list``), and the parameters to recreate the feature
@@ -436,8 +316,7 @@ def fs_find_params(X_train      : AnyDataFrame,
     else:
         model_fs_name = type(model_fs).__name__
         raise NotImplementedError('{0} is not implemented.'.format(model_fs_name))
-    # else:
-    #     raise NotImplementedError('{0} is not implemented.'.format(self.model_fs_name))
+
 
 def fs_get_X_select(X_train          : AnyDataFrame,
                     X_test           : AnyDataFrame,
@@ -473,6 +352,7 @@ def fs_get_X_select(X_train          : AnyDataFrame,
     X_train_select = X_train_select
     X_test_select = X_test_select
 
+    # TODO: Are these ever used?
     labels_x_select = df_fs_params.loc[df_fs_params_idx]['labels_x_select']
     rank_x_select = df_fs_params.loc[df_fs_params_idx]['rank_x_select']
 
