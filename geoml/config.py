@@ -32,13 +32,14 @@ class FeatureDataConfig(TypedDict):
     ground_truth_measure : str
     date_tolerance       : int
     # TODO: These kwarg arguments can be much more flexible
-    cv_method_kwargs     : Dict[str, int]
-    cv_split_kwargs      : Dict[str, str]
-    impute_method        : str
-    train_test           : str
-    cv_split_tune_kwargs : Dict[Literal["y"], List[str]]
-    print_out_fd         : bool
-    print_spliiter_info  : bool
+    cv_method_kwargs      : Dict[str, int]
+    cv_split_kwargs       : Dict[str, str]
+    impute_method         : str
+    train_test            : str
+    cv_method_tune_kwargs : Dict[str, float]
+    cv_split_tune_kwargs  : Dict[str, List[str]]
+    print_out_fd          : bool
+    print_spliiter_info   : bool
 
 
 class FeatureSelectionConfig(TypedDict):
