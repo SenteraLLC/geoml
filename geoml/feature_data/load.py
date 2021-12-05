@@ -92,8 +92,7 @@ def get_X_and_y(df : AnyDataFrame,
                 label_y  : str,
                 labels_y_id : List[str],
                 dir_results : Optional[str],
-                impute_method : str,
-              ) -> Tuple[AnyDataFrame, AnyDataFrame, List[str]]:
+              ) -> Tuple[AnyDataFrame, AnyDataFrame]:
     subset = db_utils.get_primary_keys(df)
     labels_id = subset + ['date', 'train_test']
     df_X = df[labels_id + labels_x]
@@ -102,7 +101,7 @@ def get_X_and_y(df : AnyDataFrame,
     if dir_results is not None:
         _save_df_X_y(dir_results, label_y, df_X, df_y)
 
-    return df_X, df_y, labels_id
+    return df_X, df_y
 
 
 def get_tuning_splitter(df                    : AnyDataFrame,
