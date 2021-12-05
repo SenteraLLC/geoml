@@ -45,7 +45,7 @@ from typing import cast
 #       dv_method LeavePGroupsOut
 #       cv_method_tune RepeatedStrafifiedKFold
 
-def _handle_wl_cols(c : str,
+def _handle_wl_cols(c        : str,
                     wl_range : Tuple[int, int],
                     labels_x : List[str],
                     prefix   : str = 'wl_'
@@ -60,7 +60,6 @@ def _handle_wl_cols(c : str,
     return labels_x
 
 
-# TODO: This function isn't very type-safe
 def _get_labels_x(group_feats : GroupFeatures,
                   cols        : Optional[Set[str]] = None
                  ) -> List[str]:
@@ -89,7 +88,7 @@ def _get_labels_x(group_feats : GroupFeatures,
       return labels_x
 
 
-def _check_empty_geom(df : AnyDataFrame):
+def _check_empty_geom(df : AnyDataFrame) -> AnyDataFrame:
     if isinstance(df, gpd.GeoDataFrame):
         if all(df[~df[df.geometry.name].is_empty]):
             df = pd.DataFrame(df.drop(columns=[df.geometry.name]))
@@ -365,7 +364,7 @@ def _check_sklearn_splitter(cv_method        : Any,
     return cv_split_kwargs
 
 
-def _cv_method_check_random_seed(cv_method : Any,
+def _cv_method_check_random_seed(cv_method        : Any,
                                  cv_method_kwargs : Dict[str, Any],
                                  random_seed      : int,
                                 ) -> Dict[str, Any]:
@@ -382,7 +381,7 @@ def _cv_method_check_random_seed(cv_method : Any,
 
 
 def _splitter_eval(cv_split_kwargs : Dict[str, Any],
-                   df : Optional[AnyDataFrame] = None
+                   df              : Optional[AnyDataFrame] = None
                   ) -> Dict[str, Any]:
     '''
     Preps the CV split keyword arguments (evaluates them to variables).
@@ -552,17 +551,17 @@ def _save_df_X_y(dir_results : str,
     df_y.to_csv(fname_out_y, index=False)
 
 
-def get_feat_group_X_y(df_response : AnyDataFrame,
-                       tables      : Dict[str, AnyDataFrame],
-                       ground_truth_tissue : str,
+def get_feat_group_X_y(df_response          : AnyDataFrame,
+                       tables               : Dict[str, AnyDataFrame],
+                       group_feats          : GroupFeatures,
+                       ground_truth_tissue  : str,
                        ground_truth_measure : str,
-                       group_feats : GroupFeatures,
-                       date_tolerance : int,
-                       date_train : date,
-                       random_seed : int,
-                       cv_method   : Any,
-                       cv_method_kwargs : Dict[str, Any],
-                       cv_split_kwargs  : Optional[Dict[str, Any]] = None,
+                       date_tolerance       : int,
+                       date_train           : date,
+                       random_seed          : int,
+                       cv_method            : Any,
+                       cv_method_kwargs     : Dict[str, Any],
+                       cv_split_kwargs      : Optional[Dict[str, Any]] = None,
                       ) -> AnyDataFrame:
     '''
     Retrieves all the necessary columns in ``group_feats``, then filters
@@ -599,8 +598,7 @@ def get_feat_group_X_y(df_response : AnyDataFrame,
     df = _train_test_split_df(df, random_seed, cv_method, cv_method_kwargs, cv_split_kwargs)
     return df
 
-    #X_train, X_test, y_train, y_test, df, labels_x, = _get_X_and_y(
-    #    df, label_y, group_feats, random_seed, impute_method)
+
 def get_X_and_y(df : AnyDataFrame,
                 labels_x : List[str],
                 label_y  : str,
