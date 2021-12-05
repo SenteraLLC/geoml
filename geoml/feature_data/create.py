@@ -619,13 +619,13 @@ def get_X_and_y(df : AnyDataFrame,
     return df_X, df_y, labels_id
 
 
+# TODO: This should be elsewhere
 def get_tuning_splitter(df                    : AnyDataFrame,
                         df_X                  : AnyDataFrame,
                         cv_method_tune        : Any,
                         cv_method_tune_kwargs : Dict[str, Any],
                         cv_split_tune_kwargs  : Dict[str, Any],
                         random_seed           : int,
-                        print_splitter_info   : bool,
                        ) -> Any:
     cv_method = deepcopy(cv_method_tune)
     cv_method_kwargs = deepcopy(cv_method_tune_kwargs)
@@ -665,7 +665,8 @@ def get_tuning_splitter(df                    : AnyDataFrame,
         if 'X' not in cv_split_kwargs_eval:  # sets X
             cv_split_kwargs_eval['X'] = df_X_train
 
-    if print_splitter_info == True:
+    # TODO: Stderr
+    if True:
         n_train = []
         n_val = []
         for idx_train, idx_val in cv.split(**cv_split_kwargs_eval):
