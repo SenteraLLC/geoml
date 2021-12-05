@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional, Tuple
 def set_model_fs(model_fs            : Any,
                  model_fs_params_set : Dict[str, Any],
                  random_seed         : int,
-                ) -> Any:
+                ) -> Tuple[Any, str]:
     '''
     Actually initializes the sklearn model based on the model ``str``. If
     the <random_seed> was not included in the <model_fs_params> (or if
@@ -53,14 +53,15 @@ def set_model_fs(model_fs            : Any,
             print('Invalid parameter <random_state> for estimator, thus '
                   '<random_state> cannot be set.\n')
 
-    return model_fs
+    return model_fs, model_fs_name
 
 
-def _f_feat_n_df(model_fs     : Any,
-                 model_params : Dict[str, Any],
-                 X_train      : AnyDataFrame,
-                 y_train      : AnyDataFrame,
-                 labels_x     : List[str],
+def _f_feat_n_df(model_fs      : Any,
+                 model_fs_name : str,
+                 model_params  : Dict[str, Any],
+                 X_train       : AnyDataFrame,
+                 y_train       : AnyDataFrame,
+                 labels_x      : List[str],
                 ) -> AnyDataFrame:
     '''
     Uses an ``sklearn`` model to determine the number of features selected
@@ -78,7 +79,6 @@ def _f_feat_n_df(model_fs     : Any,
     feat_ranking = rankdata(-np.abs(coefs), method='min')
 
     feats_x_select = [labels_x[i] for i in feats]
-    model_fs_name = type(model_fs).__name__
     data = [model_fs_name, model_fs.get_params(),
             len(feats), tuple(feats), tuple(feats_x_select),
             tuple(feat_ranking)]
@@ -98,28 +98,30 @@ def _params_adjust(config_dict : Dict[str, float],
     return config_dict
 
 
-def _f_opt_n_feats(x        : float,
-                   n_feats  : int,
-                   model_fs : Any,
-                   X_train  : AnyDataFrame,
-                   y_train  : AnyDataFrame,
-                   labels_x : List[str],
+def _f_opt_n_feats(x             : float,
+                   n_feats       : int,
+                   model_fs      : Any,
+                   model_fs_name : str,
+                   X_train       : AnyDataFrame,
+                   y_train       : AnyDataFrame,
+                   labels_x      : List[str],
                   ) -> float:
     '''
     Returns the difference between n selected feats and desired n_feats.
 
     Zero is desired.
     '''
-    df = _f_feat_n_df(model_fs, {'alpha': x}, X_train, y_train, labels_x)
+    df = _f_feat_n_df(model_fs, model_fs_name, {'alpha': x}, X_train, y_train, labels_x)
     feat_n_sel = df['feat_n'].values[0]
     return np.abs(feat_n_sel - n_feats)
 
 
-def _find_features_max(n_feats  : int,
-                       model_fs : Any,
-                       X_train  : AnyDataFrame,
-                       y_train  : AnyDataFrame,
-                       labels_x : List[str],
+def _find_features_max(n_feats       : int,
+                       model_fs      : Any,
+                       model_fs_name : str,
+                       X_train       : AnyDataFrame,
+                       y_train       : AnyDataFrame,
+                       labels_x      : List[str],
                       ) -> Dict[str, Any]:
     '''
     Finds the model parameter(s) that result in the max n_feats.
@@ -131,14 +133,14 @@ def _find_features_max(n_feats  : int,
     # TODO: Get bracket min and max to get in ballpark
     alpha : float = 10000
     # TODO: remember _f_opt_n_feats should return 0 at convergence
-    while _f_opt_n_feats(alpha, n_feats, model_fs, X_train, y_train, labels_x) > 1:
+    while _f_opt_n_feats(alpha, n_feats, model_fs, model_fs_name, X_train, y_train, labels_x) > 1:
         alpha *= 0.1
         if alpha < 1e-4:
             break
         # print(alpha)
     alpha_min = alpha / 10
     alpha_max = alpha
-    args = (n_feats, model_fs, X_train, y_train, labels_x)
+    args = (n_feats, model_fs, model_fs_name, X_train, y_train, labels_x)
     result = optimize.minimize_scalar(
                  _f_opt_n_feats,
                  args = args,
@@ -154,7 +156,7 @@ def _find_features_max(n_feats  : int,
         model_fs_params_feats_max = {'alpha': result['x']}
 
     # TODO: Does any of this even get used?
-    df = _f_feat_n_df(model_fs, model_fs_params_feats_max, X_train, y_train, labels_x)
+    df = _f_feat_n_df(model_fs, model_fs_name, model_fs_params_feats_max, X_train, y_train, labels_x)
     feat_n_sel = df['feat_n'].values[0]
 
     # TODO: Log to stderr
@@ -163,11 +165,12 @@ def _find_features_max(n_feats  : int,
     return model_fs_params_feats_max
 
 
-def _find_features_min(model_fs     : Any,
+def _find_features_min(model_fs      : Any,
+                       model_fs_name : str,
                        model_fs_params_adjust_min : Dict[str, float],
-                       X_train      : AnyDataFrame,
-                       y_train      : AnyDataFrame,
-                       labels_x     : List[str],
+                       X_train       : AnyDataFrame,
+                       y_train       : AnyDataFrame,
+                       labels_x      : List[str],
                       ) -> Dict[str, Any]:
     '''
     Finds the model parameters that will result in having just a single
@@ -175,7 +178,7 @@ def _find_features_min(model_fs     : Any,
     via ``**kwargs`` to return a dataframe with number of features,
     ranking, etc.
     '''
-    df = _f_feat_n_df(model_fs, model_fs_params_adjust_min, X_train, y_train, labels_x)
+    df = _f_feat_n_df(model_fs, model_fs_name, model_fs_params_adjust_min, X_train, y_train, labels_x)
     feat_n_sel = df['feat_n'].values[0]
 
     if feat_n_sel <= 1:  # the initial value already results in 1 (or 0) feats
@@ -184,7 +187,7 @@ def _find_features_min(model_fs     : Any,
             model_fs_params_adjust_min = _params_adjust(
                 model_fs_params_adjust_min, key='alpha',
                 increase=False, factor=1.2)
-            df = _f_feat_n_df(model_fs, model_fs_params_adjust_min, X_train, y_train, labels_x)
+            df = _f_feat_n_df(model_fs, model_fs_name, model_fs_params_adjust_min, X_train, y_train, labels_x)
             feat_n_sel = df['feat_n'].values[0]
         model_fs_params_adjust_min = params_last  # set it back to 1 feat
     else:
@@ -192,17 +195,18 @@ def _find_features_min(model_fs     : Any,
             model_fs_params_adjust_min = _params_adjust(
                 model_fs_params_adjust_min, key='alpha',
                 increase=True, factor=1.2)
-            df = _f_feat_n_df(model_fs, model_fs_params_adjust_min, X_train, y_train, labels_x)
+            df = _f_feat_n_df(model_fs, model_fs_name, model_fs_params_adjust_min, X_train, y_train, labels_x)
             feat_n_sel = df['feat_n'].values[0]
     return model_fs_params_adjust_min
 
-def _lasso_fs_df(model_fs     : Any,
+def _lasso_fs_df(model_fs      : Any,
+                 model_fs_name : str,
                  model_fs_params_adjust_min : Dict[str, float],
-                 X_train      : AnyDataFrame,
-                 y_train      : AnyDataFrame,
-                 labels_x     : List[str],
-                 n_feats    : int,
-                 n_linspace : int,
+                 X_train       : AnyDataFrame,
+                 y_train       : AnyDataFrame,
+                 labels_x      : List[str],
+                 n_feats       : int,
+                 n_linspace    : int,
                 ) -> AnyDataFrame:
     '''
     Creates a "template" dataframe that provides all the necessary
@@ -210,8 +214,8 @@ def _lasso_fs_df(model_fs     : Any,
     features determined by the ``FeatureSelection`` class.
     '''
     if n_feats > 1:
-        model_fs_params_feats_min = _find_features_min(model_fs, model_fs_params_adjust_min, X_train, y_train, labels_x)
-        model_fs_params_feats_max = _find_features_max(n_feats, model_fs, X_train, y_train, labels_x)
+        model_fs_params_feats_min = _find_features_min(model_fs, model_fs_name, model_fs_params_adjust_min, X_train, y_train, labels_x)
+        model_fs_params_feats_max = _find_features_max(n_feats, model_fs, model_fs_name, X_train, y_train, labels_x)
 
         params_max = np.log(model_fs_params_feats_max['alpha'])
         params_min = np.log(model_fs_params_feats_min['alpha'])
@@ -227,16 +231,16 @@ def _lasso_fs_df(model_fs     : Any,
 
     # minimization is the first point where minimum is reached; thus, when
     # using with logspace, it may not quite reach the max feats desired
-    if _f_opt_n_feats(param_val_list[-1], n_feats, model_fs, X_train, y_train, labels_x) != 0:
+    if _f_opt_n_feats(param_val_list[-1], n_feats, model_fs, model_fs_name, X_train, y_train, labels_x) != 0:
         param_val_list[-1] = model_fs_params_feats_max['alpha']
 
     param_adjust_temp = model_fs_params_feats_min.copy()
     param_adjust_temp['alpha'] = param_val_list[0]
-    df = _f_feat_n_df(model_fs, param_adjust_temp, X_train, y_train, labels_x)
+    df = _f_feat_n_df(model_fs, model_fs_name, param_adjust_temp, X_train, y_train, labels_x)
 
     for val in param_val_list[1:]:
         param_adjust_temp['alpha'] = val
-        df_temp = _f_feat_n_df(model_fs, param_adjust_temp, X_train, y_train, labels_x)
+        df_temp = _f_feat_n_df(model_fs, model_fs_name, param_adjust_temp, X_train, y_train, labels_x)
         df = df.append(df_temp)
 
     df = df.drop_duplicates(subset=['feats_x_select'], ignore_index=True)
@@ -250,12 +254,13 @@ def _lasso_fs_df(model_fs     : Any,
 
     return df
 
-def fs_find_params(X_train      : AnyDataFrame,
-                   y_train      : AnyDataFrame,
-                   model_fs     : Any,
-                   labels_x     : List[str],
-                   n_feats      : int,
-                   n_linspace   : int,
+def fs_find_params(X_train       : AnyDataFrame,
+                   y_train       : AnyDataFrame,
+                   model_fs      : Any,
+                   model_fs_name : str,
+                   labels_x      : List[str],
+                   n_feats       : int,
+                   n_linspace    : int,
                    model_fs_params_adjust_min : Dict[str, float],
                   ) -> AnyDataFrame:
     '''
@@ -301,9 +306,9 @@ def fs_find_params(X_train      : AnyDataFrame,
               ''.format(n_feats, X_train.shape[1]))
         n_feats = X_train.shape[1]
 
-    model_fs_name = type(model_fs).__name__
     if model_fs_name == 'Lasso':
         df_fs_params = _lasso_fs_df(model_fs,
+                                    model_fs_name,
                                     model_fs_params_adjust_min,
                                     X_train,
                                     y_train,
@@ -314,7 +319,6 @@ def fs_find_params(X_train      : AnyDataFrame,
         return df_fs_params
     # elif model_fs_name == 'PCA':
     else:
-        model_fs_name = type(model_fs).__name__
         raise NotImplementedError('{0} is not implemented.'.format(model_fs_name))
 
 
