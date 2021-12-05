@@ -63,5 +63,16 @@
       "model_fs_params_adjust_max": {"alpha": 1e-3},
       "n_feats": 12,
       "n_linspace": 150
+   },
+   "training":
+   {
+       "regressor": "TODO",
+       "regressor_params": {"max_iter": 100000, "selection": "cyclic", "warm_start": true},
+       "param_grid": {"TO": "DO"},
+       "n_jobs_tune": 2,
+       "scoring": ["neg_mean_absolute_error", "neg_mean_squared_error", "r2"],
+       "refit": "neg_mean_absolute_error",
+       "rank_scoring": "neg_mean_absolute_error",
+       "print_out_train": false
    }
 }

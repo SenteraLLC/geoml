@@ -51,7 +51,22 @@ class FeatureSelectionConfig(TypedDict):
     n_linspace                 : int
 
 
+class TrainingConfig(TypedDict):
+    regressor : Any
+    regressor_params : Dict[str, Any]
+    param_grid       : Dict[str, Any]
+    n_jobs_tune      : int
+    scoring          : List[str]
+    refit            : str
+    rank_scoring     : str
+    print_out_train  : bool
+
+
 class Config(TypedDict):
     table             : TableConfig
     feature_data      : FeatureDataConfig
     feature_selection : FeatureSelectionConfig
+    training          : TrainingConfig
+
+
+
