@@ -9,51 +9,14 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
-from copy import deepcopy
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 from scipy.stats import rankdata  # type: ignore
 from scipy import optimize  # type: ignore
-from sklearn.linear_model import Lasso  # type: ignore
 from sklearn.feature_selection import SelectFromModel  # type: ignore
-import traceback
-import json
 
-from .utils import AnyDataFrame
+from ..utils import AnyDataFrame
 from typing import Any, Dict, List, Optional, Tuple
-
-
-def set_model_fs(model_fs            : Any,
-                 model_fs_params_set : Dict[str, Any],
-                 random_seed         : int,
-                ) -> Tuple[Any, str]:
-    '''
-    Actually initializes the sklearn model based on the model ``str``. If
-    the <random_seed> was not included in the <model_fs_params> (or if
-    there is a discrepancy), the model's random state is set/reset to avoid
-    any discrepancy.
-    '''
-    if model_fs_params_set is None:
-        model_fs_params_set = {}
-    model_fs.set_params(**model_fs_params_set)
-
-    if 'regressor' in model_fs.get_params().keys():
-        regressor_key_fs = 'regressor__'
-        model_fs_name = type(model_fs.regressor).__name__
-        try:
-            model_fs.set_params(**{regressor_key_fs + 'random_state': random_seed})
-        except ValueError:
-            print('Invalid parameter <random_state> for estimator, thus '
-                  '<random_state> cannot be set.\n')
-    else:
-        model_fs_name = type(model_fs).__name__
-        try:
-            model_fs.set_params(**{'random_state': random_seed})
-        except ValueError:
-            print('Invalid parameter <random_state> for estimator, thus '
-                  '<random_state> cannot be set.\n')
-
-    return model_fs, model_fs_name
 
 
 def _f_feat_n_df(model_fs      : Any,
@@ -84,6 +47,7 @@ def _f_feat_n_df(model_fs      : Any,
             tuple(feat_ranking)]
     df = pd.DataFrame(data=[data], columns=cols)
     return df
+
 
 def _params_adjust(config_dict : Dict[str, float],
                    key         : str,
@@ -322,43 +286,36 @@ def fs_find_params(X_train       : AnyDataFrame,
         raise NotImplementedError('{0} is not implemented.'.format(model_fs_name))
 
 
-def fs_get_X_select(X_train          : AnyDataFrame,
-                    X_test           : AnyDataFrame,
-                    df_fs_params     : AnyDataFrame,
-                    df_fs_params_idx : int,
-                   ) -> Tuple[AnyDataFrame, AnyDataFrame, List[str], List[int]]:
+def set_model_fs(model_fs            : Any,
+                 model_fs_params_set : Dict[str, Any],
+                 random_seed         : int,
+                ) -> Tuple[Any, str]:
     '''
-    References <df_fs_params> to provide a new matrix X that only includes
-    the selected features.
-
-    Parameters:
-        df_fs_params_idx (``int``): The index of <df_fs_params> to retrieve
-            sklearn model parameters (the will be stored in the "params"
-            column).
-
-    Example:
-        >>> from geoml import FeatureSelection
-        >>> from geoml.tests import config
-
-        >>> myfs = FeatureSelection(config_dict=config.config_dict)
-        >>> myfs.fs_find_params()
-        >>> X_train_select, X_test_select = myfs.fs_get_X_select(2)
+    Actually initializes the sklearn model based on the model ``str``. If
+    the <random_seed> was not included in the <model_fs_params> (or if
+    there is a discrepancy), the model's random state is set/reset to avoid
+    any discrepancy.
     '''
-    msg1 = ('<df_fs_params> must be populated; be sure to execute '
-            '``find_feat_selection_params()`` prior to running '
-            '``get_X_select()``.')
-    assert isinstance(df_fs_params, pd.DataFrame), msg1
+    if model_fs_params_set is None:
+        model_fs_params_set = {}
+    model_fs.set_params(**model_fs_params_set)
 
-    feats_x_select = df_fs_params.loc[df_fs_params_idx]['feats_x_select']
+    if 'regressor' in model_fs.get_params().keys():
+        regressor_key_fs = 'regressor__'
+        model_fs_name = type(model_fs.regressor).__name__
+        try:
+            model_fs.set_params(**{regressor_key_fs + 'random_state': random_seed})
+        except ValueError:
+            print('Invalid parameter <random_state> for estimator, thus '
+                  '<random_state> cannot be set.\n')
+    else:
+        model_fs_name = type(model_fs).__name__
+        try:
+            model_fs.set_params(**{'random_state': random_seed})
+        except ValueError:
+            print('Invalid parameter <random_state> for estimator, thus '
+                  '<random_state> cannot be set.\n')
 
-    X_train_select = X_train[:,feats_x_select]
-    X_test_select = X_test[:,feats_x_select]
-    X_train_select = X_train_select
-    X_test_select = X_test_select
+    return model_fs, model_fs_name
 
-    # TODO: Are these ever used?
-    labels_x_select = df_fs_params.loc[df_fs_params_idx]['labels_x_select']
-    rank_x_select = df_fs_params.loc[df_fs_params_idx]['rank_x_select']
-
-    return X_train_select, X_test_select, labels_x_select, rank_x_select
 
