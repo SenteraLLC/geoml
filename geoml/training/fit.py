@@ -309,76 +309,6 @@ def _get_test_results(df              : AnyDataFrame,
     return df_test_full1, y_pred_test, y_pred_train
 
 
-    # estimator = df_tune_filtered2.iloc[0]['regressor']
-    # estimator1 = estimator.replace('\n', '')
-
-# def _execute_tuning(X, y, model_list, param_grid_dict,
-#                    alpha, standardize, scoring, scoring_refit,
-#                    max_iter, random_seed, key, df_train, n_splits, n_repeats,
-#                    print_results=False):
-#     '''
-#     Execute model tuning, saving gridsearch hyperparameters for each number
-#     of features.
-#     '''
-#     df_tune = None
-#     for idx in self.df_fs_params.index:
-#         X_train_select, X_test_select = self.fs_get_X_select(idx)
-#         print('Number of features: {0}'.format(len(feats)))
-
-#         param_grid_dict = param_grid_add_key(param_grid_dict, key)
-
-#         df_tune_grid = self._tune_grid_search()
-#         df_tune_rank = self._get_tune_results(df_tune_grid, rank=1)
-#         if df_tune is None:
-#             df_tune = df_tune_rank.copy()
-#         else:
-#             df_tune.append(df_tune_rank)
-
-#         if print_results is True:
-#             print('{0}:'.format(self.regressor_name))
-#             print('R2: {0:.3f}\n'.format(df_temp['score_val_r2'].values[0]))
-#     df_tune = df_tune.sort_values('feat_n').reset_index(drop=True)
-#     self.df_tune = df_tune
-
-
-# def _execute_tuning_pp(
-#         logspace_list, X1, y1, model_list, param_grid_dict, standardize,
-#         scoring, scoring_refit, max_iter, random_seed, key, df_train,
-#         n_splits, n_repeats, df_tune_all_list):
-#     '''
-#     Actual execution of hyperparameter tuning via multi-core processing
-#     '''
-#     # chunks = chunk_by_n(reversed(logspace_list))
-#     chunk_size = int(len(logspace_list) / (os.cpu_count()*2)) + 1
-#     with ProcessPoolExecutor() as executor:
-#         # for alpha, df_tune_feat_list in zip(reversed(logspace_list), executor.map(execute_tuning, it.repeat(X1), it.repeat(y1), it.repeat(model_list), it.repeat(param_grid_dict), reversed(logspace_list),
-#         #                                                                           it.repeat(standardize), it.repeat(scoring), it.repeat(scoring_refit), it.repeat(max_iter), it.repeat(random_seed),
-#         #                                                                           it.repeat(key), it.repeat(df_train), it.repeat(n_splits), it.repeat(n_repeats))):
-#         for df_tune_feat_list in executor.map(execute_tuning, it.repeat(X1), it.repeat(y1), it.repeat(model_list), it.repeat(param_grid_dict), reversed(logspace_list),
-#                                               it.repeat(standardize), it.repeat(scoring), it.repeat(scoring_refit), it.repeat(max_iter), it.repeat(random_seed),
-#                                               it.repeat(key), it.repeat(df_train), it.repeat(n_splits), it.repeat(n_repeats), chunksize=chunk_size):
-#                 # chunksize=chunk_size))
-
-#             # print('df: {0}'.format(df_tune_feat_list))
-
-#             # print('type: {0}'.format(type(df_tune_feat_list[0])))
-#             df_tune_all_list = append_tuning_results(df_tune_all_list, df_tune_feat_list)
-#     return df_tune_all_list
-
-# def _set_df_pred_idx(self):
-#     df = self.df_test
-#     idx_full = self.df_pred.columns.get_level_values(level=0)
-#     idx_filtered = []
-#     for i in idx_full:
-#         # print(i)
-#         if i in self.df_y.columns:
-#             idx_filtered.append(i)
-#         elif i in list(df['index_full']):
-#             idx_filtered.append(df[df['index_full'] == i].index[0])
-#         else:
-#             idx_filtered.append(np.nan)  # keep -1
-#     self.df_pred.columns = pd.MultiIndex.from_arrays([idx_full, idx_filtered], names=('full', 'filtered'))
-
 def _filter_test_results(df_tune      : AnyDataFrame,
                          df_test_full : AnyDataFrame,
                          scoring      : str = 'test_neg_mae'):
@@ -407,6 +337,7 @@ def _filter_test_results(df_tune      : AnyDataFrame,
     df_filtered.reset_index(drop=True, inplace=True)
     df_test = df_filtered
     # self._set_df_pred_idx()
+
 
 def _get_uid(df_test_full : AnyDataFrame,
              idx : int
