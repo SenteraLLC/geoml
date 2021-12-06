@@ -1,5 +1,6 @@
-import pandas as pd
-import geopandas as gpd
+import pandas as pd  # type: ignore
+import geopandas as gpd # type: ignore
+
 
 import warnings
 from typing import Set, Optional, Tuple
