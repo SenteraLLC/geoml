@@ -20,8 +20,8 @@ from sklearn.metrics import r2_score  # type: ignore
 
 from typing import Any, Optional, Dict, List, Tuple
 
-from .utils import AnyDataFrame
-from .feature_selection import fs_get_X_select
+from ..utils import AnyDataFrame
+from .util import fs_get_X_select
 
 REGRESSOR_KEY = 'regressor__'
 
