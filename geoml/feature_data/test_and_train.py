@@ -1,5 +1,6 @@
 import pandas as pd  # type: ignore
 
+from sklearn.experimental import enable_iterative_imputer  # type: ignore
 from sklearn.impute import IterativeImputer  # type: ignore
 from sklearn.impute import KNNImputer  # type: ignore
 
