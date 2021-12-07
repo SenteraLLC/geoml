@@ -24,7 +24,7 @@ from ..db.db import DBHandler
 from ..db.spatial import Imagery
 from ..db.db import utilities as db_utils
 from .utils import AnyDataFrame
-from .config import GroupFeatures
+from .config.config import GroupFeatures
 
 from ..db.spatial import utilities as spatial_utils
 
@@ -392,13 +392,11 @@ def predict(db                  : DBHandler,
             ``min`` and ``max`` parameters, respectively.
     '''
     gdf_pred = _load_field_bounds(db, primary_keys_pred, date_predict)
-    print("GDF PRED: ",gdf_pred)
+
     print('Making predictions on new data...')
 
-    print("GDF PRED S: ",gdf_pred_s)
     if not isinstance(gdf_pred_s, pd.Series):
         # print('Using the first row ')
-        print("GDF PRED: ",gdf_pred)
         gdf_pred_s = gdf_pred.iloc[0]
 
     subset = db_utils.get_primary_keys(gdf_pred_s)

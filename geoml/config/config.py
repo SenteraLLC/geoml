@@ -1,5 +1,6 @@
-from typing import TypedDict, Dict, Union, Set, Tuple, List, Optional, Literal, Any
+from typing import TypedDict, Dict, Union, Set, Tuple, List, Optional, Literal, Any, Union
 
+from datetime import date
 
 class DBConfig(TypedDict):
     name   : str
@@ -25,21 +26,22 @@ class GroupFeatures(TypedDict):
 
 
 class FeatureDataConfig(TypedDict):
-    random_seed          : int
-    dir_results          : Optional[str]
-    group_feats          : GroupFeatures
-    ground_truth_tissue  : str
-    ground_truth_measure : str
-    date_tolerance       : int
+    random_seed           : int
+    dir_results           : Optional[str]
+    group_feats           : GroupFeatures
+    ground_truth_tissue   : str
+    ground_truth_measure  : str
+    date_tolerance        : int
+    date_train            : date
     # TODO: These kwarg arguments can be much more flexible
+    cv_method             : Any
     cv_method_kwargs      : Dict[str, int]
     cv_split_kwargs       : Dict[str, str]
     impute_method         : str
     train_test            : str
+    cv_method_tune        : Any
     cv_method_tune_kwargs : Dict[str, float]
     cv_split_tune_kwargs  : Dict[str, List[str]]
-    print_out_fd          : bool
-    print_spliiter_info   : bool
 
 
 class FeatureSelectionConfig(TypedDict):
@@ -52,14 +54,22 @@ class FeatureSelectionConfig(TypedDict):
 
 
 class TrainingConfig(TypedDict):
-    regressor : Any
+    regressor        : Any
     regressor_params : Dict[str, Any]
     param_grid       : Dict[str, Any]
     n_jobs_tune      : int
     scoring          : List[str]
     refit            : str
     rank_scoring     : str
-    print_out_train  : bool
+
+
+class PredictConfig(TypedDict):
+    date_predict        : date
+    image_search_method : str
+    primary_keys_pred   : Dict[str, Any]
+
+
+ConfigGroup = Union[TableConfig, FeatureDataConfig, FeatureSelectionConfig, TrainingConfig, PredictConfig]
 
 
 class Config(TypedDict):
@@ -67,6 +77,7 @@ class Config(TypedDict):
     feature_data      : FeatureDataConfig
     feature_selection : FeatureSelectionConfig
     training          : TrainingConfig
+    predict           : PredictConfig
 
 
 

@@ -33,6 +33,7 @@
    {
       "random_seed" : 999,
       "dir_results" : null,
+      "date_train"  : "1/1/2022",
       "group_feats" : {
                         "dap": "dap",
                         "rate_ntd": {"col_rate_n": "rate_n_kgha",
@@ -51,28 +52,40 @@
       "train_test"            : "train",
       "cv_method_tune"        : "RepeatedStratifiedKFold",
       "cv_method_tune_kwargs" : {"n_splits": 4, "n_repeats": 3},
-      "cv_split_tune_kwargs"  : {"y": ["farm", "year"]},
-      "print_out_fd"          : false,
-      "print_splitter_info"   : false
-
+      "cv_split_tune_kwargs"  : {"y": ["farm", "year"]}
    },
    "feature_selection":
    {
-      "model_fs_params_set": {"max_iter": 100000, "selection": "cyclic", "warm_start": true},
-      "model_fs_params_adjust_min": {"alpha": 1},
-      "model_fs_params_adjust_max": {"alpha": 1e-3},
+      "model_fs"                   : "Lasso",
+      "model_fs_params_set"        : {"precompute" : true,
+                                      "max_iter"   : 100000,
+                                      "tol"        : 0.001,
+                                      "selection"  : "cyclic",
+                                      "warm_start": true
+                                     },
+      "model_fs_params_adjust_min" : {"alpha": 1},
+      "model_fs_params_adjust_max" : {"alpha": 1e-3},
       "n_feats": 12,
       "n_linspace": 150
    },
    "training":
    {
-       "regressor": "TODO",
+       "regressor": "TransformedTargetRegressor",
        "regressor_params": {"max_iter": 100000, "selection": "cyclic", "warm_start": true},
-       "param_grid": {"TO": "DO"},
+       "param_grid": {"alpha": [1e-04, 1e-03, 1e-02, 1e-01, 1e+00]},
        "n_jobs_tune": 2,
        "scoring": ["neg_mean_absolute_error", "neg_mean_squared_error", "r2"],
        "refit": "neg_mean_absolute_error",
-       "rank_scoring": "neg_mean_absolute_error",
-       "print_out_train": false
+       "rank_scoring": "neg_mean_absolute_error"
+   },
+   "predict":
+   {
+       "primary_keys_pred" : {"owner"    : "css-farms-dalhart",
+                              "farm"     : "cabrillas",
+                              "field_id" : "c-19-e",
+                              "year"     : 2020
+                             },
+       "image_search_method" : "past",
+       "date_predict"        : "1/1/2020"
    }
 }

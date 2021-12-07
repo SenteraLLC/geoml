@@ -9,7 +9,7 @@ from typing import Tuple, List, Optional, Set, Dict
 from typing import cast
 
 from ..utils import AnyDataFrame
-from ..config import GroupFeatures
+from ..config.config import GroupFeatures
 
 
 def _handle_wl_cols(c        : str,

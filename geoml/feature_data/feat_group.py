@@ -8,7 +8,7 @@ import geopandas as gpd  # type: ignore
 
 from ..utils import AnyDataFrame
 from ...db.db import utilities as db_utils
-from ..config import GroupFeatures
+from ..config.config import GroupFeatures
 
 from .util import cv_method_check_random_seed, check_sklearn_splitter, stratify_set, splitter_eval
 

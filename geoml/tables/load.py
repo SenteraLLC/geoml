@@ -20,7 +20,7 @@ from sqlalchemy import inspect  # type: ignore
 from ...db.db import utilities as db_utils
 from ...db.db import DBHandler
 
-from ..config import Config, DBConfig, TableConfig
+from ..config.config import Config, DBConfig, TableConfig
 # TODO: Move this
 from ..utils import check_col_names
 from ..utils import AnyDataFrame
