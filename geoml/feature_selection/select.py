@@ -117,11 +117,11 @@ def _find_features_max(n_feats       : int,
     if result['success'] is True:
         model_fs_params_feats_max = {'alpha': result['x']}
     elif result['success'] is False and result['x'] < 0:
-        self.model_fs_params_feats_max = {'alpha': alpha_min}
+        model_fs_params_feats_max = {'alpha': alpha_min}
     elif result['success'] is False and result['fun'] == 0:
         model_fs_params_feats_max = {'alpha': result['x']}
     else:
-        self.model_fs_params_feats_max = {'alpha': alpha_min}
+        model_fs_params_feats_max = {'alpha': alpha_min}
 
 
     # TODO: Does any of this even get used?
@@ -206,7 +206,7 @@ def _lasso_fs_df(model_fs      : Any,
 
     param_adjust_temp = model_fs_params_feats_min.copy()
 
-    df = None
+    df : Optional[AnyDataFrame] = None
     for val in param_val_list:
         param_adjust_temp['alpha'] = val
         df_temp = _f_feat_n_df(model_fs, model_fs_name, param_adjust_temp, X_train, y_train, labels_x)
@@ -215,7 +215,8 @@ def _lasso_fs_df(model_fs      : Any,
         else:
           df = df.append(df_temp)
 
-    df = df.drop_duplicates(subset=['feats_x_select'], ignore_index=True)
+    if df is not None:
+      df = df.drop_duplicates(subset=['feats_x_select'], ignore_index=True)
     msg = ('The alpha value that achieves selection of {0} feature(s) was '
            'not found. Instead, the max number of features to use will '
            'be: {1}')

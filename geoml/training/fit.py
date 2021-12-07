@@ -386,9 +386,8 @@ def fit(df_y            : AnyDataFrame,
     df_test_full_old = df_test_full
 
     #_ = get_tuning_splitter()  # prints the number of obs
-    df_tune : Optional[AnyDataFrame] = None
-    df_test_full : Optional[AnyDataFrame] = None
-    df_pred : Optional[AnyDataFrame] = None
+    df_tune      : Optional[AnyDataFrame] = None
+    df_pred      : Optional[AnyDataFrame] = None
     df_pred_full : Optional[AnyDataFrame] = None
     for idx in df_fs_params.index:
         X_train_select, X_test_select, labels_x_select, rank_x_select = fs_get_X_select(X_train, X_test, df_fs_params, idx)

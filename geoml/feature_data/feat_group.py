@@ -33,15 +33,15 @@ def _join_group_feats(df             : AnyDataFrame,
     '''
     Joins predictors to ``df`` based on the contents of group_feats
     '''
+
+    field_bounds = tables["field_bounds"]
     as_planted = tables.get("as_planted")
     dates_res  = tables.get("dates_res")
 
     if 'dae' in group_feats:
-        field_bounds = tables["field_bounds"]
         df = dae(df, field_bounds, as_planted, dates_res)
 
     if 'dap' in group_feats:
-        field_bounds = tables["field_bounds"]
         df = dap(df, field_bounds, as_planted, dates_res)
 
     n_applications = tables.get("n_applications")
