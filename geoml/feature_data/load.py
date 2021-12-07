@@ -125,6 +125,8 @@ def get_tuning_splitter(df                    : AnyDataFrame,
         cv_method_kwargs_eval = dict(
             (k, eval(str(cv_method_kwargs[k]), scope)
              ) for k in cv_method_kwargs)
+         # TODO: Is this a generator like the return of cv.split?
+        print("Using cv_method 'train_test_split' may be broken.")
         return cv_method(df, **cv_method_kwargs_eval)
     else:
         cv_split_kwargs = check_sklearn_splitter(
@@ -161,5 +163,9 @@ def get_tuning_splitter(df                    : AnyDataFrame,
         print('Number of observations in the (tuning) train set (avg): {0:.1f} ({1:.1f}%)'.format(np.mean(n_train), train_pct))
         print('Number of observations in the (tuning) validation set (avg): {0:.1f} ({1:.1f}%)\n'.format(np.mean(n_val), val_pct))
 
-    return cv.split(**cv_split_kwargs_eval)
+    # TODO: Should probably clean this up
+    #       This is kind of a hack
+    get_tuning_splitter = lambda : cv.split(**cv_split_kwargs_eval)
+
+    return get_tuning_splitter
 
