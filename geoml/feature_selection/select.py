@@ -116,8 +116,13 @@ def _find_features_max(n_feats       : int,
     model_fs_params_feats_max = {'alpha': alpha_min}
     if result['success'] is True:
         model_fs_params_feats_max = {'alpha': result['x']}
+    elif result['success'] is False and result['x'] < 0:
+        self.model_fs_params_feats_max = {'alpha': alpha_min}
     elif result['success'] is False and result['fun'] == 0:
         model_fs_params_feats_max = {'alpha': result['x']}
+    else:
+        self.model_fs_params_feats_max = {'alpha': alpha_min}
+
 
     # TODO: Does any of this even get used?
     df = _f_feat_n_df(model_fs, model_fs_name, model_fs_params_feats_max, X_train, y_train, labels_x)
@@ -192,20 +197,23 @@ def _lasso_fs_df(model_fs      : Any,
         params_min = np.log(model_fs_params_feats_min['alpha'])
         param_val_list = list(np.logspace(params_min, params_max,
                                           num=n_linspace, base=np.e) / 10)
-
     # minimization is the first point where minimum is reached; thus, when
     # using with logspace, it may not quite reach the max feats desired
     if _f_opt_n_feats(param_val_list[-1], n_feats, model_fs, model_fs_name, X_train, y_train, labels_x) != 0:
         param_val_list[-1] = model_fs_params_feats_max['alpha']
 
-    param_adjust_temp = model_fs_params_feats_min.copy()
-    param_adjust_temp['alpha'] = param_val_list[0]
-    df = _f_feat_n_df(model_fs, model_fs_name, param_adjust_temp, X_train, y_train, labels_x)
 
-    for val in param_val_list[1:]:
+
+    param_adjust_temp = model_fs_params_feats_min.copy()
+
+    df = None
+    for val in param_val_list:
         param_adjust_temp['alpha'] = val
         df_temp = _f_feat_n_df(model_fs, model_fs_name, param_adjust_temp, X_train, y_train, labels_x)
-        df = df.append(df_temp)
+        if df is None:
+          df = df_temp.copy()
+        else:
+          df = df.append(df_temp)
 
     df = df.drop_duplicates(subset=['feats_x_select'], ignore_index=True)
     msg = ('The alpha value that achieves selection of {0} feature(s) was '
