@@ -105,7 +105,7 @@ def _tune_grid_search(n_jobs_tune : int,
                           'scoring': scoring,
                           'n_jobs': n_jobs_tune,
                           'pre_dispatch': pre_dispatch,
-                          'cv': tuning_splitter,
+                          'cv': tuning_splitter(),
                           'refit': refit,
                           'return_train_score': True}
     clf = GridSearchCV(**kwargs_grid_search, verbose=0)
@@ -311,7 +311,8 @@ def _get_test_results(df              : AnyDataFrame,
 
 def _filter_test_results(df_tune      : AnyDataFrame,
                          df_test_full : AnyDataFrame,
-                         scoring      : str = 'test_neg_mae'):
+                         scoring      : str = 'test_neg_mae'
+                        ) -> AnyDataFrame:
     '''
     Remove dupilate number of features (keep only lowest error)
 
@@ -335,8 +336,7 @@ def _filter_test_results(df_tune      : AnyDataFrame,
     # df_filtered.reset_index(level=df_filtered.index.names, inplace=True)
     # df_filtered = df_filtered.rename(columns={'index': 'index_full'})
     df_filtered.reset_index(drop=True, inplace=True)
-    df_test = df_filtered
-    # self._set_df_pred_idx()
+    return df_filtered
 
 
 def _get_uid(df_test_full : AnyDataFrame,
@@ -367,7 +367,8 @@ def fit(df_y            : AnyDataFrame,
         param_grid      : Dict[str, Any],
         scoring         : List[str],
         random_seed     : int,
-       ) -> Tuple[AnyDataFrame, AnyDataFrame, AnyDataFrame, AnyDataFrame]:
+        df_test_full    : Optional[AnyDataFrame] = None,
+       ) -> Tuple[AnyDataFrame, AnyDataFrame, AnyDataFrame, AnyDataFrame, AnyDataFrame]:
     '''
     Perform tuning for each unique scenario from ``FeatureSelection``
     (i.e., for each row in <df_fs_params>).
@@ -382,11 +383,13 @@ def fit(df_y            : AnyDataFrame,
     print('Executing hyperparameter tuning and estimator training...')
 
     regressor_name = _set_regressor(regressor, regressor_params, random_seed)
+    df_test_full_old = df_test_full
 
     #_ = get_tuning_splitter()  # prints the number of obs
     df_tune : Optional[AnyDataFrame] = None
     df_test_full : Optional[AnyDataFrame] = None
     df_pred : Optional[AnyDataFrame] = None
+    df_pred_full : Optional[AnyDataFrame] = None
     for idx in df_fs_params.index:
         X_train_select, X_test_select, labels_x_select, rank_x_select = fs_get_X_select(X_train, X_test, df_fs_params, idx)
         n_feats = len(df_fs_params.loc[idx]['feats_x_select'])
@@ -395,7 +398,7 @@ def fit(df_y            : AnyDataFrame,
             print('Number of features: {0}'.format(n_feats))
         df_tune_grid = _tune_grid_search(n_jobs_tune, regressor, param_grid, scoring, refit, X_train_select, y_train, tuning_splitter)
         df_tune_rank = _get_tune_results(df_tune_grid, regressor, regressor_name, scoring, rank_scoring, model_fs_name, labels_x_select, rank_x_select, rank=1)
-        uid = _get_uid(df_test_full, idx)
+        uid = _get_uid(df_test_full_old, idx)
         df_tune_rank.loc[0, 'uid'] = uid
         df_tune_rank = df_tune_rank.rename(index={0: uid})
         if df_tune is None:
@@ -423,7 +426,7 @@ def fit(df_y            : AnyDataFrame,
             # df_pred[(uid, np.nan)] = y_pred
 
 
-    _filter_test_results(df_tune, df_test_full, scoring='test_neg_mae')
+    df_test = _filter_test_results(df_tune, df_test_full, scoring='test_neg_mae')
 
-    return df_tune, df_test_full, df_pred, df_pred_full
+    return df_tune, df_test_full, df_pred, df_pred_full, df_test
 
