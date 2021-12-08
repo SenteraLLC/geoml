@@ -101,7 +101,7 @@ class ModelFS(Enum):
 from sklearn.linear_model import Lasso  # type: ignore
 
 model_fs : Dict[ModelFS, Any] = {
-    ModelFS.Lasso : Lasso,
+    ModelFS.Lasso : Lasso(),
 }
 
 parseModelFS = partial(parseEnum, ModelFS, model_fs)
