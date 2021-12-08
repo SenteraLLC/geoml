@@ -107,11 +107,10 @@ def main(base_dir_data : str,
 
     from .feature_selection.select import set_model_fs, fs_find_params
 
-    # TODO: Fix these arguments
-    from sklearn.linear_model import Lasso  # type: ignore
-    model_fs   = Lasso()
-
     feature_selection_config   = config["feature_selection"]
+
+    model_fs                   = feature_selection_config["model_fs"]
+    print("Model fs.")
     model_fs_params_set        = feature_selection_config["model_fs_params_set"]
     n_feats                    = feature_selection_config["n_feats"]
     n_linspace                 = feature_selection_config["n_linspace"]
@@ -124,14 +123,11 @@ def main(base_dir_data : str,
 
     # Training #
     from .training.fit import fit
-    from sklearn.compose import TransformedTargetRegressor # type: ignore
-    from sklearn.preprocessing import PowerTransformer # type: ignore
-
-    regressor = TransformedTargetRegressor(regressor=Lasso(), transformer=PowerTransformer(copy=True, method="yeo-johnson", standardize=True))
-    param_grid = {"alpha": list(np.logspace(-4, 0, 5))}
 
     training_config = config["training"]
 
+    regressor        = training_config["regressor"]
+    param_grid       = training_config["param_grid"]
     regressor_params = training_config["regressor_params"]
     n_jobs_tune      = training_config["n_jobs_tune"]
     scoring          = training_config["scoring"]
