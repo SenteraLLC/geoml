@@ -1,2 +1,2 @@
 git+https://github.com/sentinelsat/sentinelsat.git@v0.14
-git+https://github.com/insight-sensing/db.git@0.0.1
+git+https://github.com/insight-sensing/db.git@new_db_refactor
