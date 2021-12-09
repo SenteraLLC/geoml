@@ -18,7 +18,8 @@ import pandas as pd  # type: ignore
 from copy import deepcopy
 from sklearn.model_selection import train_test_split  # type: ignore
 
-from ...db.db import utilities as db_utils
+from db import utilities as db_utils
+
 from ..utils import AnyDataFrame
 from .util import cv_method_check_random_seed, check_sklearn_splitter, stratify_set, splitter_eval
 

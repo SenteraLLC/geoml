@@ -7,7 +7,7 @@ from typing import Set, Optional, Tuple
 
 from ..utils import AnyDataFrame
 from ..utils import check_col_names
-from ...db.db import utilities as db_utils
+from db import utilities as db_utils
 
 
 def check_empty_geom(df : AnyDataFrame):

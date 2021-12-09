@@ -20,13 +20,14 @@ import rasterio as rio  # type: ignore
 
 from .tables.new_columns import dae, dap, rate_ntd
 
-from ..db.db import DBHandler
-from ..db.spatial import Imagery
-from ..db.db import utilities as db_utils
+from db import utilities as db_utils
+from db import DBHandler
+from spatial import utilities as spatial_utils
+from spatial import Imagery
+
 from .utils import AnyDataFrame
 from .config.config import GroupFeatures
 
-from ..db.spatial import utilities as spatial_utils
 
 from typing import Dict, Any, List, Optional, Tuple
 

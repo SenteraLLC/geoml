@@ -1,7 +1,7 @@
 import pandas as pd  # type: ignore
 import geopandas as gpd  # type: ignore
 
-from ...db.db import utilities as db_utils
+from db import utilities as db_utils
 
 from ..utils import AnyDataFrame
 from ..utils import check_col_names

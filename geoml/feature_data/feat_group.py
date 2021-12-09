@@ -6,8 +6,9 @@ from copy import deepcopy
 import pandas as pd  # type: ignore
 import geopandas as gpd  # type: ignore
 
+from db import utilities as db_utils
+
 from ..utils import AnyDataFrame
-from ...db.db import utilities as db_utils
 from ..config.config import GroupFeatures
 
 from .util import cv_method_check_random_seed, check_sklearn_splitter, stratify_set, splitter_eval

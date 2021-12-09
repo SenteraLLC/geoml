@@ -17,8 +17,8 @@ import pandas as pd  # type: ignore
 import geopandas as gpd # type: ignore
 from sqlalchemy import inspect  # type: ignore
 
-from ...db.db import utilities as db_utils
-from ...db.db import DBHandler
+from db import utilities as db_utils
+from db import DBHandler
 
 from ..config.config import Config, DBConfig, TableConfig
 # TODO: Move this
