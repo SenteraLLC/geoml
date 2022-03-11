@@ -12,7 +12,19 @@ API to retrieve training data, create X matrix, and perform feature selection, h
 [![codecov](https://codecov.io/gh/insight-sensing/geoml/branch/dev/graph/badge.svg?token=45FYM8VS7H)](https://codecov.io/gh/insight-sensing/geoml)
 [![build](https://circleci.com/gh/insight-sensing/geoml/tree/dev.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/geoml?branch=dev)
 
-## Setup and Installation (Windows)
+## Installation
+
+### Windows
+1. [Set up SSH](https://github.com/SenteraLLC/install-instructions/blob/master/ssh_setup.md)
+2. Install [conda](https://github.com/SenteraLLC/install-instructions/blob/master/conda.md)
+3. Install package
+```
+git clone git@github.com:SenteraLLC/geoml.git
+cd geoml
+conda env create -f requirements\environment_dev.yml
+conda activate geoml
+pip install .
+```
 There is an *environment_test.yml* file that can be used to create the environment and install the dependencies. After cloning from Github, create the environment:
 
 `conda env create -n test_env -f .geoml\requirements\environment_test.yml`
@@ -25,7 +37,7 @@ pip install -r .geoml\requirements\dev_pip.txt
 pip install -r .geoml\requirements\testing_pip.txt
 ```
 
-Note: On Windows, the `postgis` dependency must be installed via `pip` since it is not available on conda-forge. Also not that the `find_program` function of `testing.postgresql` should also be modified if using Windows (see [db issue #10](https://github.com/insight-sensing/db/issues/10)).
+Note: On Windows, the `postgis` dependency must be installed via `pip` since it is not available on conda-forge. Also note that the `find_program` function of `testing.postgresql` should be modified if using Windows (see [db issue #10](https://github.com/SenteraLLC/db/issues/10)).
 
 ## Setup and Installation (Linux and MacOS)
 There is an *environment.yml* file that can be used to create the environment and install the dependencies. After cloning from Github, create the environment:

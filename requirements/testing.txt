@@ -1,2 +1,0 @@
-pytest-cov >= 2.9.0
-codecov >= 2.1.4
