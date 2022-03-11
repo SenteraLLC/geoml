@@ -323,17 +323,14 @@ class FeatureData(Tables):
                 )
             if "sentinel" in key:
                 # self.rs_sentinel = self._check_empty_geom(self.rs_sentinel)
-                response_data = deepcopy(self.response_data)
-                table_name = response_data.pop("table_name")
-                _ = response_data.pop("value_col")
+
                 print(
                     "\nLoading all available Sentinel data based on spatio-temporal "
-                    "response data.\nTable: {0}\nkwargs: {1}\n"
-                    "".format(table_name, response_data)
+                    "response data.\nresponse_data: {0}\n"
+                    "".format(self.response_data)
                 )
                 gdf_stats = self.db.get_zonal_stats(
-                    table_name_response=table_name,
-                    filter_kwargs=response_data,
+                    response_data=self.response_data,
                     tolerance=date_tolerance,  # days
                     direction="nearest",  # ["nearest", "backward", "forward"]
                     buffer=-20,
@@ -342,7 +339,7 @@ class FeatureData(Tables):
                     wide=True,
                 )
                 # Assumes all rasters in db.reflectance have same bands and band order
-                rast_metadata = self.get_table_df("reflectance", rid=1)[
+                rast_metadata = self.db.get_table_df("reflectance", rid=1)[
                     "rast_metadata"
                 ].item()
                 bands = ["b{0}".format(i + 1) for i in range(11)]
@@ -352,7 +349,23 @@ class FeatureData(Tables):
                 gdf_stats.rename(columns=dict(zip(bands, cols)), inplace=True)
                 # wl_min, wl_max = group_feats[key]
                 subset = db_utils.get_primary_keys(self.df_response)
-                df = pd.merge(df, gdf_stats, how="left", on=subset + ["date", "geom"])
+                (
+                    table_name_response,
+                    value_col,
+                    filter_kwargs,
+                ) = db_utils.pop_table_val_from_response_data(self.response_data)
+                subset_filter = [
+                    c
+                    for c in list(filter_kwargs.keys())
+                    if c not in ["owner", "farm", "field_id", "year"]
+                ]
+                # df = pd.merge(df, gdf_stats, how="left", on=subset + ["date", "geom"])
+                df = pd.merge(
+                    df,
+                    gdf_stats,
+                    how="left",
+                    on=subset + ["date"] + subset_filter + [value_col],
+                )
         return df
 
     def _load_df_response(self):
@@ -465,7 +478,9 @@ class FeatureData(Tables):
 
         gdf_nogeom.drop(columns=[gdf.geometry.name], inplace=True)
         field_bounds.drop(columns=["id"], inplace=True)
-        gdf_out = gdf_geom.append(gdf_nogeom.merge(field_bounds, on=subset))
+        gdf_out = pd.concat(
+            [gdf_geom, gdf_nogeom.merge(field_bounds, on=subset)], axis=0
+        )
         return gdf_out
 
     # def _get_response_df(
@@ -765,7 +780,7 @@ class FeatureData(Tables):
         df_train.insert(0, "train_test", "train")
         df_test.insert(0, "train_test", "test")
         df_out = df_train.copy()
-        df_out = df_out.append(df_test).reset_index(drop=True)
+        df_out = pd.concat([df_out, df_test], axis=0).reset_index(drop=True)
         return df_out
 
     def _impute_missing_data(self, X, method="iterative"):
@@ -813,12 +828,11 @@ class FeatureData(Tables):
             df = df.dropna()
         else:
             df = df[pd.notnull(df[self.label_y])]
-        labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
 
         df_train = df[df["train_test"] == "train"]
         df_test = df[df["train_test"] == "test"]
 
-        # If number of cols are different, then remove from both and update labels_x
+        # If number of cols are different, remove from both before assigning labels_x
         cols_nan_train = df_train.columns[
             df_train.isnull().all(0)
         ]  # gets columns with all nan
@@ -829,7 +843,7 @@ class FeatureData(Tables):
             )
             df_train = df[df["train_test"] == "train"]
             df_test = df[df["train_test"] == "test"]
-            labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+        labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
 
         X_train = df_train[labels_x].values
         X_test = df_test[labels_x].values
@@ -838,6 +852,14 @@ class FeatureData(Tables):
 
         X_train = self._impute_missing_data(X_train, method=impute_method)
         X_test = self._impute_missing_data(X_test, method=impute_method)
+        if impute_method is not None:  # Add imputed data back to df
+            df_train.iloc[
+                :, [df.columns.get_loc(c) for c in labels_x if c in df]
+            ] = X_train
+            df_test.iloc[
+                :, [df.columns.get_loc(c) for c in labels_x if c in df]
+            ] = X_test
+            df = pd.concat([df_train, df_test], axis=0)
 
         msg = "There is a different number of columns in <X_train> than in " "<X_test>."
         assert X_train.shape[1] == X_test.shape[1], msg
@@ -966,6 +988,13 @@ class FeatureData(Tables):
             Shape of testing matrix "X":  (65, 14)
             Shape of testing vector "y":  (65,)
         """
+
+        # print(len(df1))
+        # print(len(df2))
+        # print(len(df3))
+        # print(len(df4))
+        # print(len(df5))
+
         print("Getting feature data...")
         self._set_params_from_kwargs_fd(**kwargs)
         df = self.df_response.copy()
@@ -974,7 +1003,7 @@ class FeatureData(Tables):
             df, group_feats=self.group_feats, date_tolerance=self.date_tolerance
         )
 
-        # TODO: Check imputation method
+        # TODO: Check impute_method
         msg = (
             "After joining feature data with response data and filtering "
             "by <date_tolerance={0}>, there are no observations left. "

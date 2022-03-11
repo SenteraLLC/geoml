@@ -824,12 +824,15 @@ class Tables(object):
             df_empty.drop(columns=[df_empty.geometry.name], inplace=True)
 
             # df_fill = df_geom.append(
-            df_fill = pd.concat([
-                df_geom,
-                df_empty.merge(
-                    self.field_bounds[subset + [self.field_bounds.geometry.name]],
-                    on=subset,
-                )], axis=0
+            df_fill = pd.concat(
+                [
+                    df_geom,
+                    df_empty.merge(
+                        self.field_bounds[subset + [self.field_bounds.geometry.name]],
+                        on=subset,
+                    ),
+                ],
+                axis=0,
             )
             return df_fill
 
@@ -1373,12 +1376,15 @@ class Tables(object):
                     # df_join = df_join.append(gpd.tools.sjoin(
                     #     n_apps_y[subset_n_apps + ['geom']], df_y[cols_require + ['geom']], how='inner'))
                     df_join = pd.concat(
-                        [df_join,
-                        gpd.overlay(
-                            df_y[["id"] + cols_require + ["geom"]],
-                            n_apps_y[subset_n_apps + ["geom"]],
-                            how="intersection",
-                        )], axis=0
+                        [
+                            df_join,
+                            gpd.overlay(
+                                df_y[["id"] + cols_require + ["geom"]],
+                                n_apps_y[subset_n_apps + ["geom"]],
+                                how="intersection",
+                            ),
+                        ],
+                        axis=0,
                     )
 
             # Don't drop index_right? Becasue it defines the duplicates from the right df
