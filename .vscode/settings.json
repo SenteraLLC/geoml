@@ -1,5 +1,0 @@
-{
-    "python.formatting.provider": "black",
-    "editor.formatOnSave": true,
-    "python.terminal.activateEnvInCurrentTerminal": true
-}
