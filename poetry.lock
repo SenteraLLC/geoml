@@ -275,7 +275,7 @@ ipykernel = ["ipykernel (>=6.9.1,<7.0.0)"]
 type = "git"
 url = "git@github.com:SenteraLLC/db"
 reference = "to_mlops"
-resolved_reference = "ca4da724eeb2ba7f58c8697994d1b660e1c7748b"
+resolved_reference = "d60dfcde4c46ab9eedbb599314b0f6ec55fd6b12"
 
 [[package]]
 name = "debugpy"
