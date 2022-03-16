@@ -18,7 +18,7 @@ pip = "^22.0.4"
 pygeos = "^0.12.0"
 Rtree = "^0.9.7"
 scikit-learn = "^1.0.2"
-db = {git = "git@github.com:SenteraLLC/db", rev = "to_mlops"}
+db = {git = "git@github.com:SenteraLLC/db", tag = "v0.1.1"}
 ipykernel = {version = "^6.9.1", optional = true}
 
 [tool.poetry.dev-dependencies]
