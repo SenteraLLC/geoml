@@ -10,12 +10,11 @@ Insight Sensing Corporation. All rights reserved.
 @contributors: [Tyler J. Nigon]
 """
 import os
+
 import pytest
 
-
-test_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        'geoml', 'tests')
-data_dir = os.path.join(test_dir, 'testdata')
+test_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "geoml", "tests")
+data_dir = os.path.join(test_dir, "testdata")
 
 
 # @pytest.fixture(scope="session")
