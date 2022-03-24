@@ -347,7 +347,19 @@ class FeatureData(Tables):
                     "wl_{0:.0f}".format(round(wl)) for wl in rast_metadata["wavelength"]
                 ]
                 gdf_stats.rename(columns=dict(zip(bands, cols)), inplace=True)
-                # wl_min, wl_max = group_feats[key]
+                gdf_stats.rename(columns={"geom": "geom_rast"}, inplace=True)
+                wl_min, wl_max = group_feats[key]
+                wl_drop = []
+                for c in gdf_stats.columns:
+                    try:
+                        if (
+                            int(c.split("_")[-1]) < wl_min
+                            or int(c.split("_")[-1]) > wl_max
+                        ):
+                            wl_drop.append(c)
+                    except:
+                        pass
+                gdf_stats.drop(columns=wl_drop, inplace=True)
                 subset = db_utils.get_primary_keys(self.df_response)
                 (
                     table_name_response,
@@ -366,6 +378,7 @@ class FeatureData(Tables):
                     how="left",
                     on=subset + ["date"] + subset_filter + [value_col],
                 )
+                # df["date"] = pd.to_datetime(df["date"].dt.date)
         return df
 
     def _load_df_response(self):
