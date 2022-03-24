@@ -1,0 +1,107 @@
+{
+    "Tables": {
+        "db_name": "potato",
+        "db_host": "localhost",
+        "db_user": "anayltics_user",
+        "password": "NONE",
+        "db_schema": "NONE",
+        "db_port": "NONE",
+        "db": "NONE",
+        "base_dir_data": "NONE"
+    },
+    "FeatureData": {
+        "random_seed": 999,
+        "dir_results": "NONE",
+        "response_data": {
+            "table_name": "obs_tissue",
+            "value_col": "value",
+            "owner": "css-farms-dalhart",
+            "tissue": "petiole",
+            "measure": "no3_ppm"
+        },
+        "group_feats": {
+            "dap": "dap",
+            "rate_ntd": {
+                "col_rate_n": "rate_n_kgha",
+                "col_out": "rate_ntd_kgha"
+            },
+            "sentinel_wl_range": [
+                400,
+                2200
+            ]
+        },
+        "date_train": null,
+        "date_tolerance": 3,
+        "cv_method": null,
+        "cv_method_kwargs": {
+            "test_size": "0.4",
+            "stratify": null
+        },
+        "cv_split_kwargs": "NONE",
+        "impute_method": "iterative",
+        "train_test": "train",
+        "cv_method_tune": null,
+        "cv_method_tune_kwargs": {
+            "n_splits": 4,
+            "n_repeats": 3
+        },
+        "cv_split_tune_kwargs": {
+            "y": [
+                "farm",
+                "year"
+            ]
+        },
+        "print_out_fd": "FALSE",
+        "print_splitter_info": "FALSE"
+    },
+    "FeatureSelection": {
+        "model_fs": null,
+        "model_fs_params_set": {
+            "max_iter": 100000,
+            "selection": "cyclic",
+            "warm_start": "TRUE"
+        },
+        "model_fs_params_adjust_min": {
+            "alpha": 1
+        },
+        "model_fs_params_adjust_max": {
+            "alpha": 1e-3
+        },
+        "n_feats": 12,
+        "n_linspace": 150,
+        "print_out_fs": "FALSE"
+    },
+    "Training": {
+        "regressor": null,
+        "regressor_params": {
+            "max_iter": 100000,
+            "selection": "cyclic",
+            "warm_start": "TRUE"
+        },
+        "param_grid": {
+            "alpha": null
+        },
+        "n_jobs_tune": 2,
+        "scoring": null,
+        "refit": "neg_mean_absolute_error",
+        "rank_scoring": "neg_mean_absolute_error",
+        "print_out_train": "FALSE"
+    },
+    "Predict": {
+        "train": "NONE",
+        "loc_df_test": "NONE",
+        "estimator": "NONE",
+        "feats_x_select": "NONE",
+        "date_predict": null,
+        "gdf_pred": "NONE",
+        "primary_keys_pred": {
+            "owner": "css-farms-dalhart",
+            "farm": "cabrillas",
+            "field_id": "c-06",
+            "year": 2020
+        },
+        "image_search_method": "past",
+        "refit_X_full": "TRUE",
+        "dir_out_pred": null
+    }
+}
