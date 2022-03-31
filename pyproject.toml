@@ -17,9 +17,8 @@ keyring = "^23.5.0"
 pip = "^22.0.4"
 pygeos = "^0.12.0"
 Rtree = "^0.9.7"
-scikit-learn = "^1.0.2"
-db = {git = "git@github.com:SenteraLLC/db", tag = "v0.1.1"}
-ipykernel = {version = "^6.9.1", optional = true}
+scikit-learn = "^=1.0.2"
+db = {git = "git@github.com:SenteraLLC/db", tag = "v0.1.2"}
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.17.0"
@@ -27,9 +26,7 @@ sure = "^2.0.0"
 flake8 = "^4.0.1"
 pytest = "^7.0.1"
 black = "^22.1.0"
-
-[tool.poetry.extras]
-ipykernel = ["ipykernel"]
+ipykernel = "^6.9.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
