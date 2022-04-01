@@ -332,7 +332,7 @@ class FeatureData(Tables):
                 gdf_stats = self.db.get_zonal_stats(
                     response_data=self.response_data,
                     tolerance=date_tolerance,  # days
-                    direction="nearest",  # ["nearest", "backward", "forward"]
+                    direction="nearest",  # ["nearest", "past", "future"]
                     buffer=-20,
                     stat="mean",
                     units_expression="/10000",

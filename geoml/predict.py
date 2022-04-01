@@ -21,6 +21,7 @@ from db import DBHandler
 
 # from spatial import Imagery
 import db.utilities as db_utils
+from db.sql.sql_constructors import closest_date_sql
 
 # import spatial.utilities as spatial_utils
 from geoml import Tables
@@ -277,6 +278,13 @@ class Predict(Tables):
         delta = (datetime.combine(date, datetime.min.time()) - date_closest).days
         return date_closest, delta
 
+    def _find_nearest_raster_new(self, primary_key_val):
+        """
+        Find nearest raster using PostGIS SQL query.
+
+        This function will likely be replaced with a sql query in db repo.
+        """
+
     def _find_nearest_raster(self, primary_key_val, image_search_method="past"):
         """
         Finds the image with the closest date to <Predict.date_predict>.
@@ -318,15 +326,25 @@ class Predict(Tables):
         """
         subset = db_utils.get_primary_keys(self.gdf_pred)
         primary_key_val = dict((k, gdf_pred_s[k]) for k in subset)
-        raster_name, delta = self._find_nearest_raster(
-            primary_key_val, self.image_search_method
-        )
 
-        # load raster as array
-        array_img, profile, df_metadata = self.db.get_raster(
-            raster_name, **primary_key_val
+        sql_closest_date = closest_date_sql(
+            db_schema=self.db.db_schema,
+            pkey=primary_key_val,
+            date_str=self.date_predict.strftime(format="%Y-%m-%d"),
+            tolerance=None,
+            direction=self.image_search_method,
+            limit=1,
         )
-        # array_pred = np.empty(array_img.shape[1:], dtype=float)
+        df_reflectance = pd.read_sql(sql_closest_date, con=self.db.engine)
+        if len(df_reflectance) != 1:
+            raise ValueError(
+                f"There aren't any rasters for <{primary_key_val}>. Please add images "
+                "or change <date_predict> to be a later date."
+            )
+
+        array_img, profile, df_metadata = self.db.get_raster(
+            table_name="reflectance", rid=df_reflectance.iloc[0]["rid"]
+        )
         return array_img, profile, df_metadata
 
     def _get_array_img_band_idx(self, df_metadata, names, col_header="wavelength"):
@@ -447,7 +465,7 @@ class Predict(Tables):
         buffer_dist=-40,
         clip_min=0,
         clip_max=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Makes predictions for a single geometry.
@@ -483,7 +501,7 @@ class Predict(Tables):
             # print('Using the first row ')
             gdf_pred_s = self.gdf_pred.iloc[0]
 
-        subset = db_utils.get_primary_keys(gdf_pred_s)
+        subset = db_utils.get_primary_keys(self.gdf_pred)
         array_img, profile, df_metadata = self._get_X_map(gdf_pred_s)
 
         # 1. Get features for the model of interest
