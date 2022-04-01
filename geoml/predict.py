@@ -347,7 +347,9 @@ class Predict(Tables):
         )
         return array_img, profile, df_metadata
 
-    def _get_array_img_band_idx(self, df_metadata, names, col_header="wavelength"):
+    def _get_array_img_band_idx(
+        self, df_metadata, names, col_header="wavelength", tol=10
+    ):
         """
         Gets the index of the bands based on feature names from
         <feats_x_select>.
@@ -366,9 +368,13 @@ class Predict(Tables):
         wl_AB_sync = [self.db.sentinel_AB_sync[b] for b in band_names]
         cols = band_names if col_header == "bands" else wl_AB_sync
         keys = dict(
-            ("wl_{0:.0f}".format(col), i)
-            for i, col in enumerate(cols)
-            if "wl_{0:.0f}".format(col) in names
+            (n, cols.index(min(cols, key=lambda x: abs(x - int(n.split("_")[-1])))))
+            for n in names
+            if abs(
+                min(cols, key=lambda x: abs(x - int(n.split("_")[-1])))
+                - int(n.split("_")[-1])
+            )
+            < tol
         )
         return keys
 
@@ -390,7 +396,7 @@ class Predict(Tables):
         if any("wl_" in f for f in self.feats_x_select):
             # For now, just add null placeholders as a new column
             wl_names = [f for f in self.feats_x_select if "wl_" in f]
-            keys = self._get_array_img_band_idx(df_metadata, wl_names)
+            keys = self._get_array_img_band_idx(df_metadata, wl_names, tol=10)
             for name in wl_names:
                 df_feats[name] = keys[name]
             # TODO: Figure out how to decipher between Sentinel and other sources
