@@ -16,6 +16,7 @@ import numpy as np
 import os
 import pandas as pd
 import rasterio as rio
+from rasterio.mask import mask as rio_mask
 
 from db import DBHandler
 
@@ -445,12 +446,17 @@ class Predict(Tables):
         with rio.io.MemoryFile() as memfile:  # load array_pred as memory object
             with memfile.open(**profile_out) as ds_temp:
                 ds_temp.write(array_pred)
+
+                # convert from 4326 to utm
+                srid_utm = self.db._get_utm_epsg(gdf_bounds, how="centroid")
+
                 geometry = (
                     gdf_bounds[gdf_bounds.geometry.name]
-                    .to_crs(epsg=profile_out["crs"].to_epsg())
+                    .to_crs(epsg=srid_utm)
                     .buffer(buffer_dist)
+                    .to_crs(epsg=profile_out["crs"].to_epsg())
                 )
-                array_pred, _ = rio.mask.mask(ds_temp, geometry, crop=True)
+                array_pred, _ = rio_mask(ds_temp, geometry, crop=True)
                 # adjust profile based on geometry bounds
                 # if int(geometry.crs.utm_zone[:-1]) <= 30:
                 #     west = geometry.bounds['maxx'].item()
@@ -524,20 +530,21 @@ class Predict(Tables):
 
         df_feats = self._feats_x_select_data(df_feats, df_metadata)
         # TODO: change when we get individual functions for each wx feature
-        if any([f for f in self.feats_x_select if f in self.weather_derived.columns]):
-            primary_key_val = dict((k, gdf_pred_s[k]) for k in subset)
-            primary_key_val["date"] = self.date_predict
-            weather_derived_filter = self.weather_derived.loc[
-                (
-                    self.weather_derived[list(primary_key_val)]
-                    == pd.Series(primary_key_val)
-                ).all(axis=1)
-            ]
-            for f in set(self.feats_x_select).intersection(
-                self.weather_derived.columns
-            ):
-                # get its value from weather_derived and add to df_feats
-                df_feats[f] = weather_derived_filter[f].values[0]
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # if any([f for f in self.feats_x_select if f in self.weather_derived.columns]):
+        #     primary_key_val = dict((k, gdf_pred_s[k]) for k in subset)
+        #     primary_key_val["date"] = self.date_predict
+        #     weather_derived_filter = self.weather_derived.loc[
+        #         (
+        #             self.weather_derived[list(primary_key_val)]
+        #             == pd.Series(primary_key_val)
+        #         ).all(axis=1)
+        #     ]
+        #     for f in set(self.feats_x_select).intersection(
+        #         self.weather_derived.columns
+        #     ):
+        #         # get its value from weather_derived and add to df_feats
+        #         df_feats[f] = weather_derived_filter[f].values[0]
 
         array_X = self._fill_array_X(array_img, df_feats)
         mask = array_img[0] == 0
