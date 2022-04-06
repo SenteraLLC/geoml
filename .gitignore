@@ -132,6 +132,7 @@ dmypy.json
 
 # Scripts
 geoml/scripts
+/scripts
 
 # Docker work
 docker

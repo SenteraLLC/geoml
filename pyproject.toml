@@ -1,6 +1,5 @@
 [tool.poetry]
 name = "geoml"
-version = "0.1.1"
 description = ""
 authors = ["Your Name <you@example.com>"]
 

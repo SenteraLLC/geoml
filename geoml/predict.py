@@ -186,12 +186,7 @@ class Predict(Tables):
         assert self.primary_keys_pred != None, msg
         self.primary_keys_pred["year"] = self.date_predict.year
 
-        gdf = self.db.get_table_df("field_bounds")
-        gdf_pred = gdf.loc[
-            (
-                gdf[list(self.primary_keys_pred)] == pd.Series(self.primary_keys_pred)
-            ).all(axis=1)
-        ]
+        gdf_pred = self.db.get_table_df("field_bounds", **self.primary_keys_pred)
         subset = db_utils.get_primary_keys(gdf_pred)
         if len(gdf_pred) == 0:
             print(
@@ -230,92 +225,6 @@ class Predict(Tables):
         self.X_full_select = X_full[:, feats_x_select_idx]
         self.y_full = np.concatenate([self.train.y_train, self.train.y_test], axis=0)
         self.estimator.fit(self.X_full_select, self.y_full)
-
-    def _get_image_dates(self, tables_s2):
-        """
-        Gets the date of each image in the DB.
-        """
-        df_date = pd.DataFrame(columns=["raster_name", "date"])
-        for t_name in tables_s2:
-            date_img = t_name.split("_")[1]
-            df_temp = pd.DataFrame.from_dict(
-                {"raster_name": [t_name], "date": [date_img]}
-            )
-            df_date = df_date.append(df_temp)
-        df_date["date"] = pd.to_datetime(df_date["date"], format="%Y%m%dt%H%M%S")
-        return df_date
-
-    def _match_date(self, date_series, date=None, image_search_method="nearest"):
-        """
-        Finds the closest date from <series> based on the <image_search_method>.
-
-        Parameters:
-            image_search_method (``str``): How to search for the "nearest" date. Must be
-                one of ['nearest', 'past', 'future']. "past" returns the image
-                captured closest in the past, "future" returns the image
-                captured closest in the future, and "nearest" returns the image
-                captured closest, either in the past or future.
-            date_series (``pandas.Series``): A vector containing multiple dates
-                to choose from. The returned date will be a date that is
-                present in <date_series>.
-            date (``datetime``): The date to base the search on.
-
-        Returns:
-            date_closest: The closest date.
-            delta: The difference (in days) between <date> and <date_closest>.
-                 A positive delta indicates <date_closest> is in the past, and
-                 a negative delta indicates <date_closest> is in the future.
-        """
-        msg = "<image_search_method> must be one of ['past', 'future', 'nearest']."
-        assert image_search_method in ["past", "future", "nearest"], msg
-        if date is None:
-            date = self.date
-        if image_search_method == "nearest":
-            date_closest = min(date_series, key=lambda x: abs(x - date))
-        elif image_search_method == "past":
-            date_closest = max(i for i in date_series if i <= date)
-        elif image_search_method == "future":
-            date_closest = min(i for i in date_series if i >= date)
-        delta = (datetime.combine(date, datetime.min.time()) - date_closest).days
-        return date_closest, delta
-
-    def _find_nearest_raster_new(self, primary_key_val):
-        """
-        Find nearest raster using PostGIS SQL query.
-
-        This function will likely be replaced with a sql query in db repo.
-        """
-
-    def _find_nearest_raster(self, primary_key_val, image_search_method="past"):
-        """
-        Finds the image with the closest date to <Predict.date_predict>.
-
-        Parameters:
-            image_search_method (``str``): How to search for the "nearest" date. Must be
-                one of ['nearest', 'past', 'future']. "past" returns the image
-                captured closest in the past, "future" returns the image
-                captured closest in the future, and "nearest" returns the image
-                captured closest, either in the past or future.
-
-        Returns:
-            raster_name (``str``): The name of the raster that was captured
-                closest to <Predict.date_predict>
-        """
-        # get a list of all raster images in DB
-        tables_s2 = spatial_utils.get_table_names(
-            self.db.engine,
-            self.db.db_schema,
-            col_filter="rast",
-            row_filter=primary_key_val,
-            return_empty=False,
-        )
-        df_date = self._get_image_dates(tables_s2)
-        # compare <date> to df_date and match image date based on image_search_method
-        date_closest, delta = self._match_date(
-            df_date["date"], self.date_predict, image_search_method
-        )
-        raster_name = df_date[df_date["date"] == date_closest]["raster_name"].item()
-        return raster_name, delta
 
     def _get_X_map(self, gdf_pred_s):
         """
@@ -457,18 +366,53 @@ class Predict(Tables):
                     .to_crs(epsg=profile_out["crs"].to_epsg())
                 )
                 array_pred, _ = rio_mask(ds_temp, geometry, crop=True)
-                # adjust profile based on geometry bounds
-                # if int(geometry.crs.utm_zone[:-1]) <= 30:
-                #     west = geometry.bounds['maxx'].item()
-                # else:
-                #     west = geometry.bounds['minx'].item()
                 profile_out["transform"] = rio.transform.from_origin(
-                    geometry.bounds["minx"].item(),
-                    geometry.bounds["maxy"].item(),
+                    geometry.bounds["minx"].item() - (profile["transform"].a / 2),
+                    geometry.bounds["maxy"].item() - (profile["transform"].e / 2),
                     profile["transform"].a,
                     -profile["transform"].e,
                 )
         return array_pred, profile_out
+
+    def _update_profile(self, profile):
+        from geoml import __version__
+
+        p = deepcopy(profile)
+        if self.train is None:
+            date_train = None
+            response = None
+            band_names = ["Sentera GeoML Prediction"]
+        else:
+            date_train = self.train.date_train.strftime("%Y-%m-%d")
+            response = self.train.response_data
+            band_names = [
+                self.train.response_data["tissue"]
+                + "-"
+                + self.train.response_data["measure"]
+            ]
+
+        p.update(
+            count=1,
+            bands=1,
+            description={
+                "date_train": date_train,
+                "response": response,
+                "date_predict": self.date_predict.strftime("%Y-%m-%d"),
+                "feats_x_select": self.feats_x_select,
+                "estimator": str(self.estimator).replace(" ", "").replace("\n", ""),
+                "parameters": self.estimator.get_params(),
+                "geoml_version": __version__,
+            },
+        )
+        p["band names"] = band_names
+        del (
+            p["wavelength"],
+            p["fwhm"],
+            p["reflectance scale factor"],
+            p["sensor type"],
+            p["wavelength units"],
+        )
+        return p
 
     def predict(
         self,
@@ -553,8 +497,7 @@ class Predict(Tables):
         array_pred[np.expand_dims(mask, 0)] = 0
         if any(v is not None for v in [clip_min, clip_max]):
             array_pred = array_pred.clip(min=clip_min, max=clip_max)
-        # array_pred = np.ma.masked_array(data=array_pred, mask=mask_2d)
-        profile.update(count=1)
+        profile = self._update_profile(profile)
         if mask_by_bounds == True:
             array_pred, profile = self._mask_by_bounds(array_pred, profile, buffer_dist)
         return array_pred, profile
