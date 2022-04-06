@@ -11,6 +11,7 @@ Insight Sensing Corporation. All rights reserved.
 """
 from copy import deepcopy
 from datetime import datetime
+from functools import partial
 import geopandas as gpd
 import numpy as np
 import os
@@ -277,15 +278,14 @@ class Predict(Tables):
         band_names, wavelengths = self.db._get_band_wl_from_metadata(df_metadata)
         wl_AB_sync = [self.db.sentinel_AB_sync[b] for b in band_names]
         cols = band_names if col_header == "bands" else wl_AB_sync
-        keys = dict(
-            (n, cols.index(min(cols, key=lambda x: abs(x - int(n.split("_")[-1])))))
+
+        split_wl_to_int = lambda n: int(n.split("_")[-1])
+        get_wl_diff = lambda n, x: abs(x - split_wl_to_int(n))
+        keys = {
+            n: cols.index(min(cols, key=partial(get_wl_diff, n)))
             for n in names
-            if abs(
-                min(cols, key=lambda x: abs(x - int(n.split("_")[-1])))
-                - int(n.split("_")[-1])
-            )
-            < tol
-        )
+            if abs(min(cols, key=partial(get_wl_diff, n)) - split_wl_to_int(n)) < tol
+        }
         return keys
 
     def _feats_x_select_data(self, df_feats, df_metadata):
@@ -374,43 +374,52 @@ class Predict(Tables):
                 )
         return array_pred, profile_out
 
-    def _update_profile(self, profile):
-        from geoml import __version__
-
-        p = deepcopy(profile)
+    def _set_train_keys(self):
         if self.train is None:
             date_train = None
             response = None
+            response_units = None
             band_names = ["Sentera GeoML Prediction"]
         else:
             date_train = self.train.date_train.strftime("%Y-%m-%d")
             response = self.train.response_data
+            response_units = None  # TODO: Derive units from DB response query
             band_names = [
                 self.train.response_data["tissue"]
                 + "-"
                 + self.train.response_data["measure"]
             ]
+        return date_train, response, response_units, band_names
+
+    def _write_pred_profile(self, profile):
+        from geoml.profile_keys import (
+            PROFILE_REQUIRED_KEYS,
+            PROFILE_GTIFF_KEYS,
+            PROFILE_ENVI_BASIC_KEYS,
+            PROFILE_GEOML_KEYS,
+        )
+        from geoml import __version__
+
+        profile_keys = PROFILE_REQUIRED_KEYS.union(
+            PROFILE_GTIFF_KEYS, PROFILE_ENVI_BASIC_KEYS, PROFILE_GEOML_KEYS
+        )
+        p = {k: profile[k] for k in profile if k in profile_keys}
+        date_train, response, response_units, band_names = self._set_train_keys()
 
         p.update(
             count=1,
             bands=1,
-            description={
-                "date_train": date_train,
-                "response": response,
-                "date_predict": self.date_predict.strftime("%Y-%m-%d"),
-                "feats_x_select": self.feats_x_select,
-                "estimator": str(self.estimator).replace(" ", "").replace("\n", ""),
-                "parameters": self.estimator.get_params(),
-                "geoml_version": __version__,
-            },
-        )
-        p["band names"] = band_names
-        del (
-            p["wavelength"],
-            p["fwhm"],
-            p["reflectance scale factor"],
-            p["sensor type"],
-            p["wavelength units"],
+            description="Sentera GeoML Prediction",
+            pkeys=self.primary_keys_pred,
+            date_train=date_train,
+            response=response,
+            response_units=response_units,
+            band_names=band_names,
+            date_predict=self.date_predict.strftime("%Y-%m-%d"),
+            estimator=str(self.estimator).replace(" ", "").replace("\n", ""),
+            estimator_parameters=self.estimator.get_params(),
+            feats_x_select=self.feats_x_select,
+            geoml_version=__version__,
         )
         return p
 
@@ -497,7 +506,7 @@ class Predict(Tables):
         array_pred[np.expand_dims(mask, 0)] = 0
         if any(v is not None for v in [clip_min, clip_max]):
             array_pred = array_pred.clip(min=clip_min, max=clip_max)
-        profile = self._update_profile(profile)
+        profile = self._write_pred_profile(profile)
         if mask_by_bounds == True:
             array_pred, profile = self._mask_by_bounds(array_pred, profile, buffer_dist)
         return array_pred, profile
