@@ -1189,6 +1189,8 @@ class Tables(object):
         df.loc[:, "date"] = df.loc[:, "date"].apply(pd.to_datetime, errors="coerce")
         if not isinstance(df, gpd.GeoDataFrame):
             df = self._get_geom_from_primary_keys(df)  # Returns GeoDataFrame
+        else:
+            df = self._fill_empty_geom(df)
 
         if "field_id" in subset:
             df_join = self._spatial_join_clean_keys(df, self.as_planted)
@@ -1265,6 +1267,8 @@ class Tables(object):
         df.loc[:, "date"] = df.loc[:, "date"].apply(pd.to_datetime, errors="coerce")
         if not isinstance(df, gpd.GeoDataFrame):
             df = self._get_geom_from_primary_keys(df)  # Returns GeoDataFrame
+        else:
+            df = self._fill_empty_geom(df)
 
         if "field_id" in subset:
             df_join = self._spatial_join_clean_keys(df, self.as_planted)

@@ -332,16 +332,17 @@ class FeatureData(Tables):
                 gdf_stats = self.db.get_zonal_stats(
                     response_data=self.response_data,
                     tolerance=date_tolerance,  # days
-                    direction="nearest",  # ["nearest", "backward", "forward"]
+                    direction="nearest",  # ["nearest", "past", "future"]
                     buffer=-20,
                     stat="mean",
                     units_expression="/10000",
                     wide=True,
                 )
                 # Assumes all rasters in db.reflectance have same bands and band order
-                rast_metadata = self.db.get_table_df("reflectance", rid=1)[
-                    "rast_metadata"
-                ].item()
+                rast_metadata = pd.read_sql(
+                    "select rast_metadata from reflectance order by rid limit 1",
+                    con=self.db.engine,
+                )["rast_metadata"].item()
                 bands = ["b{0}".format(i + 1) for i in range(11)]
                 cols = [
                     "wl_{0:.0f}".format(round(wl)) for wl in rast_metadata["wavelength"]
