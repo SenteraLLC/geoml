@@ -1180,23 +1180,50 @@ class Tables(object):
             2   NNI  2019      101 2019-07-23  Petiole  NO3_ppm   1588.190000   61
         """
         subset = db_utils.get_primary_keys(df)
-        cols_require = [
-            subset + ["date", df.geometry.name]
-            if isinstance(df, gpd.GeoDataFrame)
-            else subset + ["date"]
-        ][0]
+        cols_require = subset + ["date"]
         self._check_col_names(df, cols_require)
         df.loc[:, "date"] = df.loc[:, "date"].apply(pd.to_datetime, errors="coerce")
+
+        if "id" not in df.columns:  # required for multiple geometries
+            df = self._add_id_by_subset(df, subset=cols_require)
+
         if not isinstance(df, gpd.GeoDataFrame):
             df = self._get_geom_from_primary_keys(df)  # Returns GeoDataFrame
         else:
             df = self._fill_empty_geom(df)
 
         if "field_id" in subset:
-            df_join = self._spatial_join_clean_keys(df, self.as_planted)
-        # elif 'field_id' in subset and isinstance(df, pd.DataFrame):
-        #     df_join = df.merge(predict.dates, on=subset,
-        #                         validate='many_to_one')
+            subset_plant = [
+                "date_plant",
+                "date_emerge",
+                "crop",
+                "variety",
+                "population_nha",
+                "description",
+            ]
+            df_join = None
+            for y in sorted(df["year"].unique()):
+                df_y = df[df["year"] == y]
+                plant_apps_y = self.as_planted[self.as_planted["year"] == y]
+                if df_join is None:
+                    df_join = gpd.overlay(
+                        df_y[["id"] + cols_require + ["geom"]],
+                        plant_apps_y[subset_plant + ["geom"]],
+                        how="intersection",
+                    )
+                else:
+                    df_join = pd.concat(
+                        [
+                            df_join,
+                            gpd.overlay(
+                                df_y[["id"] + cols_require + ["geom"]],
+                                plant_apps_y[subset_plant + ["geom"]],
+                                how="intersection",
+                            ),
+                        ],
+                        axis=0,
+                    )
+            df_join.rename(columns={df_join.geometry.name: "geom"}, inplace=True)
         elif "plot_id" in subset:
             on = [i for i in subset if i != "plot_id"]
             df_join = df.merge(self.dates_res, on=on, validate="many_to_one")
@@ -1210,16 +1237,11 @@ class Tables(object):
             pd.to_datetime, errors="coerce"
         )
         df_join["dae"] = (df_join["date"] - df_join["date_emerge"]).dt.days
-        df_out = df.merge(df_join[cols_require + ["dae"]], on=cols_require)
-        df_out = df_out.drop_duplicates()
+        df_out = df.drop(columns="geom").merge(
+            df_join[cols_require + ["geom", "dae"]], on=cols_require
+        )
+        df_out = df_out[list(df.drop(columns="id").columns) + ["dae"]]
         return df_out.reset_index(drop=True)
-
-        # if isinstance(df_join, gpd.GeoDataFrame):
-        #     subgeom = cols_require + [df_join.geometry.name]
-        #     df_out = df.merge(df_join[subgeom + ['dae']], on=subgeom)
-        # else:
-        #     df_out = df.merge(df_join[cols_require + ['dae']], on=cols_require)
-        # return df_out.reset_index(drop=True)
 
     def dap(self, df):
         """
@@ -1258,23 +1280,50 @@ class Tables(object):
             2   NNI  2019      101 2019-07-23  Petiole  NO3_ppm   1588.190000   82
         """
         subset = db_utils.get_primary_keys(df)
-        cols_require = [
-            subset + ["date", df.geometry.name]
-            if isinstance(df, gpd.GeoDataFrame)
-            else subset + ["date"]
-        ][0]
+        cols_require = subset + ["date"]
         self._check_col_names(df, cols_require)
         df.loc[:, "date"] = df.loc[:, "date"].apply(pd.to_datetime, errors="coerce")
+
+        if "id" not in df.columns:  # required for multiple geometries
+            df = self._add_id_by_subset(df, subset=cols_require)
+
         if not isinstance(df, gpd.GeoDataFrame):
             df = self._get_geom_from_primary_keys(df)  # Returns GeoDataFrame
         else:
             df = self._fill_empty_geom(df)
 
         if "field_id" in subset:
-            df_join = self._spatial_join_clean_keys(df, self.as_planted)
-        # elif 'field_id' in subset and isinstance(df, pd.DataFrame):
-        #     df_join = df.merge(self.dates, on=subset,
-        #                         validate='many_to_one')
+            subset_plant = [
+                "date_plant",
+                "date_emerge",
+                "crop",
+                "variety",
+                "population_nha",
+                "description",
+            ]
+            df_join = None
+            for y in sorted(df["year"].unique()):
+                df_y = df[df["year"] == y]
+                plant_apps_y = self.as_planted[self.as_planted["year"] == y]
+                if df_join is None:
+                    df_join = gpd.overlay(
+                        df_y[["id"] + cols_require + ["geom"]],
+                        plant_apps_y[subset_plant + ["geom"]],
+                        how="intersection",
+                    )
+                else:
+                    df_join = pd.concat(
+                        [
+                            df_join,
+                            gpd.overlay(
+                                df_y[["id"] + cols_require + ["geom"]],
+                                plant_apps_y[subset_plant + ["geom"]],
+                                how="intersection",
+                            ),
+                        ],
+                        axis=0,
+                    )
+            df_join.rename(columns={df_join.geometry.name: "geom"}, inplace=True)
         elif "plot_id" in subset:
             on = [i for i in subset if i != "plot_id"]
             df_join = df.merge(self.dates_res, on=on, validate="many_to_one")
@@ -1284,29 +1333,15 @@ class Tables(object):
                 "<as_planted> table for primary keys:\n{0}".format(df[subset])
             )
 
-        # print(df_join.columns)
-        # df_join.loc[:, 'date'] = df_join.loc[:, 'date'].apply(pd.to_datetime, errors='coerce')
         df_join.loc[:, "date_plant"] = df_join.loc[:, "date_plant"].apply(
             pd.to_datetime, errors="coerce"
         )
         df_join["dap"] = (df_join["date"] - df_join["date_plant"]).dt.days
-        df_out = df.merge(df_join[cols_require + ["dap"]], on=cols_require)
+        df_out = df.drop(columns="geom").merge(
+            df_join[cols_require + ["geom", "dap"]], on=cols_require
+        )
+        df_out = df_out[list(df.drop(columns="id").columns) + ["dap"]]
         return df_out.reset_index(drop=True)
-
-        # cols_require = subset + ['date']
-        # self._check_col_names(df, cols_require)
-
-        # if 'field_id' in subset:
-        #     df_join = df.merge(self.dates, on=subset,
-        #                        validate='many_to_one')
-        # elif 'plot_id' in subset:
-        #     on = [i for i in subset if i != 'plot_id']
-        #     df_join = df.merge(self.dates_res, on=on,
-        #                        validate='many_to_one')
-        # df_join['dap'] = (df_join['date']-df_join['date_plant']).dt.days
-        # df_out = df_join[cols_require + ['dap']]
-        # df_out = df.merge(df_out, on=cols_require)
-        # return df_out.reset_index(drop=True)
 
     def rate_ntd(self, df, col_rate_n="rate_n_kgha", col_rate_ntd_out="rate_ntd_kgha"):
         """
