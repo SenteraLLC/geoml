@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 16 14:42:53 2020
+Created on Tue Oct 27 19:18:16 2020
 
 TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
 Insight Sensing Corporation. All rights reserved.
@@ -9,1504 +9,623 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+from copy import deepcopy
+from datetime import datetime
+from functools import partial
+import geopandas as gpd
 import numpy as np
 import os
 import pandas as pd
-import geopandas as gpd
-from sqlalchemy import inspect
-import warnings
+import rasterio as rio
+from rasterio.io import MemoryFile
+from rasterio.mask import mask as rio_mask
 
 from db import DBHandler
-from db.table_templates import table_templates
+
+# from spatial import Imagery
 import db.utilities as db_utils
+from db.sql.sql_constructors import closest_date_sql
+
+# import spatial.utilities as spatial_utils
+from geoml import Tables
+from geoml import Training
 
 
-class Tables(object):
+class Predict(Tables):
     """
-    Class for accessing tables that contain training data. In addition to
-    accessing the data (via either local files or connecting to a database),
-    this class makes the appropriate joins and has functions available to add
-    new columns to the table(s) that may be desireable regression features.
+    ``Predict`` inherits from an instance of ``Training``, and consists of
+    variables and functions to carry out predictions on new data with the
+    previously trained models.
+
+    Some things to be determined:
+        1.  Should this class predict a single primary keyset at at time (e.g.,
+            a single owner/farm/field_id/year/date) for a given geometry? Or
+            should it look for all fields in the field_bounds table for this
+            year and try to make predictions on each one?
+            To start, just take a single field (it can be switched out for new
+            predictions pretty easily).
+        2.  Should we inherit from training, or just have the ability to pass
+            a ``Training`` instance to ``Predict``? Not having the dependence
+            on ``Training`` would be valuable so ``Predict`` could be used as
+            a standalone module where the only thing passed is the
+            tuned/trained estimator. With this, if ``Training`` is passed,
+            there might be deeper functionality not available if an estimator
+            is simply passed.
+        3.  Right now, predict() inherits from train, but we don't really want
+            the predict class to depend on train. For example, if we already
+            have a trained estimator and its corresponding params, we would like
+            to be able to run predict using that estimator. A way to implent
+            this is to have an optional parameter "train"
     """
 
     __allowed_params = (
-        "db_name",
-        "db_host",
-        "db_user",
-        "password",
-        "db_schema",
-        "db_port",
-        "db",
-        "base_dir_data",
-        "table_names",
+        "train",
+        "estimator",
+        "feats_x_select",
+        "date_predict",
+        "primary_keys_pred",
+        "gdf_pred",
+        "image_search_method",
+        "refit_X_full",
+        "dir_out_pred",
     )
 
     def __init__(self, **kwargs):
-        """
-        Parameters:
-            base_dir_data (``str``): The base directory containing all the
-                tables available to be joined. Ignored if there is a valid
-                connection to a database.
-            table_names (``dict`` of ``str``): The filenames of the various
-                tables; these files must be in ``base_dir_data``. Ignored if
-                there is a valid connection to a database.
+        """ """
+        super(Predict, self).__init__(**kwargs)
+        self.load_tables()
+        # super(Predict, self).__init__(**kwargs)
+        # self.train(**kwargs)
 
-        Note:
-            To set the DB password in via keyring, adapt the following:
-            >>> db_name = 'test_db_pw'
-            >>> db_host = 'localhost'
-            >>> db_user = 'postgres'
-            >>> password = 'my_db_pw2!'
-            >>> service_name = '@'.join((db_name, db_host))  # 'test_db_pw@localhost'
-            >>> keyring.set_password(service_name, db_user, password)
-        """
-        self.db_name = None
-        self.db_host = None
-        self.db_user = None
-        self.password = (
-            None  # password does not have to be passsed if stored in local keyring
-        )
-        self.db_schema = None
-        self.db_port = None
-        self.db = None
-        self.base_dir_data = None
-        self.table_names = {
-            "experiments": "experiments.geojson",
-            "dates_res": "dates_res.csv",
-            "trt": "trt.csv",
-            "trt_n": "trt_n.csv",
-            "trt_n_crf": "trt_n_crf.csv",
-            "obs_tissue_res": "obs_tissue_res.geojson",
-            "obs_soil_res": "obs_soil_res.geojson",
-            "rs_cropscan_res": "rs_cropscan.csv",
-            "rs_micasense_res": "rs_micasense.csv",
-            "rs_spad_res": "rs_spad.csv",
-            "field_bounds": "field_bounds.geojson",
-            "dates": "dates.csv",
-            "as_planted": "as_planted.geojson",
-            "n_applications": "n_applications.geojson",
-            "obs_tissue": "obs_tissue.geojson",
-            "obs_soil": "obs_soil.geojson",
-            "rs_sentinel": "rs_sentinel.geojson",
-            "reflectance": "reflectance.geojson",
-            "weather": "weather.csv",
-            "weather_derived": "calc_weather.csv",
-            "weather_derived_res": "calc_weather_res.csv",
-        }
+        self.train = None  # geoml train object
+        self.loc_df_test = None
+        self.estimator = None
+        self.feats_x_select = None
+        self.date_predict = datetime.now().date()  # when
+        self.primary_keys_pred = {
+            "owner": None,
+            "farm": None,
+            "field_id": None,
+            "year": None,
+        }  # year isn't necessary; overwritten by date_predict.year
+        self.gdf_pred = None  # where
+        self.image_search_method = "past"
+        self.refit_X_full = False
+        self.dir_out_pred = None
 
-        self._set_params_from_kwargs_t(**kwargs)
-        self._set_attributes_t(**kwargs)
+        self._set_attributes_pred()
+        self._set_params_from_kwargs_pred(**kwargs)
 
-        # The following are "temporary" tables, in that they need to find a
-        # home in the DB (stored), or we have to come up with a solution to
-        # derive them on demand (derived).
-        # self.weather_derived = pd.read_csv(os.path.join(
-        #     self.base_dir_data, self.table_names['weather_derived']))
-
-    def _set_params_from_dict_t(self, config_dict):
+    def _set_params_from_dict_pred(self, config_dict):
         """
         Sets any of the parameters in ``config_dict`` to self as long as they
         are in the ``__allowed_params`` list
         """
-        if config_dict is not None and "Tables" in config_dict:
-            params_jt = config_dict["Tables"]
-        elif config_dict is not None and "Tables" not in config_dict:
-            params_jt = config_dict
+        if config_dict is not None and "Predict" in config_dict:
+            params_p = config_dict["Predict"]
+        elif config_dict is not None and "Predict" not in config_dict:
+            params_p = config_dict
         else:  # config_dict is None
             return
-
-        for k, v in params_jt.items():
+        for k, v in params_p.items():
             if k in self.__class__.__allowed_params:
                 setattr(self, k, v)
 
-        if params_jt["db"] is not None:  # db takes precedence over all db settings
-            setattr(self, "db_name", params_jt["db"].db_name)
-            setattr(self, "db_host", params_jt["db"].db_host)
-            setattr(self, "db_user", params_jt["db"].db_user)
-            setattr(self, "db_schema", params_jt["db"].db_schema)
-            setattr(self, "db_port", params_jt["db"].db_port)
-        # else:
-        #     self._connect_to_db()
-
-    def _set_params_from_kwargs_t(self, **kwargs):
+    def _set_params_from_kwargs_pred(self, **kwargs):
         """
         Sets any of the passed kwargs to self as long as long as they are in
         the ``__allowed_params`` list. Notice that if 'config_dict' is passed,
         then its contents are set before the rest of the kwargs, which are
-        passed to ``FeatureData`` more explicitly.
+        passed to ``Prediction`` more explicitly.
         """
         if "config_dict" in kwargs:
-            self._set_params_from_dict_t(kwargs.get("config_dict"))
-            # self._connect_to_db()
+            config_dict = kwargs.get("config_dict")
+            self._set_params_from_dict_pred(config_dict)
+        else:
+            config_dict = None
 
-        # db_creds_old = [self.db_name, self.db_host, self.db_user,
-        #                 self.db_schema, self.db_port]
-        if len(kwargs) > 0:  # this evaluates to False if empty dict ({})
+        if config_dict is not None and "Predict" in config_dict:
+            params_p = config_dict["Predict"]
+        elif config_dict is not None and "Predict" not in config_dict:
+            params_p = config_dict
+        else:
+            params_p = deepcopy(kwargs)
+
+        if len(kwargs) > 0:
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
-            if "db" in kwargs:
-                setattr(self, "db_name", kwargs["db"].db_name)
-                setattr(self, "db_host", kwargs["db"].db_host)
-                setattr(self, "db_user", kwargs["db"].db_user)
-                setattr(self, "db_schema", kwargs["db"].db_schema)
-                setattr(self, "db_port", kwargs["db"].db_port)
-            # else:
-            #     db_creds_new = [self.db_name, self.db_host, self.db_user,
-            #                     self.db_schema, self.db_port]
-            #     if db_creds_new != db_creds_old:  # Only connects/reconnects if something changed
-            #         self._connect_to_db()
-        if self.db is None:
-            self._connect_to_db()
 
-    def _connect_to_db(self):
-        """
-        Using DBHandler, tries to make a connection to ``tables.db_name``.
-        """
-        msg = (
-            "To connect to the DB, all of the following variables must "
-            "be passed to ``Tables`` (either directly or via the config "
-            "file): [db_name, db_host, db_user, db_schema, db_port]"
-        )
+        if self.date_predict is None:
+            self.date_predict = datetime.now().date()
+        elif isinstance(self.date_predict, str):
+            try:
+                self.date_predict = datetime.strptime(self.date_predict, "%Y-%m-%d")
+            except ValueError as e:
+                raise ValueError(
+                    "{0}.\nPlease either pass a datetime object, or a string "
+                    'in the "YYYY-mm-dd" format.'.format(e)
+                )
+
+        if isinstance(self.train, Training) and self.loc_df_test:
+            if self.estimator and self.feats_x_select:
+                print(
+                    "<predict.estimator> and <predict.feats_x_select> are "
+                    "being overwritten by <predict.train.df_test.loc[loc_df_test]>"
+                )
+            self.estimator = self.train.df_test.loc[self.loc_df_test, "regressor"]
+            self.feats_x_select = self.train.df_test.loc[
+                self.loc_df_test, "feats_x_select"
+            ]
+
+        if not self.db and isinstance(self.train, Training):
+            if self.train.db:
+                self.db = self.train.db
         if (
-            any(
-                v is None
-                for v in [
-                    self.db_name,
-                    self.db_host,
-                    self.db_user,
-                    self.db_schema,
-                    self.db_port,
-                ]
-            )
-            == True
+            not isinstance(self.gdf_pred, gpd.GeoDataFrame)
+            or "primary_keys_pred" in kwargs
+            or "primary_keys_pred" in params_p
         ):
-            print(msg)
-            return
+            self._load_field_bounds()
 
-        self.db = DBHandler(
-            database=self.db_name,
-            host=self.db_host,
-            user=self.db_user,
-            password=self.password,
-            port=self.db_port,
-            schema=self.db_schema,
-        )
+        if self.refit_X_full is True:
+            if "estimator" in kwargs or "estimator" in params_p:
+                self._refit_on_full_X()
 
-        if not isinstance(self.db, DBHandler):
-            print(
-                "Failed to connect to database via DBHanlder. Please check "
-                "DB credentials."
-            )
-
-    def _set_attributes_t(self, **kwargs):
+    def _set_attributes_pred(self):
         """
         Sets any class attribute to ``None`` that will be created in one of the
-        user functions
+        user functions from the ``feature_selection`` class
         """
-        self.experiments = None
-        self.dates_res = None
-        self.trt = None
-        self.trt_n = None
-        self.trt_n_crf = None
-        self.obs_tissue_res = None
-        self.obs_soil_res = None
-        self.rs_cropscan_res = None
-        self.rs_micasense_res = None
-        self.rs_spad_res = None
-        self.field_bounds = None
-        self.dates = None
-        self.as_planted = None
-        self.n_applications = None
-        self.obs_tissue = None
-        self.obs_soil = None
-        self.rs_sentinel = None
-        self.weather = None
+        self.X_full = None
+        self.y_full = None
 
-        self.weather_derived = (
-            None  # Not sure if this will be a derived or stored table
-        )
-        self.weather_derived_res = None
-
-    def _cr_rate_ntd(self, df):
+    def _load_field_bounds(self):
         """
-        join_tables.rate_ntd() must sum all the N rates before a particular
-        date within each study/year/plot_id combination. Therefore, there can
-        NOT be duplicate rows of the metadata when using
-        join_tables.rate_ntd(). This function ensures that there is not
-        duplicate metadata information in df.
+        Loads field bounds from DB.
+        """
+        msg = "<primary_keys_pred> must be set to load field bounds from DB."
+        assert self.primary_keys_pred != None, msg
+        self.primary_keys_pred["year"] = self.date_predict.year
+
+        gdf_pred = self.db.get_table_df("field_bounds", **self.primary_keys_pred)
+        subset = db_utils.get_primary_keys(gdf_pred)
+        if len(gdf_pred) == 0:
+            print(
+                "No field boundaries were loaded. Please be sure "
+                "<primary_keys_pred> is properly set and that it "
+                "corresponds to an actual field boundary.\n"
+                "<primary_keys_pred>: {0}".format(self.primary_keys_pred)
+            )
+        else:
+            print("Field boundaries were loaded for the following field(s):")
+            for _, r in gdf_pred[subset].iterrows():
+                print(r.to_string() + "\n")
+        self.gdf_pred = gdf_pred
+
+    def _refit_on_full_X(self):
+        """
+        Refits
         """
         msg = (
-            "There can NOT be duplicate rows of the metadata in the ``df`` "
-            "passed to ``join_tables.rate_ntd()``. Please filter ``df`` so "
-            "there are not duplicate metadata rows.\n\nHint: is ``df`` "
-            "in a long format with multiple types of data (e.g., vine N "
-            "and tuber N)?\n..or does ``df`` contain subsamples?"
+            "To refit the estimator on the full X matrix, an instance "
+            "of the ``Train`` class must be passed as a parameter to "
+            "``Predict`` so that ``X_full`` and ``y_full`` can be "
+            "created."
         )
-        # cols = ['owner', 'study', 'year', 'plot_id', 'date']
-        subset = db_utils.get_primary_keys(df)
-        # if df.groupby(cols).size()[0].max() > 1:
-        if df.groupby(subset + ["date"]).size()[0].max() > 1:
-            raise AttributeError(msg)
+        assert self.train is not None, msg
+        print("Refitting estimator on full X matrix.")
+        X_full = np.concatenate([self.train.X_train, self.train.X_test], axis=0)
 
-    # def _check_requirements(self, df, table_or_feat, date_format='%Y-%m-%d'):
-    #     '''
-    #     Checks that ``df`` has all of the correct columns and that they contain
-    #     the correct data types
-
-    #     Parameters:
-    #         df (``pandas.DataFrame``): the input DataFrame
-    #         table_name (``str``): the function calling the _check_requirements()
-    #             function. This is used to access join_tables.msg_require, which
-    #             contains all the messages to be raised if the correct columns
-    #             are not in ``df``. If ``None``, just assumes ``df`` should
-    #             contain ["study", "year", and "plot_id"]
-    #     '''
-    #     self.cols_require = {
-    #         'df_dates': ['owner', 'study', 'year', 'date_plant', 'date_emerge'],
-    #         # 'df_exp': ['owner', 'study', 'year', 'plot_id', 'rep', 'trt_id'],
-    #         'df_exp': ['owner', 'study', 'year', 'plot_id', 'trt_id'],
-    #         'df_trt': ['owner', 'study', 'year', 'trt_id', 'trt_n', 'trt_var', 'trt_irr'],
-    #         'df_n_apps': ['owner', 'study', 'year', 'trt_n', 'date_applied', 'source_n', 'rate_n_kgha'],
-    #         'df_n_crf': ['owner', 'study', 'year', 'date_applied', 'source_n', 'b0', 'b1', 'b2', 'b2'],
-    #         'df_wx': ['owner', 'study', 'year', 'date'],
-    #         }
-
-    # def _check_requirements_custom(
-    #         self, df, date_cols=['date'], by=['owner', 'study', 'year', 'plot_id'],
-    #         date_format='%Y-%m-%d'):
-    #     '''
-    #     Checks that ``df`` has all of the correct columns and that they contain
-    #     the correct data types
-
-    #     Parameters:
-    #         df (``pandas.DataFrame``): the input DataFrame
-    #         f (``str``): the function calling the _check_requirements()
-    #             function. This is used to access join_tables.msg_require, which
-    #             contains all the messages to be raised if the correct columns
-    #             are not in ``df``. If ``None``, just assumes ``df`` should
-    #             contain ["study", "year", and "plot_id"]
-    #     '''
-    #     if not isinstance(date_cols, list):
-    #         date_cols = [date_cols]
-    #     cols_require = by.copy()
-    #     cols_require.extend(date_cols)
-
-    #     msg = ('The following columns are required in ``df``: {0}. Please '
-    #            'check that each of these column names are in "df.columns".'
-    #            ''.format(cols_require))
-    #     if not all(i in df.columns for i in cols_require):
-    #         raise AttributeError(msg)
-
-    #     n_dt = len(df.select_dtypes(include=[np.datetime64]).columns)
-    #     if n_dt < len(date_cols):
-    #         for d in date_cols:
-    #             df[d] = pd.to_datetime(df.loc[:, d], format=date_format)
-    #     return df
-
-    # TODO: check each of the column data types if they must be particular (e.g., datetime)
-
-    # def _read_dfs(self, date_format='%Y-%m-%d'):
-    #     '''
-    #     Read in all to dataframe tables and convert date columns to datetime
-    #     '''
-    #     df_dates = pd.read_csv(self.fnames['dates'])
-    #     df_dates = self._check_requirements(df_dates, f='df_dates', date_format=date_format)
-    #     self.df_dates = df_dates
-
-    #     df_exp = pd.read_csv(self.fnames['experiments'])
-    #     df_exp = self._check_requirements(df_exp, f='df_exp', date_format=date_format)
-    #     self.df_exp = df_exp
-
-    #     df_trt = pd.read_csv(self.fnames['treatments'])
-    #     df_trt = self._check_requirements(df_trt, f='df_trt', date_format=date_format)
-    #     self.df_trt = df_trt
-
-    #     df_n_apps = pd.read_csv(self.fnames['n_apps'])
-    #     df_n_apps = self._check_requirements(df_n_apps, f='df_n_apps', date_format=date_format)
-    #     self.df_n_apps = df_n_apps
-
-    #     df_n_crf = pd.read_csv(self.fnames['n_crf'])
-    #     df_n_crf = self._check_requirements(df_n_crf, f='df_n_crf', date_format=date_format)
-    #     self.df_n_crf = df_n_crf
-
-    #     df_wx = pd.read_csv(self.fnames['wx'])
-    #     df_wx = self._check_requirements(df_wx, f='df_wx', date_format=date_format)
-    #     self.df_wx = df_wx
-
-    def _load_tables(
-        self, tissue_col="tissue", measure_col="measure", value_col="value"
-    ):
-        """
-        Loads the appropriate table based on the value passed for ``tissue``,
-        then filters observations according to
-        """
-        print("loading tables....")
-        fname_obs_tissue = os.path.join(self.base_dir_data, self.fname_obs_tissue)
-        df_obs_tissue = self._read_csv_geojson(fname_obs_tissue)
-        self.labels_y_id = [tissue_col, measure_col]
-        self.label_y = value_col
-        self.df_obs_tissue = df_obs_tissue[pd.notnull(df_obs_tissue[value_col])]
-
-        # get all unique combinations of tissue and measure cols
-        tissue = (
-            df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False)
-            .first()[tissue_col]
-            .tolist()
-        )
-        measure = (
-            df_obs_tissue.groupby(by=[measure_col, tissue_col], as_index=False)
-            .first()[measure_col]
-            .tolist()
-        )
-        for tissue, measure in zip(tissue, measure):
-            df = self.df_obs_tissue[
-                (self.df_obs_tissue[measure_col] == measure)
-                & (self.df_obs_tissue[tissue_col] == tissue)
-            ]
-            if tissue == "tuber" and measure == "biomdry_Mgha":
-                self.df_tuber_biomdry_Mgha = df.copy()
-            elif tissue == "vine" and measure == "biomdry_Mgha":
-                self.df_vine_biomdry_Mgha = df.copy()
-            elif tissue == "wholeplant" and measure == "biomdry_Mgha":
-                self.df_wholeplant_biomdry_Mgha = df.copy()
-            elif tissue == "tuber" and measure == "biomfresh_Mgha":
-                self.df_tuber_biomfresh_Mgha = df.copy()
-            elif tissue == "canopy" and measure == "cover_pct":
-                self.df_canopy_cover_pct = df.copy()
-            elif tissue == "tuber" and measure == "n_kgha":
-                self.df_tuber_n_kgha = df.copy()
-            elif tissue == "vine" and measure == "n_kgha":
-                self.df_vine_n_kgha = df.copy()
-            elif tissue == "wholeplant" and measure == "n_kgha":
-                self.df_wholeplant_n_kgha = df.copy()
-            elif tissue == "tuber" and measure == "n_pct":
-                self.df_tuber_n_pct = df.copy()
-            elif tissue == "vine" and measure == "n_pct":
-                self.df_vine_n_pct = df.copy()
-            elif tissue == "wholeplant" and measure == "n_pct":
-                self.df_wholeplant_n_pct = df.copy()
-            elif tissue == "petiole" and measure == "no3_ppm":
-                self.df_petiole_no3_ppm = df.copy()
-
-        fname_cropscan = os.path.join(self.base_dir_data, self.fname_cropscan)
-        if os.path.isfile(fname_cropscan):
-            df_cs = self._read_csv_geojson(fname_cropscan)
-            subset = db_utils.get_primary_keys(df_cs)
-            self.df_cs = df_cs.groupby(subset + ["date"]).mean().reset_index()
-        fname_sentinel = os.path.join(self.base_dir_data, self.fname_sentinel)
-        if os.path.isfile(fname_sentinel):
-            df_sentinel = self._read_csv_geojson(fname_sentinel)
-            df_sentinel.rename(columns={"acquisition_time": "date"}, inplace=True)
-            subset = db_utils.get_primary_keys(df_sentinel)
-            self.df_sentinel = (
-                df_sentinel.groupby(subset + ["date"]).mean().reset_index()
-            )
-        fname_wx = os.path.join(self.base_dir_data, self.fname_wx)
-        if os.path.isfile(fname_wx):
-            df_wx = self._read_csv_geojson(fname_wx)
-            subset = db_utils.get_primary_keys(df_sentinel)
-            subset = [i for i in subset if i not in ["field_id", "plot_id"]]
-            self.df_wx = df_wx.groupby(subset + ["date"]).mean().reset_index()
-        # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
-
-    def _load_table_from_db(self, table_name):
-        """
-        Loads <table_name> from database via <Table.db>
-        """
-        inspector = inspect(self.db.engine)
-        if table_name in inspector.get_table_names(schema=self.db.db_schema):
-            df = self.db.get_table_df(table_name)
-            if len(df) > 0:
-                return df
-
-    def _read_csv_geojson(self, fname):
-        """
-        Depending on file extension, will read from either pd or gpd
-        """
-        if os.path.splitext(fname)[-1] == ".csv":
-            df = pd.read_csv(fname)
-        elif os.path.splitext(fname)[-1] == ".geojson":
-            df = gpd.read_file(fname)
-        else:
-            raise TypeError("<fname_sentinel> must be either a .csv or " ".geojson...")
-        return df
-
-    def _load_table_from_file(self, table_name, fname):
-        """
-        Loads <table_name> from file.
-        """
-        fname_full = os.path.join(self.base_dir_data, fname)
-        if os.path.isfile(fname_full):
-            df = self._read_csv_geojson(fname_full)
-            if len(df) > 0:
-                return df
-
-    def _get_table_from_self(self, table_name):
-        """
-        Gets table as df from self based on table_name
-        """
-        if table_name == "experiments":
-            return self.experiments
-        if table_name == "dates_res":
-            return self.dates_res
-        if table_name == "trt":
-            return self.trt
-        if table_name == "trt_n":
-            return self.trt_n
-        if table_name == "trt_n_crf":
-            return self.trt_n_crf
-        if table_name == "obs_tissue_res":
-            return self.obs_tissue_res
-        if table_name == "obs_soil_res":
-            return self.obs_soil_res
-        if table_name == "rs_cropscan_res":
-            return self.rs_cropscan_res
-        if table_name == "rs_micasense_res":
-            return self.rs_micasense_res
-        if table_name == "rs_spad_res":
-            return self.rs_spad_res
-        if table_name == "field_bounds":
-            return self.field_bounds
-        if table_name == "dates":
-            return self.dates
-        if table_name == "as_planted":
-            return self.as_planted
-        if table_name == "n_applications":
-            return self.n_applications
-        if table_name == "obs_tissue":
-            return self.obs_tissue
-        if table_name == "obs_soil":
-            return self.obs_soil
-        if table_name == "rs_sentinel":
-            return self.rs_sentinel
-        if table_name == "weather":
-            return self.weather
-        if table_name == "weather_derived":
-            return self.weather_derived
-        if table_name == "weather_derived_res":
-            return self.weather_derived_res
-
-    def _set_table_to_self(self, table_name, df):
-        """
-        Sets df to appropriate variable based on table_name
-        """
-        msg = 'The following columns are required in "{0}". Missing columns: ' '"{1}".'
-        # print(table_name)
-        if self.db is not None:
-            engine = self.db.engine
-            db_schema = self.db.db_schema
-        else:
-            engine, db_schema = None, None
-        cols_require, _ = db_utils.get_cols_nullable(
-            table_name, engine=engine, db_schema=db_schema
-        )
-        cols_require = [item for item in cols_require if item != "id"]
-        if not all(i in df.columns for i in cols_require):
-            cols_missing = list(sorted(set(cols_require) - set(df.columns)))
-            raise AttributeError(msg.format(table_name, cols_missing))
-
-        # for c in cols_require:
-        #     if 'date' in c or 'time' in c:
-        # df.loc[:, c] = pd.to_datetime(df.loc[:, c], format=date_format)
-
-        if table_name == "experiments":
-            self.experiments = df
-        if table_name == "dates_res":
-            self.dates_res = df
-        if table_name == "trt":
-            self.trt = df
-        if table_name == "trt_n":
-            self.trt_n = df
-        if table_name == "trt_n_crf":
-            self.trt_n_crf = df
-        if table_name == "obs_tissue_res":
-            self.obs_tissue_res = df
-        if table_name == "obs_soil_res":
-            self.obs_soil_res = df
-        if table_name == "rs_cropscan_res":
-            self.rs_cropscan_res = df
-        if table_name == "rs_micasense_res":
-            self.rs_micasense_res = df
-        if table_name == "rs_spad_res":
-            self.rs_spad_res = df
-        if table_name == "field_bounds":
-            self.field_bounds = df
-        if table_name == "as_planted":
-            self.as_planted = df
-        if table_name == "dates":
-            self.dates = df
-        if table_name == "n_applications":
-            self.n_applications = df
-        if table_name == "obs_tissue":
-            self.obs_tissue = df
-        if table_name == "obs_soil":
-            self.obs_soil = df
-        if table_name == "rs_sentinel":
-            self.rs_sentinel = df
-        if table_name == "weather":
-            self.weather = df
-        if table_name == "weather_derived":
-            self.weather_derived = df
-        if table_name == "weather_derived_res":
-            self.weather_derived_res = df
-
-    def _check_col_names(self, df, cols_require):
-        """
-        Checks to be sure all of the required columns are in <df>.
-
-        Raises:
-            AttributeError if <df> is missing any of the required columns.
-        """
-        if not all(i in df.columns for i in cols_require):
-            cols_missing = list(sorted(set(cols_require) - set(df.columns)))
-            raise AttributeError(
-                "<df> is missing the following required "
-                "columns: {0}.".format(cols_missing)
-            )
-
-    def _dt_or_ts_to_date(self, df, col_date, date_format="%Y-%m-%d"):
-        """
-        Checks if <col> is a valid datetime or timestamp column. If not, sets
-        it as such as a <datetime.date> object.
-
-        Returns:
-            df
-        """
-        if not pd.core.dtypes.common.is_datetime64_any_dtype(df[col_date]):
-            df[col_date] = pd.to_datetime(df.loc[:, col_date], format=date_format)
-        df[col_date] = df[col_date].dt.date
-        df[col_date] = pd.to_datetime(
-            df[col_date]
-        )  # convert to datetime so pd.merge is possible
-
-        # if isinstance(df[col_date].iloc[0], pd._libs.tslibs.timestamps.Timestamp):
-        #     df[col_date] = df[col_date].to_datetime64()
-        return df
-
-    def _add_date_delta(self, df_join, left_on, right_on, delta_label=None):
-        """
-        Adds "date_delta" column to <df_join>
-        """
-        idx_delta = df_join.columns.get_loc(right_on)
-        if delta_label is None:
-            date_delta_str = "date_delta"
-        else:
-            date_delta_str = "date_delta_{0}".format(delta_label)
-        df_join.insert(idx_delta + 1, date_delta_str, None)
-        df_join[date_delta_str] = (df_join[left_on] - df_join[right_on]).astype(
-            "timedelta64[D]"
-        )
-        df_join = df_join[pd.notnull(df_join[date_delta_str])]
-        return df_join, date_delta_str
-
-    def _check_empty_geom(self, df):
-        """Issues a warning if there is empty geometry in <df>."""
-        msg1 = (
-            "Some geometries are empty and will not result in joins on those "
-            "rows. Either pass as a normal dataframe with no geometry, or add "
-            "the appropriate geometry for all rows."
-        )
-        msg2 = (
-            "A geodataframe was passed to ``join_closest_date()``, but all "
-            "geometries are empty and thus no rows will be joined. Please "
-            "either pass as a normal dataframe with no geometry, or add in "
-            "the appropriate geometry."
-        )
-        if all(df[df.geometry.name].is_empty):
-            raise ValueError(msg2)
-        if any(df[df.geometry.name].is_empty):
-            warnings.warn(msg1, category=RuntimeWarning, stacklevel=1)
-
-    def _join_geom_date(
-        self, df_left, df_right, left_on, right_on, tolerance=3, delta_label=None
-    ):
-        """
-        Merges on geometry, then keeps only closest date.
-
-        The problem here is that pd.merge_asof() requires the data to be sorted
-        on the keys to be joined, and because geometry cannot be sorted
-        inherently, this will not work for tables/geodataframes that are able
-        to support multiple geometries for a given set of primary keys.
-
-        Method:
-            0. For any empty geometry, we assume we are missing field_bounds
-            and thus do not have Sentinel imagery.
-            1. Many to many spatial join between df_left and df_right; this
-            will probably result in 10x+ data rows.
-            2. Remove all rows whose left geom does not "almost eqaul" the
-            right geom (using gpd.geom_almost_equals()).
-            3. Remove all rows whose left date is outside the tolerance of the
-            right date.
-            4. Finally, choose the columns to keep and tidy up df.
-
-        Parameters:
-            delta_label (``str``): Used to set the column name of the
-                "delta_date" by appending <delta_label> to "delta_date"
-                (e.g., "delta_date_mylabel"). Will only be set if <tolerance>
-                is greater than zero.
-        """
-        subset_left = db_utils.get_primary_keys(df_left)
-        subset_right = db_utils.get_primary_keys(df_right)
-        # Get names of geometry columns
-        geom_l = df_left.geometry.name + "_l"
-        geom_r = df_right.geometry.name + "_r"
-
-        # Missing geometry will get filtered out here
-        df_merge1 = df_left.merge(
-            df_right,
-            how="inner",
-            on=subset_left,
-            suffixes=["_l", "_r"],
-            validate="many_to_many",
-        )
-        # Grab geometry for each df; because zonal stats were retrieved based
-        # on obs_tissue geom, we can keep observations that geometry is equal.
-        gdf_merge1_l = gpd.GeoDataFrame(df_merge1[geom_l], geometry=geom_l)
-        gdf_merge1_r = gpd.GeoDataFrame(df_merge1[geom_r], geometry=geom_r)
-        # Remove all rows whose left geom does not "almost eqaul" right geom
-        df_sjoin2 = df_merge1[gdf_merge1_l.geom_almost_equals(gdf_merge1_r, 8)].copy()
-        left_on2 = left_on + "_l"
-        right_on2 = right_on + "_r"
-        df_sjoin2.rename(columns={left_on: left_on2, right_on: right_on2}, inplace=True)
-        # Add "date_delta" column
-        # if tolerance == 0:
-        #     df_sjoin2.dropna(inplace=True)
-        # elif tolerance > 0:
-        df_sjoin2, delta_label_out = self._add_date_delta(
-            df_sjoin2, left_on=left_on2, right_on=right_on2, delta_label=delta_label
-        )
-        df_sjoin2.dropna(inplace=True)
-        # idx_delta = df_sjoin2.columns.get_loc(left_on2)
-        # df_sjoin2.insert(
-        #     idx_delta+1, 'date_delta',
-        #     (df_sjoin2[left_on2]-df_sjoin2[right_on2]).astype('timedelta64[D]'))
-        # Remove rows whose left date is outside tolerance of the right date.
-        df_delta = df_sjoin2[abs(df_sjoin2[delta_label_out]) <= tolerance]
-
-        # Because a left row may have multiple matches with the right <df>,
-        # keep only the one that is the closest. First, find duplicate rows.
-        subset = subset_left + [left_on2, geom_r]
-        df_dup = df_delta[df_delta.duplicated(subset=subset, keep=False)]
-        # Next, find row with lowest date_delta; if same, just get first.
-        df_keep = pd.DataFrame(
-            data=[], columns=df_dup.columns
-        )  # df for selected entries
-        df_keep = df_keep.astype(df_dup.dtypes.to_dict())
-        df_unique = df_dup.drop_duplicates(subset=subset, keep="first")[subset]
-        for idx, row in df_unique.iterrows():  # Unique subset cols only
-            # The magic to get duplicate of a particular unique non-null group
-            df_filtered = df_dup[df_dup[row.index].isin(row.values).all(1)]
-            # Find index where delta is min and append it to df_keep
-            idx_min = abs(df_filtered[delta_label_out]).idxmin(axis=0, skipna=True)
-            # df_keep = df_keep.append(df_filtered.loc[idx_min, :])
-            df_keep = pd.concat([df_keep, df_filtered.loc[idx_min, :]], axis=0)
-        df_join = df_delta.drop_duplicates(subset=subset, keep=False)
-        # df_join = df_join.append(df_keep)
-        df_join = pd.concat([df_join, df_keep], axis=0)
-        df_join = df_join[pd.notnull(df_join[delta_label_out])]
-        # drop right join columns,
-        if geom_l in df_join.columns:
-            df_join = gpd.GeoDataFrame(df_join, geometry=geom_l)
-            df_join.rename(columns={geom_l: "geom"}, inplace=True)
-            df_join.set_geometry(col="geom", inplace=True)
-        df_join.rename(columns={left_on2: left_on}, inplace=True)
-        cols_drop = [
-            c + side
-            for side in ["_l", "_r"]
-            for c in ["id", "geom", "geometry"]
-            if c + side in df_join.columns
-        ] + [right_on2]
-        df_join.drop(columns=cols_drop, inplace=True)
-        return df_join
-
-    def _add_id_by_subset(self, df, subset, col_id="id"):
-        """
-        Adds a new column named 'id' to <df> based on unique subset values.
-        """
-        df_unique_id = df.drop_duplicates(subset=subset, keep="first").sort_values(
-            by=subset
-        )[subset]
-        df_unique_id.insert(0, "id", list(range(len(df_unique_id))))
-        df_id = df.merge(df_unique_id, on=subset)
-        df_id = df_id[["id"] + [c for c in df_id.columns if c != "id"]]
-        return df_id
-
-    def _find_unique_geom(self, df):
-        """
-        Finds the unique geometries in <df> and adds a new column as UID.
-
-        GeoML utilities?
-        """
-        df = df.reset_index(drop=True)
-        df_copy = df.copy()
-        df_copy.loc[:, "unique_geom"] = None
-
-        uid = 0
-        for i, r in df.iterrows():
-            # break
-            if df_copy.loc[i, "unique_geom"] is not None:
-                continue  # skip if already found
-            else:
-                df_copy.loc[
-                    df_copy.geom_almost_equals(r.geom, align=False), "unique_geom"
-                ] = uid
-                uid += 1
-        return df_copy
-
-    def _calc_ntd_with_geom(
-        self, df, df_join, col_rate_n, col_rate_ntd_out, col_id="id"
-    ):
-        """
-        Calculates nitrogen applied to date for a geodataframe potentially
-        having multiple geometries in the same "subset".
-
-        The issue is that with multiple geometries in the same field_id, the
-        N applications are being added across geometries all towards the same
-        field_id and it is mis-calculated as being much higher N rate than it
-        actually was. By separating, we can add up N applied thus far for
-        fields with a single geometry, then handle fields with mutliple
-        geometries separate.
-            # 0. Separate between primary key rows that are unique (those with
-            # only a single geometry), and those that aren't (those with
-            # multiple geometries).
-        Note:
-            <df> should already have the join with the <n_applications> table.
-        """
-        subset = db_utils.get_primary_keys(df)
-        cols_require = subset + ["date"]  # Unique subset for which to calculate NTD
-
-        if col_id not in df_join.columns:  # required for multiple geometries
-            df_join = self._add_id_by_subset(
-                df_join, subset=cols_require, col_id=col_id
-            )
-
-        # 1. Get all unique geometries for each year
-        # subgeom = subset + [df_join.geometry.name]
-        # df_unique = df_join[~df_join.duplicated(
-        #     subset=subgeom, keep='first')][subgeom]
-
-        # # 2. Separate fields with only a single geometry from those with
-        # # multiple geometries by checking <df_unique> subset.
-        # df_subset_1_geom = df_unique[~df_unique.duplicated(
-        #     subset=subset, keep=False)][subgeom]
-        # df_subset_mult_geom = df_unique[df_unique.duplicated(
-        #     subset=subset, keep=False)][subgeom]
-
-        # # 3. Combine single and multiple geometries, and get N app info
-        # df_single_mult = pd.concat([df_subset_1_geom, df_subset_mult_geom],
-        #                            ignore_index=True)
-        # df_join_single_mult = df_join.merge(  # get N app info for all dates
-        #     df_single_mult, on=subgeom)
-
-        # 4. Calculate N applied to date, and merge with original <df>
-        # df_ntd = df_join_single_mult.groupby(
-        #     cols_require + [col_id])[col_rate_n].sum().reset_index()
-
-        # TODO: merge geom and sum 'rate_n_kgha'
-        df_ntd = (
-            df_join.groupby(cols_require + [col_id])[col_rate_n].sum().reset_index()
-        )
-        df_ntd = df_ntd.sort_values(by=col_id).reset_index(drop=True)
-        df_ntd.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-        df_out = df.merge(
-            df_ntd, on=cols_require + [col_id], validate="many_to_one"
-        )  # col_id required because it is unique for each observation
-        return df_out
-
-    def _fill_empty_geom(self, df):
-        """Fills/replaces empty geometry with field_bounds geometry"""
-        if self.field_bounds is not None:
-            subset = db_utils.get_primary_keys(self.as_planted)
-
-            df_geom = df[~df[df.geometry.name].is_empty]
-            df_empty = df[df[df.geometry.name].is_empty]
-            df_empty.drop(columns=[df_empty.geometry.name], inplace=True)
-
-            # df_fill = df_geom.append(
-            df_fill = pd.concat(
-                [
-                    df_geom,
-                    df_empty.merge(
-                        self.field_bounds[subset + [self.field_bounds.geometry.name]],
-                        on=subset,
-                    ),
-                ],
-                axis=0,
-            )
-            return df_fill
-
-    def _spatial_join_clean_keys(self, df_left, df_right):
-        """
-        Performs spatial join, then only keeps matched primary keys.
-
-        Deletes any rows whose primary keys in the joined dataframes do not
-        match, then renames primary keys with standard naming.
-        """
-
-        df_join_s = gpd.tools.sjoin(
-            df_left, df_right.to_crs(df_left.crs.to_epsg()), how="inner"
-        )
-
-        subset = db_utils.get_primary_keys(df_left)
-        if "field_id" in subset:
-            keys = [
-                ["owner_left", "owner_right"],
-                ["farm_left", "farm_right"],
-                ["field_id_left", "field_id_right"],
-                ["year_left", "year_right"],
-            ]
-        else:
-            keys = [
-                ["owner_left", "owner_right"],
-                ["study_left", "study_right"],
-                ["plot_id_left", "plot_id_right"],
-                ["year_left", "year_right"],
-            ]
-        # keys = [['{0}_left'.format(k), '{0}_right'.format(k)] for k in subset]
-
-        df_join = df_join_s.loc[
-            (df_join_s[keys[0][0]] == df_join_s[keys[0][1]])
-            & (df_join_s[keys[1][0]] == df_join_s[keys[1][1]])
-            & (df_join_s[keys[2][0]] == df_join_s[keys[2][1]])
-            & (df_join_s[keys[3][0]] == df_join_s[keys[3][1]])
+        # get index of labels_x_select in labels_x
+        feats_x_select_idx = [
+            i
+            for i in range(len(self.train.labels_x))
+            if self.train.labels_x[i] in self.feats_x_select
         ]
 
-        # df_join = df_join_s.loc[(df_join_s['owner_left'] == df_join_s['owner_right']) &
-        #                         (df_join_s['farm_left'] == df_join_s['farm_right']) &
-        #                         (df_join_s['field_id_left'] == df_join_s['field_id_right']) &
-        #                         (df_join_s['year_left'] == df_join_s['year_right'])]
-        df_join.rename(
-            columns={
-                keys[0][0]: keys[0][0].split("_left")[0],
-                keys[1][0]: keys[1][0].split("_left")[0],
-                keys[2][0]: keys[2][0].split("_left")[0],
-                keys[3][0]: keys[3][0].split("_left")[0],
-            },
-            inplace=True,
-        )
-        df_join.drop(
-            columns={
-                keys[0][1]: keys[0][1].split("_right")[0],
-                keys[1][1]: keys[1][1].split("_right")[0],
-                keys[2][1]: keys[2][1].split("_right")[0],
-                keys[3][1]: keys[3][1].split("_right")[0],
-            },
-            # 'owner_right': 'owner', 'farm_right': 'farm',
-            # 'field_id_right': 'field_id', 'year_right': 'year'},
-            inplace=True,
-        )
-        return df_join
+        self.X_full_select = X_full[:, feats_x_select_idx]
+        self.y_full = np.concatenate([self.train.y_train, self.train.y_test], axis=0)
+        self.estimator.fit(self.X_full_select, self.y_full)
 
-    def _get_geom_from_primary_keys(self, df):
-        """Adds field_bounds geom to <df> based on primary keys"""
-        for g in ["goem", "geometry"]:
-            if g in df.columns:
-                df.drop(columns=[g], inplace=True)
-        subset = db_utils.get_primary_keys(df)
-        gdf = gpd.GeoDataFrame(
-            df.merge(
-                self.field_bounds[subset + [self.field_bounds.geometry.name]], on=subset
-            ),
-            geometry="geom",
-        )
-        return gdf
-
-    # ##############
-    #         # 1. Get all unique geometries
-    #         subgeom = subset + [df_join.geometry.name]
-    #         df_unique = df_join[~df_join.duplicated(  # don't want id because this is unique geom not obs
-    #             subset=subgeom, keep='first')][subgeom]
-
-    #         # 2. Separate fields with only a single geometry from those with
-    #         # multiple geometries by checking <df_unique> subset.
-    #         df_subset_1_geom = df_unique[~df_unique.duplicated(
-    #             subset=subset, keep=False)][subgeom]
-    #         df_subset_mult_geom = df_unique[df_unique.duplicated(
-    #             subset=subset, keep=False)][subgeom]
-
-    #         # 3. For fields with 1 geom, business as usual
-    #         df_join_single = df_join.merge(  # get attributes from <df_join>
-    #             df_subset_1_geom, on=subgeom)
-    #         df_ntd_single = df_join_single.groupby(cols_require + ['id'])[col_rate_n].sum().reset_index()
-
-    #         # 4. For fields with multiple geom, calculate NTD for each separately
-    #         df_join_mult = df_join.merge(
-    #             df_subset_mult_geom, on=subgeom)
-    #         df_ntd_mult = df_join_mult.groupby(cols_require + ['id'])[col_rate_n].sum().reset_index()  # have to use id because 'geom' won't work
-
-    #         # Combine at point of renaming col
-    #         df_single_mult = pd.concat([df_ntd_single, df_ntd_mult], ignore_index=True).sort_values(by='id')
-    #         df_single_mult.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-
-    #         df_out = df.merge(df_single_mult, on=cols_require + ['id'], validate='many_to_one')
-    #         # at this point, I think 'id' can be dropped?
-
-    # ##################
-    # df_ntd_single.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-    # df_out_single = df.merge(df_ntd_single, on=cols_require)
-
-    # # df_ntd_mult.drop(columns='id', inplace=True)  # have to drop id because it will influence final merge with df
-    # df_ntd_mult.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-
-    # df_out_mult = df.merge(df_ntd_mult, on=cols_require + ['id'], validate='many_to_one')
-    # df_out_mult = df_out_mult.drop_duplicates(subset=cols_require + ['id', col_rate_ntd_out])
-    # df_out = pd.concat([df_out_single, df_out_mult], ignore_index=True).sort_values(by='id')
-    # # at this point, I think 'id' can be dropped?
-    # return df_out
-
-    def load_tables(self, **kwargs):
+    def _get_X_map(self, gdf_pred_s):
         """
-        Loads all tables in ``Tables.table_names``.
-
-        If there is a valid DB connection, it will attempt to load tables from
-        the DB first based on ``Tables.table_names.keys()``. If there are any
-        tables that were not loaded or are empty, it will attempt to load those
-        tables from ``Tables.base_dir_data``/``Tables.table_names.values()``.
-
-        Whether there is a valid DB connection or not, any table whose value is
-        ``None`` in ``Tables.table_names.values()`` will not be loaded.
+        Retrieves the feature data in the X matrix as a georeferenced map.
 
         Parameters:
-            base_dir_data (``str``): The base directory containing all the tables
-                available to be joined.
+            gdf_pred_s (``pd.Series``): The field_bounds information to create
+                the X map for (must be passed as a Series object).
         """
-        self._set_params_from_kwargs_t(**kwargs)
+        subset = db_utils.get_primary_keys(self.gdf_pred)
+        primary_key_val = dict((k, gdf_pred_s[k]) for k in subset)
 
-        if isinstance(self.db, DBHandler):
-            print("\nLoading tables from database...")
-            for table_name in self.table_names.keys():
-                df = self._load_table_from_db(table_name)
-                if df is not None:
-                    # print(table_name)
-                    self._set_table_to_self(table_name, df)
-        else:
-            msg = (
-                "There is no connection to a database, and "
-                "<Tables.base_dir_data> was not passed. Thus, there is no "
-                "way to load any tables. Please either connect to DB or "
-                "pass <base_dir_data>."
+        sql_closest_date = closest_date_sql(
+            db_schema=self.db.db_schema,
+            pkey=primary_key_val,
+            date_str=self.date_predict.strftime(format="%Y-%m-%d"),
+            tolerance=None,
+            direction=self.image_search_method,
+            limit=1,
+        )
+        df_reflectance = pd.read_sql(sql_closest_date, con=self.db.engine)
+        if len(df_reflectance) != 1:
+            raise ValueError(
+                f"There aren't any rasters for <{primary_key_val}>. Please add images "
+                "or change <date_predict> to be a later date."
             )
-            assert self.base_dir_data is not None, msg
 
-        if self.base_dir_data is not None:
-            print("\nLoading tables from <base_dir_data>...")
-            for table_name, fname in self.table_names.items():
-                if self._get_table_from_self(table_name) is None and fname is not None:
-                    df = self._load_table_from_file(table_name, fname)
-                    if df is not None:
-                        # print(table_name)
-                        df = db_utils.cols_to_datetime(df)
-                        self._set_table_to_self(table_name, df)
+        array_img, profile, df_metadata = self.db.get_raster(
+            table_name="reflectance", rid=df_reflectance.iloc[0]["rid"]
+        )
+        return array_img, profile, df_metadata
 
-        # Now that tables are loaded, fill in empty geometry for tables that
-        # we assume take on field_bounds geom if empty: as-planted, n_applications, obs_tissue
-        for t in ["as_planted", "n_applications", "obs_tissue"]:
-            df = self._get_table_from_self(t)
-            df_fill = self._fill_empty_geom(df)
-            self._set_table_to_self(t, df_fill)
-
-        # TODO: Function to filter cropscan data (e.g., low irradiance, etc.)
-        # TODO: Do any groupby() function for cropscan (and all data for that
-        # matter) before putting into the DB/tables - it must line up with the
-        # obs_tissue observations or whatever the response variable is.
-        if self.rs_cropscan_res is not None:
-            subset = db_utils.get_primary_keys(self.rs_cropscan_res)
-            df_cs = self.rs_cropscan_res.groupby(subset + ["date"]).mean().reset_index()
-
-            # TODO: the groupby() function removes geometry - add geometry
-            # column back in by copying relevant info from rs_cropscan_res
-
-            # in the meantime, chnage to regular DataFrame if there isn't valid geometry
-            if isinstance(df_cs, gpd.GeoDataFrame):
-                gdf_cs = df_cs.copy()
-                try:
-                    _ = any(gdf_cs.geom_type)
-                except AttributeError:  # if geometry has not been set, AttributeError will be raised.
-                    df_cs = pd.DataFrame(gdf_cs)  # change to regular pandas
-            self._set_table_to_self("rs_cropscan_res", df_cs)
-
-    def join_closest_date(
-        self,
-        df_left,
-        df_right,
-        left_on="date",
-        right_on="date",
-        tolerance=0,
-        direction="nearest",
-        delta_label=None,
+    def _get_array_img_band_idx(
+        self, df_metadata, names, col_header="wavelength", tol=10
     ):
         """
-        Joins ``df_left`` to ``df_right`` by the closest date (after first
-        joining by the ``by`` columns)
-        Parameters:
-            df_left (``pd.DataFrame``): The left dataframe to join from.
-            df_right (``pd.DataFrame``): The right dataframe to join. If
-                <df_left> and <df_right> have geometry, only geometry from
-                <df_left> will be kept.
-            left_on (``str``): The "date" column name in <df_left> to join
-                from.
-            right_on (``str``): The "date" column name in <df_right> to join
-                to.
-            tolerance (``int``): Number of days away to still allow join (if
-                date_delta is greater than <tolerance>, the join will not
-                occur).
-            direction (``str``): Whether to search for prior, subsequent, or
-                closest matches. This is only implemented if geometry is not
-                present.
-
-        Note:
-            Parameter names closely follow the pandas.merge_asof function:
-            https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.merge_asof.html
-        """
-        subset_left = db_utils.get_primary_keys(df_left)
-        subset_right = db_utils.get_primary_keys(df_right)
-        msg = (
-            "The primary keys in <df_left> are not the same as those in "
-            "<df_right>. <join_closest_date()> requires that both dfs have "
-            "the same primary keys."
-        )
-        assert subset_left == subset_right, msg
-
-        cols_require_l = subset_left + [left_on]
-        cols_require_r = subset_right + [right_on]
-        self._check_col_names(df_left, cols_require_l)
-        self._check_col_names(df_right, cols_require_r)
-        df_left = self._dt_or_ts_to_date(df_left, left_on)
-        df_right = self._dt_or_ts_to_date(df_right, right_on)
-
-        # 0. Goal here is to join closest date, but when geometry exists, it
-        # gets a bit more complicated. When both are geodataframe, any missing
-        # geometry is filtered out, then tables are joined on geometry and only
-        # the closest date is kept.
-
-        # The problem is when there is empty geometry, then nothing gets joined.
-
-        # Choices:
-        # 1. Fill in any missing geometry before the join_closest_date()
-        # function is called.
-        # 2. Dynamically fill in missing geometry from df_left to df_right
-        # during join_closest_date()
-        # 3. Raise a warning if both are geodataframes and there is empty
-        # geometry.
-
-        if isinstance(df_left, gpd.GeoDataFrame) and isinstance(
-            df_right, gpd.GeoDataFrame
-        ):
-            self._check_empty_geom(df_left)
-            self._check_empty_geom(df_right)
-
-            # 2. Case where some geometries are empty, but some are not
-            df_join = self._join_geom_date(
-                df_left,
-                df_right,
-                left_on,
-                right_on,
-                tolerance=tolerance,
-                delta_label=delta_label,
-            )
-        else:
-            df_left.sort_values(left_on, inplace=True)
-            df_right.sort_values(right_on, inplace=True)
-            left_on2 = left_on + "_l"
-            right_on2 = right_on + "_r"
-            # by = subset_left + [df_left.geometry.name]
-            df_join = pd.merge_asof(
-                df_left.rename(columns={left_on: left_on2}),
-                df_right.rename(columns={right_on: right_on2}),
-                left_on=left_on2,
-                right_on=right_on2,
-                by=subset_left,
-                tolerance=pd.Timedelta(tolerance, unit="D"),
-                direction=direction,
-                suffixes=("_l", "_r"),
-            )
-            if isinstance(df_left, gpd.GeoDataFrame):
-                df_join = gpd.GeoDataFrame(df_join, geometry=df_left.geometry.name)
-            if isinstance(df_right, gpd.GeoDataFrame):
-                df_join = gpd.GeoDataFrame(df_join, geometry=df_right.geometry.name)
-
-            # if tolerance == 0:
-            #     df_join.dropna(inplace=True)
-            # elif tolerance > 0:
-            df_join, delta_label_out = self._add_date_delta(
-                df_join, left_on=left_on2, right_on=right_on2, delta_label=delta_label
-            )
-            # df_join.dropna(inplace=True)
-            df_join = df_join.rename(columns={left_on2: left_on})
-            cols_drop = [
-                c + side
-                for side in ["_l", "_r"]
-                for c in ["id"]
-                if c + side in df_join.columns
-            ] + [right_on2]
-            df_join.drop(columns=cols_drop, inplace=True)
-        return df_join.reset_index(drop=True)
-
-    def dae(self, df):
-        """
-        Adds a days after emergence (DAE) column to df.
-
-        Retrieves emergence dates from as_planted table, so <df> should be a
-        GeoDataFrame to properly account for multiple as_planted rows for the
-        same set of primary keys.
+        Gets the index of the bands based on feature names from
+        <feats_x_select>.
 
         Parameters:
-            df (``pandas.DataFrame``): The input dataframe to add DAE column
-                to. Must have the following column to perform the appropriate
-                joins: "study", "year", "plot_id", and "date" (must be able to
-                be converted to datetime).
+            df_metadata: The Sentinel metadata dataframe
+            names: The names of the Sentinel spectra features from
+                <feats_x_select>.
+            col_header: Look into why this is needed...
 
-        Example:
-            >>> import os
-            >>> import pandas as pd
-            >>> from geoml import Tables
-
-            >>> base_dir_data = os.path.join(os.getcwd(), 'geoml', 'tests', 'testdata')
-            >>> fname_petiole = os.path.join(base_dir_data, 'tissue_petiole_NO3_ppm.csv')
-            >>> my_join = Tables(base_dir_data=base_dir_data)
-            >>> df_pet_no3 = pd.read_csv(fname_petiole)
-            >>> df_pet_no3.head(3)
-              study  year  plot_id        date   tissue  measure         value
-            0   NNI  2019      101  2019-06-25  Petiole  NO3_ppm  18142.397813
-            1   NNI  2019      101  2019-07-09  Petiole  NO3_ppm   2728.023000
-            2   NNI  2019      101  2019-07-23  Petiole  NO3_ppm   1588.190000
-
-            >>> df_pet_no3 = my_join.dae(df_pet_no3)
-            >>> df_pet_no3.head(3)
-              study  year  plot_id       date   tissue  measure         value  dae
-            0   NNI  2019      101 2019-06-25  Petiole  NO3_ppm  18142.397813   33
-            1   NNI  2019      101 2019-07-09  Petiole  NO3_ppm   2728.023000   47
-            2   NNI  2019      101 2019-07-23  Petiole  NO3_ppm   1588.190000   61
+        Returns:
+            keys (``dict``): Key/value pairs representing
+                <feats_x_select> names/<array_img> band index
         """
-        subset = db_utils.get_primary_keys(df)
-        cols_require = subset + ["date"]
-        self._check_col_names(df, cols_require)
-        df.loc[:, "date"] = df.loc[:, "date"].apply(pd.to_datetime, errors="coerce")
+        band_names, wavelengths = self.db._get_band_wl_from_metadata(df_metadata)
+        wl_AB_sync = [self.db.sentinel_AB_sync[b] for b in band_names]
+        cols = band_names if col_header == "bands" else wl_AB_sync
 
-        if "id" not in df.columns:  # required for multiple geometries
-            df = self._add_id_by_subset(df, subset=cols_require)
+        split_wl_to_int = lambda n: int(n.split("_")[-1])
+        get_wl_diff = lambda n, x: abs(x - split_wl_to_int(n))
+        keys = {
+            n: cols.index(min(cols, key=partial(get_wl_diff, n)))
+            for n in names
+            if abs(min(cols, key=partial(get_wl_diff, n)) - split_wl_to_int(n)) < tol
+        }
+        return keys
 
-        if not isinstance(df, gpd.GeoDataFrame):
-            df = self._get_geom_from_primary_keys(df)  # Returns GeoDataFrame
-        else:
-            df = self._fill_empty_geom(df)
-
-        if "field_id" in subset:
-            subset_plant = [
-                "date_plant",
-                "date_emerge",
-                "crop",
-                "variety",
-                "population_nha",
-                "description",
-            ]
-            df_join = None
-            for y in sorted(df["year"].unique()):
-                df_y = df[df["year"] == y]
-                plant_apps_y = self.as_planted[self.as_planted["year"] == y]
-                if df_join is None:
-                    df_join = gpd.overlay(
-                        df_y[["id"] + cols_require + ["geom"]],
-                        plant_apps_y[subset_plant + ["geom"]],
-                        how="intersection",
-                    )
-                else:
-                    df_join = pd.concat(
-                        [
-                            df_join,
-                            gpd.overlay(
-                                df_y[["id"] + cols_require + ["geom"]],
-                                plant_apps_y[subset_plant + ["geom"]],
-                                how="intersection",
-                            ),
-                        ],
-                        axis=0,
-                    )
-            df_join.rename(columns={df_join.geometry.name: "geom"}, inplace=True)
-        elif "plot_id" in subset:
-            on = [i for i in subset if i != "plot_id"]
-            df_join = df.merge(self.dates_res, on=on, validate="many_to_one")
-        if len(df_join) == 0:
-            raise RuntimeError(
-                'Unable to calculate DAE. Check that "date_emerge" is set in '
-                "<as_planted> table for primary keys:\n{0}".format(df[subset])
-            )
-
-        df_join.loc[:, "date_emerge"] = df_join.loc[:, "date_emerge"].apply(
-            pd.to_datetime, errors="coerce"
-        )
-        df_join["dae"] = (df_join["date"] - df_join["date_emerge"]).dt.days
-        df_out = df.drop(columns="geom").merge(
-            df_join[cols_require + ["geom", "dae"]], on=cols_require
-        )
-        df_out = df_out[list(df.drop(columns="id").columns) + ["dae"]]
-        return df_out.reset_index(drop=True)
-
-    def dap(self, df):
+    def _feats_x_select_data(self, df_feats, df_metadata):
         """
-        Adds a days after planting (DAP) column to df
+        Builds a dataframe with ``feats_x_select`` data.
 
-        Retrieves planting dates from as_planted table, so <df> should be a
-        GeoDataFrame to properly account for multiple as_planted rows for the
-        same set of primary keys.
-
-        Parameters:
-            df (``pandas.DataFrame``): The input dataframe to add DAP column
-                to. Must have the following column to perform the appropriate
-                joins: "study", "year", "plot_id", and "date" (must be able to
-                be converted to datetime).
-
-        Example:
-            >>> import os
-            >>> import pandas as pd
-            >>> from geoml import Tables
-
-            >>> base_dir_data = os.path.join(os.getcwd(), 'geoml', 'tests', 'testdata')
-            >>> fname_petiole = os.path.join(base_dir_data, 'tissue_petiole_NO3_ppm.csv')
-            >>> my_join = Tables(base_dir_data=base_dir_data)
-            >>> df_pet_no3 = pd.read_csv(fname_petiole)
-            >>> df_pet_no3.head(3)
-              study  year  plot_id        date   tissue  measure         value
-            0   NNI  2019      101  2019-06-25  Petiole  NO3_ppm  18142.397813
-            1   NNI  2019      101  2019-07-09  Petiole  NO3_ppm   2728.023000
-            2   NNI  2019      101  2019-07-23  Petiole  NO3_ppm   1588.190000
-
-            >>> df_pet_no3 = my_join.dap(df_pet_no3)
-            >>> df_pet_no3.head(3)
-              study  year  plot_id       date   tissue  measure         value  dap
-            0   NNI  2019      101 2019-06-25  Petiole  NO3_ppm  18142.397813   54
-            1   NNI  2019      101 2019-07-09  Petiole  NO3_ppm   2728.023000   68
-            2   NNI  2019      101 2019-07-23  Petiole  NO3_ppm   1588.190000   82
+        Returns:
+            df_feats: DataFrame containing each of the feature names as
+                column names and the value (if not spatially aware) or
+                the array index (if spatially aware; e.g., sentinel image).
         """
-        subset = db_utils.get_primary_keys(df)
-        cols_require = subset + ["date"]
-        self._check_col_names(df, cols_require)
-        df.loc[:, "date"] = df.loc[:, "date"].apply(pd.to_datetime, errors="coerce")
-
-        if "id" not in df.columns:  # required for multiple geometries
-            df = self._add_id_by_subset(df, subset=cols_require)
-
-        if not isinstance(df, gpd.GeoDataFrame):
-            df = self._get_geom_from_primary_keys(df)  # Returns GeoDataFrame
-        else:
-            df = self._fill_empty_geom(df)
-
-        if "field_id" in subset:
-            subset_plant = [
-                "date_plant",
-                "date_emerge",
-                "crop",
-                "variety",
-                "population_nha",
-                "description",
-            ]
-            df_join = None
-            for y in sorted(df["year"].unique()):
-                df_y = df[df["year"] == y]
-                plant_apps_y = self.as_planted[self.as_planted["year"] == y]
-                if df_join is None:
-                    df_join = gpd.overlay(
-                        df_y[["id"] + cols_require + ["geom"]],
-                        plant_apps_y[subset_plant + ["geom"]],
-                        how="intersection",
-                    )
-                else:
-                    df_join = pd.concat(
-                        [
-                            df_join,
-                            gpd.overlay(
-                                df_y[["id"] + cols_require + ["geom"]],
-                                plant_apps_y[subset_plant + ["geom"]],
-                                how="intersection",
-                            ),
-                        ],
-                        axis=0,
-                    )
-            df_join.rename(columns={df_join.geometry.name: "geom"}, inplace=True)
-        elif "plot_id" in subset:
-            on = [i for i in subset if i != "plot_id"]
-            df_join = df.merge(self.dates_res, on=on, validate="many_to_one")
-        if len(df_join) == 0:
-            raise RuntimeError(
-                'Unable to calculate DAP. Check that "date_plant" is set in '
-                "<as_planted> table for primary keys:\n{0}".format(df[subset])
-            )
-
-        df_join.loc[:, "date_plant"] = df_join.loc[:, "date_plant"].apply(
-            pd.to_datetime, errors="coerce"
-        )
-        df_join["dap"] = (df_join["date"] - df_join["date_plant"]).dt.days
-        df_out = df.drop(columns="geom").merge(
-            df_join[cols_require + ["geom", "dap"]], on=cols_require
-        )
-        df_out = df_out[list(df.drop(columns="id").columns) + ["dap"]]
-        return df_out.reset_index(drop=True)
-
-    def rate_ntd(self, df, col_rate_n="rate_n_kgha", col_rate_ntd_out="rate_ntd_kgha"):
-        """
-        Adds a column "rate_ntd" indicating the amount of N applied up to the
-        date in the df['date'] column (not inclusive).
-
-        First joins df_exp to get unique treatment ids for each plot
-        Second joins df_trt to get "breakout" treatment ids for "trt_n"
-        Third, joins df_n_apps to get date_applied and rate information
-        Fourth, calculates the rate N applied to date (sum of N applied before the
-        "date" column; "date" must be a column in df_left)
-
-        Parameters:
-            df (``pandas.DataFrame``): The input dataframe to add DAP column
-                to. Must have the following column to perform the appropriate
-                joins: "study", "year", "plot_id", and "date" (must be able to
-                be converted to datetime).
-            col_rate_n (``str``): the column name in ``df`` that contains N
-                rates
-            # unit_str (``str``): A string to be appended to the new column name.
-            #     If "kgha", the column name will be "rate_ntd_kgha"
-
-        Example:
-            >>> import os
-            >>> import pandas as pd
-            >>> from geoml import Tables
-
-            >>> base_dir_data = os.path.join(os.getcwd(), 'geoml', 'tests', 'testdata')
-            >>> fname_petiole = os.path.join(base_dir_data, 'tissue_petiole_NO3_ppm.csv')
-            >>> my_join = Tables(base_dir_data=base_dir_data)
-            >>> df_pet_no3 = pd.read_csv(fname_petiole)
-            >>> df_pet_no3.head(3)
-              study  year  plot_id        date   tissue  measure         value
-            0   NNI  2019      101  2019-06-25  Petiole  NO3_ppm  18142.397813
-            1   NNI  2019      101  2019-07-09  Petiole  NO3_ppm   2728.023000
-            2   NNI  2019      101  2019-07-23  Petiole  NO3_ppm   1588.190000
-
-            >>> df_pet_no3 = my_join.rate_ntd(df_pet_no3)
-            >>> df_pet_no3.head(3)
-              study  year  plot_id        date   tissue  measure         value rate_ntd_kgha
-            0   NNI  2019      101  2019-06-25  Petiole  NO3_ppm  18142.397813       156.919
-            1   NNI  2019      101  2019-07-09  Petiole  NO3_ppm   2728.023000       156.919
-            2   NNI  2019      101  2019-07-23  Petiole  NO3_ppm   1588.190000       179.336
-        """
-        subset = db_utils.get_primary_keys(df)
-        cols_require = subset + ["date"]
-        self._check_col_names(df, cols_require)
-        self._cr_rate_ntd(df)  # raises an error if data aren't suitable
-
-        if "id" not in df.columns:  # required for multiple geometries
-            df = self._add_id_by_subset(df, subset=cols_require)
-
-        if "field_id" in subset:
-            # We need spatial join, but then have to remove excess columns and rename
-            subset_n_apps = ["date_applied", "source_n", "rate_n_kgha"]
-            df_join = None
-            for y in sorted(df["year"].unique()):
-                df_y = df[df["year"] == y]
-                n_apps_y = self.n_applications[self.n_applications["year"] == y]
-                if df_join is None:
-                    # df_join = gpd.tools.sjoin(
-                    #     n_apps_y[subset_n_apps + ['geom']], df_y[cols_require + ['geom']], how='inner')
-                    # df_join = gpd.tools.sjoin(
-                    #     df_y[['id'] + cols_require + ['geom']], n_apps_y[subset_n_apps + ['geom']], how='inner')
-                    df_join = gpd.overlay(
-                        df_y[["id"] + cols_require + ["geom"]],
-                        n_apps_y[subset_n_apps + ["geom"]],
-                        how="intersection",
-                    )
-                else:
-                    # df_join = df_join.append(gpd.tools.sjoin(
-                    #     n_apps_y[subset_n_apps + ['geom']], df_y[cols_require + ['geom']], how='inner'))
-                    df_join = pd.concat(
-                        [
-                            df_join,
-                            gpd.overlay(
-                                df_y[["id"] + cols_require + ["geom"]],
-                                n_apps_y[subset_n_apps + ["geom"]],
-                                how="intersection",
-                            ),
-                        ],
-                        axis=0,
-                    )
-
-            # Don't drop index_right? Becasue it defines the duplicates from the right df
-            if "index_right" in df_join.columns:
-                df_join.drop(columns="index_right", inplace=True)
-            # df_join_s = gpd.tools.sjoin(fd.n_applications[subset_n_apps + ['geom']], df[cols_require + ['geom']], how='inner')
-
-            # df_join = df_join_s.drop_duplicates(
-            #     subset=cols_require + subset_n_apps + ['geom'], keep='first')
-
-            # remove all rows where date_applied is after date
-            df_join = df_join[df_join["date_applied"] <= df_join["date"]]
-
-            # df_join = df_join_s.loc[(df_join_s['owner_left'] == df_join_s['owner_right']) &
-            #                         (df_join_s['farm_left'] == df_join_s['farm_right']) &
-            #                         (df_join_s['field_id_left'] == df_join_s['field_id_right']) &
-            #                         (df_join_s['year_left'] == df_join_s['year_right'])]
-            # df_join = df_join.rename(columns={
-            #     'owner_left': 'owner', 'farm_left': 'farm',
-            #     'field_id_left': 'field_id', 'year_left': 'year'})
-            # cols_drop = ['index_right', 'owner_right', 'farm_right', 'field_id_right', 'year_right']
-            # # if 'id_right' in df_join.columns:
-            # #     cols_drop = cols_drop + ['id_right']
-            # if 'id_left' in df_join.columns:
-            #     cols_drop = cols_drop + ['id_left']
-            # df_join.drop(columns=cols_drop, inplace=True)
-
-            df_join.loc[
-                ~df_join.geometry.is_valid, df_join.geometry.name
-            ] = df_join.loc[~df_join.geometry.is_valid].buffer(0)
-
-            # df_unique = fd._find_unique_geom(df_join)
-
-            df_dissolve = df_join.dissolve(
-                by=["id"] + cols_require, as_index=False, aggfunc="sum"
-            )
-
-            df_out = df.merge(
-                df_dissolve[cols_require + ["rate_n_kgha"]],
-                on=cols_require,
-                how="left",
-                indicator=True,
-            )
-            df_out = (
-                df_out[df_out["_merge"] == "both"]
-                .drop(columns="_merge")
-                .drop_duplicates()
-            )
-            df_out.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-
-            # df_out = fd._calc_ntd_with_geom(df, df_join, col_rate_n,
-            #                                   col_rate_ntd_out, col_id='id')
-
-        # The following adds extra N apps due to multiple n_app geometries within a field
-        # if 'field_id' in subset:
-        #     df_join = df.merge(self.field_bounds[subset], on=subset)
-        #     df_join = df_join.merge(
-        #         self.n_applications[subset + ['date_applied', col_rate_n]],
-        #         on=subset, validate='many_to_many')
-        elif "plot_id" in subset:
-            df_join = (
-                df.merge(self.experiments, on=subset)
-                .merge(
-                    self.trt,
-                    on=["owner", "study", "year", "trt_id"],
-                    validate="many_to_many",
+        if "dap" in self.feats_x_select:
+            df_feats = self.dap(df_feats)
+        if "dae" in self.feats_x_select:
+            df_feats = self.dae(df_feats)
+        if "rate_ntd_kgha" in self.feats_x_select:
+            df_feats_out = None
+            for r in range(len(df_feats)):
+                df_feat_single = gpd.GeoDataFrame(
+                    [df_feats.iloc[r]],
+                    crs=df_feats.crs,
+                    geometry=df_feats.geometry.name,
                 )
-                .merge(
-                    self.trt_n,
-                    on=["owner", "study", "year", "trt_n"],
-                    validate="many_to_many",
+                if df_feats_out is None:
+                    df_feats_out = self.rate_ntd(df_feat_single)
+                else:
+                    df_feats_out = pd.concat(
+                        [df_feats_out, self.rate_ntd(df_feat_single)], axis="index"
+                    )
+            df_feats = df_feats_out.copy()
+            # df_feats = self.rate_ntd(df_feats)
+        if any("wl_" in f for f in self.feats_x_select):
+            # For now, just add null placeholders as a new column
+            wl_names = [f for f in self.feats_x_select if "wl_" in f]
+            keys = self._get_array_img_band_idx(df_metadata, wl_names, tol=10)
+            for name in wl_names:
+                df_feats[name] = keys[name]
+            # TODO: Figure out how to decipher between Sentinel and other sources
+        return df_feats
+
+    def _mask_array_by_geom(self, img_shape, profile, geometry):
+        profile.update(driver="MEM", count=1)
+        with MemoryFile() as memfile:
+            with memfile.open(**profile) as ds_temp:
+                ds_temp.write(np.ones((1,) + img_shape[1:], dtype=float))
+                array_mask, _ = rio_mask(
+                    ds_temp,
+                    [geometry],
+                    nodata=profile["nodata"],
+                    filled=True,
+                    crop=False,
                 )
+        return array_mask
+
+    def _fill_array_X(self, array_img, df_feats, profile):
+        """
+        Populates array_X with all the features in df_feats
+        """
+        array_X_shape = (len(self.feats_x_select),) + array_img.shape[1:]
+        array_X = np.empty(array_X_shape, dtype=float)
+
+        for i, feat in enumerate(self.feats_x_select):
+            # Builds a 2D array of the feature to be added to array_X
+            array_feat = np.zeros((1,) + array_img.shape[1:], dtype=float)
+            for i in range(len(df_feats)):
+                geometry = df_feats.iloc[i][df_feats.geometry.name]
+                array_mask = self._mask_array_by_geom(
+                    array_img.shape, profile, geometry
+                )
+                array_feat[np.array(array_mask, dtype=bool)] = df_feats.iloc[i][feat]
+
+            if "wl_" in feat:
+                array_X[i, :, :] = array_feat[0, :, :] / 10000
+            else:
+                array_X[i, :, :] = array_feat[0, :, :]
+        return array_X
+
+    def _predict_and_reshape(self, array_X):
+        """
+        Reshapes <array_X> to 2d, predicts, and reshapes back to 3d.
+        """
+        array_X_move = np.moveaxis(array_X, 0, -1)  # move first axis to last
+        array_X_2d = array_X_move.reshape(-1, array_X_move.shape[2])
+
+        array_pred_1d = self.estimator.predict(array_X_2d)
+        array_pred = array_pred_1d.reshape(array_X_move.shape[:2])
+        array_pred = np.expand_dims(array_pred, 0)
+        return array_pred
+
+    def _mask_by_bounds(self, array_pred, profile, buffer_dist=0):
+        """
+        Masks array by field bounds in ``predict.primary_keys_pred``
+
+        Returns:
+            array_pred (``numpy.ndarray``): Input array with masked pixels set
+                to 0.
+        """
+        profile_out = deepcopy(profile)
+        array_pred = array_pred.astype(profile_out["dtype"])
+        gdf_bounds = self.db.get_table_df(  # load field bounds
+            "field_bounds", **self.primary_keys_pred
+        )
+        profile_out.update(driver="MEM")
+        with rio.io.MemoryFile() as memfile:  # load array_pred as memory object
+            with memfile.open(**profile_out) as ds_temp:
+                ds_temp.write(array_pred)
+
+                # convert from 4326 to utm
+                srid_utm = self.db._get_utm_epsg(gdf_bounds, how="centroid")
+
+                geometry = (
+                    gdf_bounds[gdf_bounds.geometry.name]
+                    .to_crs(epsg=srid_utm)
+                    .buffer(buffer_dist)
+                    .to_crs(epsg=profile_out["crs"].to_epsg())
+                )
+                array_pred, _ = rio_mask(ds_temp, geometry, crop=True)
+                profile_out["transform"] = rio.transform.from_origin(
+                    geometry.bounds["minx"].item() - (profile["transform"].a / 2),
+                    geometry.bounds["maxy"].item() - (profile["transform"].e / 2),
+                    profile["transform"].a,
+                    -profile["transform"].e,
+                )
+        return array_pred, profile_out
+
+    def _set_train_keys(self):
+        if self.train is None:
+            date_train = None
+            response = None
+            response_units = None
+            band_names = ["Sentera GeoML Prediction"]
+        else:
+            date_train = self.train.date_train.strftime("%Y-%m-%d")
+            response = self.train.response_data
+            response_units = None  # TODO: Derive units from DB response query
+            band_names = [
+                self.train.response_data["tissue"]
+                + "-"
+                + self.train.response_data["measure"]
+            ]
+        return date_train, response, response_units, band_names
+
+    def _write_pred_profile(self, profile):
+        from geoml.profile_keys import (
+            PROFILE_REQUIRED_KEYS,
+            PROFILE_GTIFF_KEYS,
+            PROFILE_ENVI_BASIC_KEYS,
+            PROFILE_GEOML_KEYS,
+        )
+        from geoml import __version__
+
+        profile_keys = PROFILE_REQUIRED_KEYS.union(
+            PROFILE_GTIFF_KEYS, PROFILE_ENVI_BASIC_KEYS, PROFILE_GEOML_KEYS
+        )
+        p = {k: profile[k] for k in profile if k in profile_keys}
+        date_train, response, response_units, band_names = self._set_train_keys()
+
+        p.update(
+            count=1,
+            bands=1,
+            description="Sentera GeoML Prediction",
+            pkeys=self.primary_keys_pred,
+            date_train=date_train,
+            response=response,
+            response_units=response_units,
+            band_names=band_names,
+            date_predict=self.date_predict.strftime("%Y-%m-%d"),
+            estimator=str(self.estimator).replace(" ", "").replace("\n", ""),
+            estimator_parameters=self.estimator.get_params(),
+            feats_x_select=self.feats_x_select,
+            geoml_version=__version__,
+        )
+        return p
+
+    def predict(
+        self,
+        gdf_pred_s=None,
+        mask_by_bounds=True,
+        buffer_dist=-40,
+        clip_min=0,
+        clip_max=None,
+        **kwargs,
+    ):
+        """
+        Makes predictions for a single geometry.
+
+        For spatially aware predictions. Builds a 3d array that contains
+        spatial data (x/y) as well as feaure data (z). The 3d array is reshaped
+        to 2d (x*y by z shape) and passed to the ``estimator.predict()``
+        function. After predictions are made, the 1d array is reshaped to 2d
+        and loaded as a rasterio object.
+
+        Parameters:
+            gdf_pred_s (``geopandas.GeoSeries``): The geometry to make the
+                prediction on.
+            mask_by_bounds (``bool``): Whether prediction array should be
+                masked by field bounds (``True``) or not (``False``).
+            buffer_dist (``int`` or ``float``): The buffer distance to
+                apply to mask boundary. Negative ``buffer_dist`` results
+                in a smaller array/polygon, whereas a positive
+                ``buffer_dist`` results in a larger array/polygon. Units
+                should be equal to units used by the coordinate reference
+                system of the rasterio profile object from imagery. Ignored
+                if ``mask_by_bounds`` is ``False``.
+            clip_min, clip_max (``int`` or ``float``): Minimum and maximum
+                value. If ``None``, clipping is not performed on the
+                corresponding edge. Only one of ``clip_min`` and ``clip_max``
+                may be ``None``. Passed to the ``numpy.clip()`` function as
+                ``min`` and ``max`` parameters, respectively.
+        """
+        print("Making predictions on new data...")
+        self._set_params_from_kwargs_pred(**kwargs)
+
+        if not isinstance(gdf_pred_s, pd.Series):
+            # print('Using the first row ')
+            gdf_pred_s = self.gdf_pred.iloc[0]
+
+        subset = db_utils.get_primary_keys(self.gdf_pred)
+        array_img, profile, df_metadata = self._get_X_map(gdf_pred_s)
+
+        # 1. Get features for the model of interest
+        cols_feats = subset + ["geom", "date"]  # df must have primary keys
+        # data_feats = list(gdf_pred_s[subset]) + [self.date_predict]
+
+        df_feats = gpd.GeoDataFrame(
+            [list(gdf_pred_s[subset]) + [gdf_pred_s.geom, self.date_predict]],
+            columns=cols_feats,
+            geometry="geom",
+            crs=self.gdf_pred.crs,
+        )
+        # df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
+
+        df_feats = self._feats_x_select_data(df_feats, df_metadata)
+        # TODO: change when we get individual functions for each wx feature
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # if any([f for f in self.feats_x_select if f in self.weather_derived.columns]):
+        #     primary_key_val = dict((k, gdf_pred_s[k]) for k in subset)
+        #     primary_key_val["date"] = self.date_predict
+        #     weather_derived_filter = self.weather_derived.loc[
+        #         (
+        #             self.weather_derived[list(primary_key_val)]
+        #             == pd.Series(primary_key_val)
+        #         ).all(axis=1)
+        #     ]
+        #     for f in set(self.feats_x_select).intersection(
+        #         self.weather_derived.columns
+        #     ):
+        #         # get its value from weather_derived and add to df_feats
+        #         df_feats[f] = weather_derived_filter[f].values[0]
+
+        array_X = self._fill_array_X(array_img, df_feats, profile)
+        mask = array_img[0] == 0
+
+        array_pred = self._predict_and_reshape(array_X)
+        array_pred[np.expand_dims(mask, 0)] = 0
+        if any(v is not None for v in [clip_min, clip_max]):
+            array_pred = array_pred.clip(min=clip_min, max=clip_max)
+        profile = self._write_pred_profile(profile)
+        if mask_by_bounds == True:
+            array_pred, profile = self._mask_by_bounds(array_pred, profile, buffer_dist)
+        return array_pred, profile
+
+    def predict_and_save(self, **kwargs):
+        """
+        Makes predictions for each geometry in ``gdf_pred`` and saves output
+        as an image.
+
+        This function does 2 tasks in addition to predict(): batch predicts for
+        all geom in ``gdf_pred``, and saves predictions as an image.
+
+        For spatially aware predictions. Builds a 3d array that contains
+        spatial data (x/y) as well as feaure data (z). The 3d array is reshaped
+        to 2d (x*y by z shape) and passed to the ``estimator.predict()``
+        function. After predictions are made, the 1d array is reshaped to 2d
+        and loaded as a rasterio object.
+        """
+        print("Making predictions on new data...")
+        self._set_params_from_kwargs_pred(**kwargs)
+
+        array_preds, df_metadatas = [], []
+        imagery = Imagery()
+        imagery.driver = "Gtiff"
+        for _, gdf_pred_s in self.gdf_pred.iterrows():
+            array_pred, ds, df_metadata = self.predict(gdf_pred_s)
+            array_preds.append(array_pred)
+            df_metadatas.append(df_metadata)
+
+            name_out = "petno3_ppm_20200713_r20m_css-farms-dalhart_cabrillas_c-06.tif"
+
+            fname_out = os.path.join(self.dir_out_pred, name_out)
+            imagery._save_image(
+                np.expand_dims(array_pred, axis=0),
+                ds.profile,
+                fname_out,
+                keep_xml=False,
             )
 
-            # remove all rows where date_applied is after date
-            df_join = df_join[df_join["date_applied"] <= df_join["date"]]
-            # if isinstance(df, gpd.GeoDataFrame):
-            # df_single_geom = df[~df.duplicated(subset=cols_require, keep=False)][cols_require]
-            # if len(df_single_geom) != len(df):  # assume there are multiple geometries in some fields
-            #     df_out = train._calc_ntd_with_geom(df, df_join, col_rate_n,
-            #                                       col_rate_ntd_out, col_id='id')
-            # else:
-            df_sum = df_join.groupby(cols_require)[col_rate_n].sum().reset_index()
-            df_sum.rename(columns={col_rate_n: col_rate_ntd_out}, inplace=True)
-            df_out = df.merge(df_sum, on=cols_require)
-        return df_out.reset_index(drop=True)
+        return array_preds, df_metadatas
+
+    # 5. Save the resulting prediction array as a geotiff (and optionally save the
+    #    input "Xarray" image).
+    # 6. Consider storing another image providing an estimate of +/- of predicted
+    #    value (based on where it lies in the "predicted" axis of the
+    #    measured/predicted cross-validated test set.)
+
+
+#     def save_preds(self, fname_out):
+#         '''
+#         Saves a
+#         '''
+
+# fname_out = r'G:\Shared drives\Data\client_data\CSS Farms\preds_prototype\petiole-no3_20200714T172859_CSS-Farms-Dalhart_Cabrillas_C-18.tif'
+# my_imagery = Imagery()
+# my_imagery.driver = 'Gtiff'
+# rast = rio.open(fname_img)
+# metadata = rast.meta
+# my_imagery._save_image(array_pred, metadata, fname_out, keep_xml=False)
+
+# fname = r'G:\Shared drives\Data\client_data\CSS Farms\preds_prototype\petiole-no3_20200714T172859_CSS-Farms-Dalhart_Cabrillas_C-18.tif'
+# with rasterio.open(fname) as src:
+#     with rasterio.Env():
+#         profile = ds.profile
+#         profile = {'driver': 'GTiff',
+#                    'dtype': 'uint16',
+#                    'nodata': 0.0,
+#                    'width': 48,
+#                    'height': 24,
+#                    'count': 1,
+#                    'crs': CRS.from_epsg(32613),
+#                    'transform': Affine(20.0, 0.0, 695800.0, 0.0, -20.0, 3983280.0),
+#                    'tiled': False,
+#                    'interleave': 'band'}
+
+#     # And then change the band count to 1, set the
+#     # dtype to uint8, and specify LZW compression.
+#     profile.update(
+#         dtype=rasterio.uint8,
+#         count=1,
+#         compress='lzw')
+
+#     with rasterio.open('example.tif', 'w', **profile) as dst:
+#         dst.write(array.astype(rasterio.uint8), 1)
