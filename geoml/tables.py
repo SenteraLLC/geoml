@@ -1,15 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Oct 16 14:42:53 2020
-
-TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
-Insight Sensing Corporation. All rights reserved.
-
-@copyright: © Insight Sensing Corporation, 2020
-@author: Tyler J. Nigon
-@contributors: [Tyler J. Nigon]
-"""
-import numpy as np
 import os
 import pandas as pd
 import geopandas as gpd
@@ -17,7 +5,6 @@ from sqlalchemy import inspect
 import warnings
 
 from db import DBHandler
-from db.table_templates import table_templates
 import db.utilities as db_utils
 
 

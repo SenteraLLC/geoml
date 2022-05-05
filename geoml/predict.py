@@ -17,6 +17,7 @@ import numpy as np
 import os
 import pandas as pd
 import rasterio as rio
+from rasterio.io import MemoryFile
 from rasterio.mask import mask as rio_mask
 
 from db import DBHandler
@@ -302,7 +303,21 @@ class Predict(Tables):
         if "dae" in self.feats_x_select:
             df_feats = self.dae(df_feats)
         if "rate_ntd_kgha" in self.feats_x_select:
-            df_feats = self.rate_ntd(df_feats)
+            df_feats_out = None
+            for r in range(len(df_feats)):
+                df_feat_single = gpd.GeoDataFrame(
+                    [df_feats.iloc[r]],
+                    crs=df_feats.crs,
+                    geometry=df_feats.geometry.name,
+                )
+                if df_feats_out is None:
+                    df_feats_out = self.rate_ntd(df_feat_single)
+                else:
+                    df_feats_out = pd.concat(
+                        [df_feats_out, self.rate_ntd(df_feat_single)], axis="index"
+                    )
+            df_feats = df_feats_out.copy()
+            # df_feats = self.rate_ntd(df_feats)
         if any("wl_" in f for f in self.feats_x_select):
             # For now, just add null placeholders as a new column
             wl_names = [f for f in self.feats_x_select if "wl_" in f]
@@ -312,18 +327,47 @@ class Predict(Tables):
             # TODO: Figure out how to decipher between Sentinel and other sources
         return df_feats
 
-    def _fill_array_X(self, array_img, df_feats):
+    def _mask_array_by_geom(self, img_shape, profile, geometry):
+        profile.update(driver="MEM", count=1)
+        with MemoryFile() as memfile:
+            with memfile.open(**profile) as ds_temp:
+                ds_temp.write(np.ones((1,) + img_shape[1:], dtype=float))
+                array_mask, _ = rio_mask(
+                    ds_temp,
+                    [geometry],
+                    nodata=profile["nodata"],
+                    filled=True,
+                    crop=False,
+                )
+        return array_mask
+
+    def _fill_array_X(self, array_img, df_feats, profile):
         """
         Populates array_X with all the features in df_feats
         """
         array_X_shape = (len(self.feats_x_select),) + array_img.shape[1:]
-        array_X = np.empty(array_X_shape, dtype=float)
+        array_X = np.zeros(array_X_shape, dtype=float)
 
-        for i, feat in enumerate(self.feats_x_select):
-            if "wl_" in feat:
-                array_X[i, :, :] = array_img[df_feats[feat], :, :] / 10000
-            else:
-                array_X[i, :, :] = df_feats[feat]
+        for i_fs, feat in enumerate(self.feats_x_select):
+            # Builds a 2D array of the feature to be added to array_X
+            array_feat = np.zeros((1,) + array_img.shape[1:], dtype=float)
+            for i in range(len(df_feats)):
+                geometry = df_feats.iloc[i][df_feats.geometry.name]
+                array_mask = self._mask_array_by_geom(
+                    array_img.shape, profile, geometry
+                )
+                mask_bool = np.array(array_mask, dtype=bool)
+
+                if "wl_" in feat:
+                    array_feat[mask_bool] = (
+                        array_img[df_feats.iloc[i][feat], :, :][mask_bool[0, :, :]]
+                        / 10000
+                    )
+
+                else:
+                    array_feat[mask_bool] = df_feats.iloc[i][feat]
+
+            array_X[i_fs, :, :] = array_feat[0, :, :]
         return array_X
 
     def _predict_and_reshape(self, array_X):
@@ -499,7 +543,7 @@ class Predict(Tables):
         #         # get its value from weather_derived and add to df_feats
         #         df_feats[f] = weather_derived_filter[f].values[0]
 
-        array_X = self._fill_array_X(array_img, df_feats)
+        array_X = self._fill_array_X(array_img, df_feats, profile)
         mask = array_img[0] == 0
 
         array_pred = self._predict_and_reshape(array_X)
