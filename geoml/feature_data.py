@@ -12,7 +12,6 @@ Insight Sensing Corporation. All rights reserved.
 from copy import deepcopy
 from datetime import datetime
 import inspect
-import json
 import numpy as np
 import os
 import pandas as pd
@@ -256,20 +255,23 @@ class FeatureData(Tables):
                 df = pd.DataFrame(df.drop(columns=[df.geometry.name]))
         return df
 
-# group_feats = {
-#     "dae": "dae",
-#     "rate_ntd": {"col_rate_n": "rate_n_kgha", "col_out": "rate_ntd_kgha"},
-#     "cropscan_wl_range1": [400, 900],
-#     "weather": {
-#         "date_origin_kwargs": {"table": "as_planted", "column": "date_plant"},
-#         "features": [
-#             'sum(w."precip_24h:mm") as "precip_csp:mm"',
-#             'sum(w."evapotranspiration_24h:mm") as "evapotranspiration_csp:mm"',
-#             'sum(w."global_rad_24h:MJ") as "global_rad_csp:MJ"',
-#             'sum(w."gdd_10C30C_2m_24h:C") as "gdd_10C30C_2m_csp:C"',
-#         ]
-#     }
-# }
+    def _swap_single_for_double_quotes(self, json_list):
+        return [s.replace("'", '"') for s in json_list]
+
+    # group_feats = {
+    #     "dae": "dae",
+    #     "rate_ntd": {"col_rate_n": "rate_n_kgha", "col_out": "rate_ntd_kgha"},
+    #     "cropscan_wl_range1": [400, 900],
+    #     "weather": {
+    #         "date_origin_kwargs": {"table": "as_planted", "column": "date_plant"},
+    #         "features": [
+    #             'sum(w."precip_24h:mm") as "precip_csp:mm"',
+    #             'sum(w."evapotranspiration_24h:mm") as "evapotranspiration_csp:mm"',
+    #             'sum(w."global_rad_24h:MJ") as "global_rad_csp:MJ"',
+    #             'sum(w."gdd_10C30C_2m_24h:C") as "gdd_10C30C_2m_csp:C"',
+    #         ]
+    #     }
+    # }
 
     def _join_group_feats(self, df, group_feats, date_tolerance):
         """
@@ -287,13 +289,22 @@ class FeatureData(Tables):
                 df, col_rate_n=col_rate_n, col_rate_ntd_out=col_rate_ntd_out
             )
         if "weather" in group_feats:
-                feature_list = json.dumps(group_feats["weather"]["features"])
-            df_weather = self.db.get_weather_summary(
-                # date_origin_kwargs={"table": "as_planted", "column": "date_plant"}
-                feature_list=feature_list,
-                date_origin_kwargs=group_feats["weather"]["date_origin_kwargs"],
-                response_data=self.response_data
+            feature_list = self._swap_single_for_double_quotes(
+                group_feats["weather"]["features"]
             )
+            gdf_weather = self.db.get_weather_summary_gis(
+                response_data=self.response_data,
+                date_origin_kwargs=group_feats["weather"]["date_origin_kwargs"],
+                feature_list=feature_list,
+            )
+            df = df.merge(gdf_weather, on=["owner", "farm"])
+
+            # df_weather = self.db.get_weather_summary(
+            #     # date_origin_kwargs={"table": "as_planted", "column": "date_plant"}
+            #     feature_list=feature_list,
+            #     date_origin_kwargs=group_feats["weather"]["date_origin_kwargs"],
+            #     response_data=self.response_data,
+            # )
         if "weather_derived" in group_feats:
             self.weather_derived = self._check_empty_geom(self.weather_derived)
             df = self.join_closest_date(  # join weather by closest date
