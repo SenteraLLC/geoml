@@ -245,7 +245,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "db"
-version = "0.1.3"
+version = "0.1.4"
 description = ""
 category = "main"
 optional = false
@@ -272,8 +272,8 @@ tqdm = "^4.62.3"
 [package.source]
 type = "git"
 url = "git@github.com:SenteraLLC/db"
-reference = "v0.1.3"
-resolved_reference = "00ca7d5aca5307005880c89ceb9a61d85f138801"
+reference = "POT-76-geoml-wx"
+resolved_reference = "1ef7f313235e4beb1937acd0876dd5630dc2202b"
 
 [[package]]
 name = "debugpy"
@@ -1749,7 +1749,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "24bccbb60b761f540dd67c435c63fff984ac8836fd49369e240b225e3875e3bf"
+content-hash = "d4f82a1ff221e1bddd54a5ea4ad2edfaa432d9d5d713d12a67ddc2b60df2f305"
 
 [metadata.files]
 affine = [
