@@ -1,14 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr  1 14:42:05 2020
-
-TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
-Insight Sensing Corporation. All rights reserved.
-
-@copyright: © Insight Sensing Corporation, 2020
-@author: Tyler J. Nigon
-@contributors: [Tyler J. Nigon]
-"""
 from copy import deepcopy
 from datetime import datetime
 import inspect
@@ -277,52 +266,58 @@ class FeatureData(Tables):
         """
         Joins predictors to ``df`` based on the contents of group_feats
         """
-        if "dae" in group_feats:
-            df = self.dae(df)  # add DAE
-        if "dap" in group_feats:
-            df = self.dap(df)  # add DAP
-        if "rate_ntd" in group_feats:
-            col_rate_n = group_feats["rate_ntd"]["col_rate_n"]
-            col_rate_ntd_out = group_feats["rate_ntd"]["col_out"]
-            # unit_str = value.rsplit('_', 1)[1]
-            df = self.rate_ntd(
-                df, col_rate_n=col_rate_n, col_rate_ntd_out=col_rate_ntd_out
+        from ast import literal_eval
+
+        subset = db_utils.get_primary_keys(self.df_response)
+
+        if "planting" in group_feats:
+            plant_kwargs = group_feats["planting"]["date_origin_kwargs"]
+            select_extra = (
+                plant_kwargs["select_extra"]
+                if "select_extra" in plant_kwargs.keys()
+                else []
             )
+            feats_plant = [
+                literal_eval(f.split(" as ")[-1])
+                for f in group_feats["planting"]["features"]
+            ] + select_extra
+
+            gdf_plant = self.db.get_planting_summary_gis(
+                response_data=self.response_data,
+                date_origin_kwargs=plant_kwargs,
+                feature_list=group_feats["planting"]["features"],
+            )
+            df = pd.merge(
+                df,
+                gdf_plant[["id"] + subset + feats_plant],
+                how="left",
+                on=subset + ["id"],
+            )
+
         if "weather" in group_feats:
-            feature_list = self._swap_single_for_double_quotes(
+            weather_kwargs = group_feats["weather"]["date_origin_kwargs"]
+            select_extra = (
+                weather_kwargs["select_extra"]
+                if "select_extra" in weather_kwargs.keys()
+                else []
+            )
+            feature_list_sql = self._swap_single_for_double_quotes(
                 group_feats["weather"]["features"]
             )
+            feats_weather = [
+                literal_eval(f.split(" as ")[-1]) for f in feature_list_sql
+            ] + select_extra
+
             gdf_weather = self.db.get_weather_summary_gis(
                 response_data=self.response_data,
                 date_origin_kwargs=group_feats["weather"]["date_origin_kwargs"],
-                feature_list=feature_list,
+                feature_list=feature_list_sql,
             )
-            df = df.merge(gdf_weather, on=["owner", "farm"])
-
-            # df_weather = self.db.get_weather_summary(
-            #     # date_origin_kwargs={"table": "as_planted", "column": "date_plant"}
-            #     feature_list=feature_list,
-            #     date_origin_kwargs=group_feats["weather"]["date_origin_kwargs"],
-            #     response_data=self.response_data,
-            # )
-        if "weather_derived" in group_feats:
-            self.weather_derived = self._check_empty_geom(self.weather_derived)
-            df = self.join_closest_date(  # join weather by closest date
+            df = pd.merge(
                 df,
-                self.weather_derived,
-                left_on="date",
-                right_on="date",
-                tolerance=0,
-                delta_label=None,
-            )
-        if "weather_derived_res" in group_feats:
-            df = self.join_closest_date(  # join weather by closest date
-                df,
-                self.weather_derived_res,
-                left_on="date",
-                right_on="date",
-                tolerance=0,
-                delta_label=None,
+                gdf_weather[["id"] + subset + feats_weather],
+                how="left",
+                on=subset + ["id"],
             )
         for (
             key
@@ -415,6 +410,36 @@ class FeatureData(Tables):
                     on=subset + ["date"] + subset_filter + [value_col],
                 )
                 # df["date"] = pd.to_datetime(df["date"].dt.date)
+        if "rate_ntd" in group_feats:
+            col_rate_n = group_feats["rate_ntd"]["col_rate_n"]
+            col_rate_ntd_out = group_feats["rate_ntd"]["col_out"]
+            # unit_str = value.rsplit('_', 1)[1]
+            df = self.rate_ntd(
+                df, col_rate_n=col_rate_n, col_rate_ntd_out=col_rate_ntd_out
+            )
+        if "dae" in group_feats:
+            df = self.dae(df)  # add DAE
+        if "dap" in group_feats:
+            df = self.dap(df)  # add DAP
+        if "weather_derived" in group_feats:
+            self.weather_derived = self._check_empty_geom(self.weather_derived)
+            df = self.join_closest_date(  # join weather by closest date
+                df,
+                self.weather_derived,
+                left_on="date",
+                right_on="date",
+                tolerance=0,
+                delta_label=None,
+            )
+        if "weather_derived_res" in group_feats:
+            df = self.join_closest_date(  # join weather by closest date
+                df,
+                self.weather_derived_res,
+                left_on="date",
+                right_on="date",
+                tolerance=0,
+                delta_label=None,
+            )
         return df
 
     def _load_df_response(self):

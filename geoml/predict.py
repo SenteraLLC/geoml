@@ -1,14 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 27 19:18:16 2020
-
-TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
-Insight Sensing Corporation. All rights reserved.
-
-@copyright: © Insight Sensing Corporation, 2020
-@author: Tyler J. Nigon
-@contributors: [Tyler J. Nigon]
-"""
 from copy import deepcopy
 from datetime import datetime
 from functools import partial
