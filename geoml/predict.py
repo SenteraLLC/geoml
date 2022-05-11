@@ -11,7 +11,6 @@ from rasterio.mask import mask as rio_mask
 
 from db import DBHandler
 
-# from spatial import Imagery
 import db.utilities as db_utils
 from db.sql.sql_constructors import closest_date_sql
 
@@ -543,84 +542,3 @@ class Predict(Tables):
         if mask_by_bounds == True:
             array_pred, profile = self._mask_by_bounds(array_pred, profile, buffer_dist)
         return array_pred, profile
-
-    def predict_and_save(self, **kwargs):
-        """
-        Makes predictions for each geometry in ``gdf_pred`` and saves output
-        as an image.
-
-        This function does 2 tasks in addition to predict(): batch predicts for
-        all geom in ``gdf_pred``, and saves predictions as an image.
-
-        For spatially aware predictions. Builds a 3d array that contains
-        spatial data (x/y) as well as feaure data (z). The 3d array is reshaped
-        to 2d (x*y by z shape) and passed to the ``estimator.predict()``
-        function. After predictions are made, the 1d array is reshaped to 2d
-        and loaded as a rasterio object.
-        """
-        print("Making predictions on new data...")
-        self._set_params_from_kwargs_pred(**kwargs)
-
-        array_preds, df_metadatas = [], []
-        imagery = Imagery()
-        imagery.driver = "Gtiff"
-        for _, gdf_pred_s in self.gdf_pred.iterrows():
-            array_pred, ds, df_metadata = self.predict(gdf_pred_s)
-            array_preds.append(array_pred)
-            df_metadatas.append(df_metadata)
-
-            name_out = "petno3_ppm_20200713_r20m_css-farms-dalhart_cabrillas_c-06.tif"
-
-            fname_out = os.path.join(self.dir_out_pred, name_out)
-            imagery._save_image(
-                np.expand_dims(array_pred, axis=0),
-                ds.profile,
-                fname_out,
-                keep_xml=False,
-            )
-
-        return array_preds, df_metadatas
-
-    # 5. Save the resulting prediction array as a geotiff (and optionally save the
-    #    input "Xarray" image).
-    # 6. Consider storing another image providing an estimate of +/- of predicted
-    #    value (based on where it lies in the "predicted" axis of the
-    #    measured/predicted cross-validated test set.)
-
-
-#     def save_preds(self, fname_out):
-#         '''
-#         Saves a
-#         '''
-
-# fname_out = r'G:\Shared drives\Data\client_data\CSS Farms\preds_prototype\petiole-no3_20200714T172859_CSS-Farms-Dalhart_Cabrillas_C-18.tif'
-# my_imagery = Imagery()
-# my_imagery.driver = 'Gtiff'
-# rast = rio.open(fname_img)
-# metadata = rast.meta
-# my_imagery._save_image(array_pred, metadata, fname_out, keep_xml=False)
-
-# fname = r'G:\Shared drives\Data\client_data\CSS Farms\preds_prototype\petiole-no3_20200714T172859_CSS-Farms-Dalhart_Cabrillas_C-18.tif'
-# with rasterio.open(fname) as src:
-#     with rasterio.Env():
-#         profile = ds.profile
-#         profile = {'driver': 'GTiff',
-#                    'dtype': 'uint16',
-#                    'nodata': 0.0,
-#                    'width': 48,
-#                    'height': 24,
-#                    'count': 1,
-#                    'crs': CRS.from_epsg(32613),
-#                    'transform': Affine(20.0, 0.0, 695800.0, 0.0, -20.0, 3983280.0),
-#                    'tiled': False,
-#                    'interleave': 'band'}
-
-#     # And then change the band count to 1, set the
-#     # dtype to uint8, and specify LZW compression.
-#     profile.update(
-#         dtype=rasterio.uint8,
-#         count=1,
-#         compress='lzw')
-
-#     with rasterio.open('example.tif', 'w', **profile) as dst:
-#         dst.write(array.astype(rasterio.uint8), 1)
