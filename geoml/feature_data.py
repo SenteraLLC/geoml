@@ -278,8 +278,7 @@ class FeatureData(Tables):
                 else []
             )
             feats_plant = [
-                literal_eval(f.split(" as ")[-1])
-                for f in group_feats["planting"]["features"]
+                f.split(" as ")[-1] for f in group_feats["planting"]["features"]
             ] + select_extra
 
             gdf_plant = self.db.get_planting_summary_gis(
