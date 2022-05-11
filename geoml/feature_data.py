@@ -1,3 +1,4 @@
+from ast import literal_eval
 from copy import deepcopy
 from datetime import datetime
 import inspect
@@ -233,6 +234,29 @@ class FeatureData(Tables):
                 labels_x.extend(group_feats[key])
             elif "rate_ntd" in key:
                 labels_x.append(group_feats[key]["col_out"])
+            elif "planting" in key:
+                plant_kwargs = group_feats["planting"]["date_origin_kwargs"]
+                select_extra = (
+                    plant_kwargs["select_extra"]
+                    if "select_extra" in plant_kwargs.keys()
+                    else []
+                )
+                feats_plant = [
+                    f.split(" as ")[-1] for f in group_feats["planting"]["features"]
+                ] + select_extra
+                labels_x.extend(feats_plant)
+            elif "weather" in key:
+                weather_kwargs = group_feats["weather"]["date_origin_kwargs"]
+                select_extra = (
+                    weather_kwargs["select_extra"]
+                    if "select_extra" in weather_kwargs.keys()
+                    else []
+                )
+                feats_weather = [
+                    literal_eval(f.split(" as ")[-1])
+                    for f in group_feats["weather"]["features"]
+                ] + select_extra
+                labels_x.extend(feats_weather)
             else:
                 labels_x.append(group_feats[key])
         self.labels_x = labels_x
@@ -266,8 +290,6 @@ class FeatureData(Tables):
         """
         Joins predictors to ``df`` based on the contents of group_feats
         """
-        from ast import literal_eval
-
         subset = db_utils.get_primary_keys(self.df_response)
 
         if "planting" in group_feats:
@@ -286,6 +308,7 @@ class FeatureData(Tables):
                 date_origin_kwargs=plant_kwargs,
                 feature_list=group_feats["planting"]["features"],
             )
+            # TODO: Consider checking for timedelta dtype and change to int here
             df = pd.merge(
                 df,
                 gdf_plant[["id"] + subset + feats_plant],
