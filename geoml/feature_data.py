@@ -336,11 +336,10 @@ class FeatureData(Tables):
         ) in (
             group_feats
         ):  # necessary because 'cropscan_wl_range1' must be differentiated
+            logging.info(
+                "Adding features to feature matrix:\n{0}\n" "".format(group_feats[key])
+            )
             if "applications" in key:
-                logging.info(
-                    "Adding Application data to feature matrix for response_data:\n{0}\n"
-                    "".format(self.response_data)
-                )
                 rate_kwargs = group_feats[key]["rate_kwargs"]
                 gdf_app = self.db.get_application_summary_gis(
                     response_data=self.response_data,
@@ -363,10 +362,6 @@ class FeatureData(Tables):
                     on=subset + ["id"],
                 )
             if "planting" in key:
-                logging.info(
-                    "Adding Planting data to feature matrix for response_data:\n{0}\n"
-                    "".format(self.response_data)
-                )
                 plant_kwargs = group_feats[key]["date_origin_kwargs"]
                 select_extra = (
                     plant_kwargs["select_extra"]
@@ -389,10 +384,6 @@ class FeatureData(Tables):
                     on=subset + ["id"],
                 )
             if "sentinel" in key:
-                logging.info(
-                    "Adding Sentinel data to feature matrix for response_data:\n{0}\n"
-                    "".format(self.response_data)
-                )
                 gdf_stats = self.db.get_zonal_stats(
                     response_data=self.response_data,
                     tolerance=date_tolerance,  # days
@@ -411,10 +402,6 @@ class FeatureData(Tables):
                     on=subset + ["id"],
                 )
             if "weather" in key:
-                logging.info(
-                    "Adding Weather data to feature matrix for response_data:\n{0}\n"
-                    "".format(self.response_data)
-                )
                 weather_kwargs = group_feats[key]["date_origin_kwargs"]
                 select_extra = (
                     weather_kwargs["select_extra"]
@@ -478,8 +465,8 @@ class FeatureData(Tables):
         response_data = deepcopy(self.response_data)
         table_name = response_data.pop("table_name")
         value_col = response_data.pop("value_col")
-        print(
-            "\nLoading response dataframe...\nTable: {0}\nkwargs: {1}\n"
+        logging.info(
+            "Loading response dataframe...\nTable: {0}\nkwargs: {1}\n"
             "".format(table_name, response_data)
         )
         df_response = self.db.get_table_df(table_name, **response_data)
