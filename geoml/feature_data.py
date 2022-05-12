@@ -232,6 +232,18 @@ class FeatureData(Tables):
                 or "weather_derived_res" in key
             ):
                 labels_x.extend(group_feats[key])
+            elif "applications" in key:
+                apps_kwargs = group_feats["applications"]["rate_kwargs"]
+                select_extra = (
+                    apps_kwargs["select_extra"]
+                    if "select_extra" in apps_kwargs.keys()
+                    else []
+                )
+                feats_apps = [
+                    f.split(" as ")[-1] for f in group_feats["applications"]["features"]
+                ] + select_extra
+                labels_x.extend(feats_apps)
+
             elif "rate_ntd" in key:
                 labels_x.append(group_feats[key]["col_out"])
             elif "planting" in key:
