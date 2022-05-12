@@ -111,11 +111,6 @@ class FeatureData(Tables):
         self._get_random_seed()
         # self.tables = Tables(base_dir_data=self.base_dir_data)
 
-    # def set_params_from_kwargs(self, **kwargs):
-    #     print('_set_params_from_kwargs - entering')
-    #     print(kwargs)
-    #     print('_set_params_from_kwargs - exiting')
-
     def _set_params_from_dict_fd(self, config_dict):
         """
         Sets any of the parameters in ``config_dict`` to self as long as they
@@ -205,12 +200,6 @@ class FeatureData(Tables):
 
         if col.isnumeric() and int(col) >= wl_range[0] and int(col) <= wl_range[1]:
             labels_x.append(c)
-        # else:
-        #     print('Wavelength column <{0}> is not valid. Please note that '
-        #           'wavelength columns should begin with <prefix> and the rest '
-        #           'must include the wavelength value that can be interpreted '
-        #           'as an integer (be sure columns are not decimals).'
-        #           ''.format(c))
         return labels_x
 
     def _get_labels_x(self, group_feats, cols=None):
@@ -221,7 +210,7 @@ class FeatureData(Tables):
         """
         labels_x = []
         for key in group_feats:
-            print("Loading <group_feats> key: {0}".format(key))
+            logging.info("Loading <group_feats> key: {0}".format(key))
             if "wl_range" in key:
                 wl_range = group_feats[key]
                 assert cols is not None, "``cols`` must be passed."
@@ -234,31 +223,29 @@ class FeatureData(Tables):
             ):
                 labels_x.extend(group_feats[key])
             elif "applications" in key:
-                apps_kwargs = group_feats["applications"]["rate_kwargs"]
+                apps_kwargs = group_feats[key]["rate_kwargs"]
                 select_extra = (
                     apps_kwargs["select_extra"]
                     if "select_extra" in apps_kwargs.keys()
                     else []
                 )
                 feats_apps = [
-                    f.split(" as ")[-1] for f in group_feats["applications"]["features"]
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
                 ] + select_extra
                 labels_x.extend(feats_apps)
-            elif "rate_ntd" in key:
-                labels_x.append(group_feats[key]["col_out"])
             elif "planting" in key:
-                plant_kwargs = group_feats["planting"]["date_origin_kwargs"]
+                plant_kwargs = group_feats[key]["date_origin_kwargs"]
                 select_extra = (
                     plant_kwargs["select_extra"]
                     if "select_extra" in plant_kwargs.keys()
                     else []
                 )
                 feats_plant = [
-                    f.split(" as ")[-1] for f in group_feats["planting"]["features"]
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
                 ] + select_extra
                 labels_x.extend(feats_plant)
             elif "weather" in key:
-                weather_kwargs = group_feats["weather"]["date_origin_kwargs"]
+                weather_kwargs = group_feats[key]["date_origin_kwargs"]
                 select_extra = (
                     weather_kwargs["select_extra"]
                     if "select_extra" in weather_kwargs.keys()
@@ -266,7 +253,7 @@ class FeatureData(Tables):
                 )
                 feats_weather = [
                     literal_eval(f.split(" as ")[-1])
-                    for f in group_feats["weather"]["features"]
+                    for f in group_feats[key]["features"]
                 ] + select_extra
                 labels_x.extend(feats_weather)
             else:
@@ -466,7 +453,7 @@ class FeatureData(Tables):
         table_name = response_data.pop("table_name")
         value_col = response_data.pop("value_col")
         logging.info(
-            "Loading response dataframe...\nTable: {0}\nkwargs: {1}\n"
+            "Loading response dataframe:\n\tTable: {0}\n\tkwargs: {1}\n"
             "".format(table_name, response_data)
         )
         df_response = self.db.get_table_df(table_name, **response_data)
@@ -485,48 +472,6 @@ class FeatureData(Tables):
         df_response = self._add_empty_geom(df_response)
         self.df_response = df_response
 
-    def _load_df_response_old(
-        self, tissue_col="tissue", measure_col="measure", value_col="value"
-    ):
-        """
-        Loads the response DataFrame based on <response_data>. The observations are
-        retrieved from the
-        <obs_tissue> table.
-        """
-        tissue = self.ground_truth_tissue
-        measure = self.ground_truth_measure
-        print(
-            "\nLoading response dataframe...\nTissue: {0}\nMeasure: {1}\n"
-            "".format(tissue, measure)
-        )
-        # fname_obs_tissue = os.path.join(self.base_dir_data, self.fname_obs_tissue)
-        # df_obs_tissue = self._read_csv_geojson(fname_obs_tissue)
-        self.labels_y_id = [tissue_col, measure_col]
-        self.label_y = value_col
-        if self.obs_tissue_res is not None:
-            obs_tissue = self.obs_tissue_res.copy()
-        elif self.obs_tissue is not None:
-            obs_tissue = self.obs_tissue.copy()
-        else:
-            raise ValueError(
-                "Both <obs_tissue> and <obs_tisue_res> are None. "
-                "Please be sure either <obs_tissue> or "
-                "<obs_tissue_res> is in <base_dir_data> or "
-                "<db_schema>."
-            )
-        if self.obs_tissue_res is not None and self.obs_tissue is not None:
-            raise ValueError(
-                "Both <obs_tissue> and <obs_tissue_res> are "
-                "populated, so we are unsure which table to "
-                "load. Please be sure only one of <obs_tissue> "
-                "or <obs_tissue_res> is in <base_dir_data> or "
-                "<db_schema>."
-            )
-        obs_tissue = obs_tissue[pd.notnull(obs_tissue[value_col])]
-        self.df_response = obs_tissue[
-            (obs_tissue[measure_col] == measure) & (obs_tissue[tissue_col] == tissue)
-        ]
-
     def _write_to_readme(self, msg, msi_run_id=None, row=None):
         """
         Writes ``msg`` to the README.txt file
@@ -539,7 +484,7 @@ class FeatureData(Tables):
         #     dir_out = os.path.join(self.dir_results, folder_name)
         # with open(os.path.join(self.dir_results, folder_name + '_README.txt'), 'a') as f:
         if self.dir_results is None:
-            print("<dir_results> must be set to create README file.")
+            logging.info("<dir_results> must be set to create README file.")
             return
         else:
             with open(os.path.join(self.dir_results, "README.txt"), "a") as f:
@@ -646,9 +591,9 @@ class FeatureData(Tables):
             )
 
         unique, counts = np.unique(groups, return_counts=True)
-        print("\nStratification groups: {0}".format(stratify_cols))
-        print("Number of stratification groups:  {0}".format(len(unique)))
-        print("Minimum number of splits allowed: {0}".format(min(counts)))
+        logging.info("\nStratification groups: {0}".format(stratify_cols))
+        logging.info("Number of stratification groups:  {0}".format(len(unique)))
+        logging.info("Minimum number of splits allowed: {0}".format(min(counts)))
         return groups
 
     def _check_sklearn_splitter(
@@ -856,12 +801,12 @@ class FeatureData(Tables):
 
         train_pct = (len(df_train) / (len(df_train) + len(df_test))) * 100
         test_pct = (len(df_test) / (len(df_train) + len(df_test))) * 100
-        print(
+        logging.info(
             '\nNumber of observations in the "training" set: {0} ({1:.1f}%)'.format(
                 len(df_train), train_pct
             )
         )
-        print(
+        logging.info(
             'Number of observations in the "test" set: {0} ({1:.1f}%)\n'.format(
                 len(df_test), test_pct
             )
@@ -965,10 +910,6 @@ class FeatureData(Tables):
         Saves both ``FeatureData.df_X`` and ``FeatureData.df_y`` to
         ``FeatureData.dir_results``.
         """
-        # if self.group_feats is None or self.label_y is None:
-        #     print('<group_feats> and <label_y> must be set to save data to '
-        #           '<dir_results>. Have you ran `get_feat_group_X_y()` yet?')
-        #     return
         dir_out = os.path.join(self.dir_results, self.label_y)
         os.makedirs(dir_out, exist_ok=True)
 
@@ -988,13 +929,13 @@ class FeatureData(Tables):
             stratify_vector = self.stratify_train
         elif train_test == "test":
             stratify_vector = self.stratify_test
-        print(
+        logging.info(
             "The number of observations in each cross-validation dataset "
             "are listed below.\nThe key represents the <stratify_{0}> ID, "
             "and the value represents the number of observations used from "
             "that stratify ID".format(train_test)
         )
-        print("Total number of observations: {0}".format(len(stratify_vector)))
+        logging.info("Total number of observations: {0}".format(len(stratify_vector)))
         train_list = []
         val_list = []
         for train_index, val_index in splitter:
@@ -1010,12 +951,12 @@ class FeatureData(Tables):
                 val[uid] = n2
             train_list.append(train)
             val_list.append(val)
-        print("\nK-fold train set:")
-        print("Number of observations: {0}".format(len(train_index)))
-        print(*train_list, sep="\n")
-        print("\nK-fold validation set:")
-        print("Number of observations: {0}".format(len(val_index)))
-        print(*val_list, sep="\n")
+        logging.info("\nK-fold train set:")
+        logging.info("Number of observations: {0}".format(len(train_index)))
+        logging.info(*train_list, sep="\n")
+        logging.info("\nK-fold validation set:")
+        logging.info("Number of observations: {0}".format(len(val_index)))
+        logging.info(*val_list, sep="\n")
 
     def get_feat_group_X_y(self, **kwargs):
         """
@@ -1085,7 +1026,7 @@ class FeatureData(Tables):
         # print(len(df4))
         # print(len(df5))
 
-        print("Getting feature data...")
+        logging.info("Creating the training feature matrix.")
         self._set_params_from_kwargs_fd(**kwargs)
         df = self.df_response.copy()
         # df = self._get_response_df(self.ground_truth_tissue, self.ground_truth_measure)
@@ -1161,26 +1102,25 @@ class FeatureData(Tables):
             if "X" not in cv_split_kwargs_eval:  # sets X
                 cv_split_kwargs_eval["X"] = df_X_train
 
-        # print(len(cv_split_kwargs_eval['X']))
         if self.print_splitter_info == True:
             n_train = []
             n_val = []
             for idx_train, idx_val in cv.split(**cv_split_kwargs_eval):
                 n_train.append(len(idx_train))
                 n_val.append(len(idx_val))
-            print(
+            logging.info(
                 "Tuning splitter: number of cross-validation splits: {0}".format(
                     cv.get_n_splits(**cv_split_kwargs_eval)
                 )
             )
             train_pct = (np.mean(n_train) / (np.mean(n_train) + np.mean(n_val))) * 100
             val_pct = (np.mean(n_val) / (np.mean(n_train) + np.mean(n_val))) * 100
-            print(
+            logging.info(
                 "Number of observations in the (tuning) train set (avg): {0:.1f} ({1:.1f}%)".format(
                     np.mean(n_train), train_pct
                 )
             )
-            print(
+            logging.info(
                 "Number of observations in the (tuning) validation set (avg): {0:.1f} ({1:.1f}%)\n".format(
                     np.mean(n_val), val_pct
                 )
