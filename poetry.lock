@@ -272,7 +272,7 @@ tqdm = "^4.62.3"
 type = "git"
 url = "git@github.com:SenteraLLC/db"
 reference = "POT-76-geoml-wx"
-resolved_reference = "317983f2d353d2a12ed1673c67bdd1404b1592d6"
+resolved_reference = "8b06325818a7dfd97f0cfcee8a5449643dea33be"
 
 [[package]]
 name = "debugpy"

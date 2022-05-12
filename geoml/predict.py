@@ -12,7 +12,7 @@ from rasterio.mask import mask as rio_mask
 from db import DBHandler
 
 import db.utilities as db_utils
-from db.sql.sql_constructors import closest_date_sql
+from db.sql.closest_date import closest_date_sql
 
 # import spatial.utilities as spatial_utils
 from geoml import Tables
