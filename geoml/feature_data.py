@@ -243,7 +243,6 @@ class FeatureData(Tables):
                     f.split(" as ")[-1] for f in group_feats["applications"]["features"]
                 ] + select_extra
                 labels_x.extend(feats_apps)
-
             elif "rate_ntd" in key:
                 labels_x.append(group_feats[key]["col_out"])
             elif "planting" in key:
