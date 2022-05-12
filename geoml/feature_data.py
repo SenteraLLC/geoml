@@ -286,6 +286,33 @@ class FeatureData(Tables):
     #     }
     # }
 
+    def _clean_zonal_stats(self, gdf_stats, wl_min, wl_max):
+        # Assumes all rasters in db.reflectance have same bands and band order
+        rast_metadata = pd.read_sql(
+            "select rast_metadata from reflectance order by rid limit 1",
+            con=self.db.engine,
+        )["rast_metadata"].item()
+        bands = ["b{0}".format(i + 1) for i in range(rast_metadata["count"])]
+        cols = ["wl_{0:.0f}".format(round(wl)) for wl in rast_metadata["wavelength"]]
+        gdf_stats.rename(columns=dict(zip(bands, cols)), inplace=True)
+        gdf_stats.rename(columns={"geom": "geom_rast"}, inplace=True)
+        wl_drop, wl_keep = [], []
+        for c in gdf_stats.columns:
+            try:
+                if int(c.split("_")[-1]) < wl_min or int(c.split("_")[-1]) > wl_max:
+                    wl_drop.append(c)
+                else:
+                    wl_keep.append(c)
+            except:
+                pass
+        gdf_stats.drop(columns=wl_drop, inplace=True)
+        (
+            table_name_response,
+            value_col,
+            filter_kwargs,
+        ) = db_utils.pop_table_val_from_response_data(self.response_data)
+        return gdf_stats, wl_keep
+
     def _join_group_feats(self, df, group_feats, date_tolerance):
         """
         Joins predictors to ``df`` based on the contents of group_feats
@@ -308,10 +335,32 @@ class FeatureData(Tables):
                 date_origin_kwargs=plant_kwargs,
                 feature_list=group_feats["planting"]["features"],
             )
-            # TODO: Consider checking for timedelta dtype and change to int here
             df = pd.merge(
                 df,
                 gdf_plant[["id"] + subset + feats_plant],
+                how="left",
+                on=subset + ["id"],
+            )
+
+        if "applications" in group_feats:
+            rate_kwargs = group_feats["applications"]["rate_kwargs"]
+            gdf_app = self.db.get_application_summary_gis(
+                response_data=self.response_data,
+                rate_kwargs=rate_kwargs,
+                feature_list=group_feats["applications"]["features"],
+            )
+
+            select_extra = (
+                rate_kwargs["select_extra"]
+                if "select_extra" in rate_kwargs.keys()
+                else []
+            )
+            feats_apps = [
+                f.split(" as ")[-1] for f in group_feats["applications"]["features"]
+            ] + select_extra
+            df = pd.merge(
+                df,
+                gdf_app[["id"] + subset + feats_apps],
                 how="left",
                 on=subset + ["id"],
             )
@@ -390,48 +439,22 @@ class FeatureData(Tables):
                     units_expression="/10000",
                     wide=True,
                 )
-                # Assumes all rasters in db.reflectance have same bands and band order
-                rast_metadata = pd.read_sql(
-                    "select rast_metadata from reflectance order by rid limit 1",
-                    con=self.db.engine,
-                )["rast_metadata"].item()
-                bands = ["b{0}".format(i + 1) for i in range(11)]
-                cols = [
-                    "wl_{0:.0f}".format(round(wl)) for wl in rast_metadata["wavelength"]
-                ]
-                gdf_stats.rename(columns=dict(zip(bands, cols)), inplace=True)
-                gdf_stats.rename(columns={"geom": "geom_rast"}, inplace=True)
                 wl_min, wl_max = group_feats[key]
-                wl_drop = []
-                for c in gdf_stats.columns:
-                    try:
-                        if (
-                            int(c.split("_")[-1]) < wl_min
-                            or int(c.split("_")[-1]) > wl_max
-                        ):
-                            wl_drop.append(c)
-                    except:
-                        pass
-                gdf_stats.drop(columns=wl_drop, inplace=True)
                 subset = db_utils.get_primary_keys(self.df_response)
-                (
-                    table_name_response,
-                    value_col,
-                    filter_kwargs,
-                ) = db_utils.pop_table_val_from_response_data(self.response_data)
-                subset_filter = [
-                    c
-                    for c in list(filter_kwargs.keys())
-                    if c not in ["owner", "farm", "field_id", "year"]
-                ]
-                # df = pd.merge(df, gdf_stats, how="left", on=subset + ["date", "geom"])
+                gdf_stats, wl_keep = self._clean_zonal_stats(gdf_stats, wl_min, wl_max)
                 df = pd.merge(
                     df,
                     gdf_stats,
+                    gdf_stats[["id"] + subset + wl_keep],
                     how="left",
-                    on=subset + ["date"] + subset_filter + [value_col],
+                    on=subset + ["id"],
                 )
-                # df["date"] = pd.to_datetime(df["date"].dt.date)
+                # df = pd.merge(
+                #     df,
+                #     gdf_stats,
+                #     how="left",
+                #     on=subset + ["date"] + subset_filter + [value_col],
+                # )
         if "rate_ntd" in group_feats:
             col_rate_n = group_feats["rate_ntd"]["col_rate_n"]
             col_rate_ntd_out = group_feats["rate_ntd"]["col_out"]
