@@ -332,6 +332,7 @@ class FeatureData(Tables):
                     response_data=self.response_data,
                     rate_kwargs=rate_kwargs,
                     feature_list=group_feats[key]["features"],
+                    filter_last_x_days=group_feats[key]["filter_last_x_days"],
                 )
 
                 select_extra = (
