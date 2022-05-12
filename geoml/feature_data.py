@@ -440,11 +440,9 @@ class FeatureData(Tables):
                     wide=True,
                 )
                 wl_min, wl_max = group_feats[key]
-                subset = db_utils.get_primary_keys(self.df_response)
                 gdf_stats, wl_keep = self._clean_zonal_stats(gdf_stats, wl_min, wl_max)
                 df = pd.merge(
                     df,
-                    gdf_stats,
                     gdf_stats[["id"] + subset + wl_keep],
                     how="left",
                     on=subset + ["id"],
