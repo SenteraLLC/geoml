@@ -2,6 +2,7 @@ from ast import literal_eval
 from copy import deepcopy
 from datetime import datetime
 import inspect
+import logging
 import numpy as np
 import os
 import pandas as pd
@@ -330,115 +331,66 @@ class FeatureData(Tables):
         """
         subset = db_utils.get_primary_keys(self.df_response)
 
-        if "planting" in group_feats:
-            plant_kwargs = group_feats["planting"]["date_origin_kwargs"]
-            select_extra = (
-                plant_kwargs["select_extra"]
-                if "select_extra" in plant_kwargs.keys()
-                else []
-            )
-            feats_plant = [
-                f.split(" as ")[-1] for f in group_feats["planting"]["features"]
-            ] + select_extra
-
-            gdf_plant = self.db.get_planting_summary_gis(
-                response_data=self.response_data,
-                date_origin_kwargs=plant_kwargs,
-                feature_list=group_feats["planting"]["features"],
-            )
-            df = pd.merge(
-                df,
-                gdf_plant[["id"] + subset + feats_plant],
-                how="left",
-                on=subset + ["id"],
-            )
-
-        if "applications" in group_feats:
-            rate_kwargs = group_feats["applications"]["rate_kwargs"]
-            gdf_app = self.db.get_application_summary_gis(
-                response_data=self.response_data,
-                rate_kwargs=rate_kwargs,
-                feature_list=group_feats["applications"]["features"],
-            )
-
-            select_extra = (
-                rate_kwargs["select_extra"]
-                if "select_extra" in rate_kwargs.keys()
-                else []
-            )
-            feats_apps = [
-                f.split(" as ")[-1] for f in group_feats["applications"]["features"]
-            ] + select_extra
-            df = pd.merge(
-                df,
-                gdf_app[["id"] + subset + feats_apps],
-                how="left",
-                on=subset + ["id"],
-            )
-
-        if "weather" in group_feats:
-            weather_kwargs = group_feats["weather"]["date_origin_kwargs"]
-            select_extra = (
-                weather_kwargs["select_extra"]
-                if "select_extra" in weather_kwargs.keys()
-                else []
-            )
-            feature_list_sql = self._swap_single_for_double_quotes(
-                group_feats["weather"]["features"]
-            )
-            feats_weather = [
-                literal_eval(f.split(" as ")[-1]) for f in feature_list_sql
-            ] + select_extra
-
-            gdf_weather = self.db.get_weather_summary_gis(
-                response_data=self.response_data,
-                date_origin_kwargs=group_feats["weather"]["date_origin_kwargs"],
-                feature_list=feature_list_sql,
-            )
-            df = pd.merge(
-                df,
-                gdf_weather[["id"] + subset + feats_weather],
-                how="left",
-                on=subset + ["id"],
-            )
         for (
             key
         ) in (
             group_feats
         ):  # necessary because 'cropscan_wl_range1' must be differentiated
-            if "cropscan" in key:
-                df = self.join_closest_date(  # join cropscan by closest date
-                    df,
-                    self.rs_cropscan_res,
-                    left_on="date",
-                    right_on="date",
-                    tolerance=date_tolerance,
-                    delta_label="cropscan",
+            if "applications" in key:
+                logging.info(
+                    "Adding Application data to feature matrix for response_data:\n{0}\n"
+                    "".format(self.response_data)
                 )
-            if "micasense" in key:
-                df = self.join_closest_date(  # join micasense by closest date
-                    df,
-                    self.rs_micasense_res,
-                    left_on="date",
-                    right_on="date",
-                    tolerance=date_tolerance,
-                    delta_label="micasense",
+                rate_kwargs = group_feats[key]["rate_kwargs"]
+                gdf_app = self.db.get_application_summary_gis(
+                    response_data=self.response_data,
+                    rate_kwargs=rate_kwargs,
+                    feature_list=group_feats[key]["features"],
                 )
-            if "spad" in key:
-                df = self.join_closest_date(  # join spad by closest date
+
+                select_extra = (
+                    rate_kwargs["select_extra"]
+                    if "select_extra" in rate_kwargs.keys()
+                    else []
+                )
+                feats_apps = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+                df = pd.merge(
                     df,
-                    self.rs_spad_res,
-                    left_on="date",
-                    right_on="date",
-                    tolerance=date_tolerance,
-                    delta_label="spad",
+                    gdf_app[["id"] + subset + feats_apps],
+                    how="left",
+                    on=subset + ["id"],
+                )
+            if "planting" in key:
+                logging.info(
+                    "Adding Planting data to feature matrix for response_data:\n{0}\n"
+                    "".format(self.response_data)
+                )
+                plant_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    plant_kwargs["select_extra"]
+                    if "select_extra" in plant_kwargs.keys()
+                    else []
+                )
+                feats_plant = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+
+                gdf_plant = self.db.get_planting_summary_gis(
+                    response_data=self.response_data,
+                    date_origin_kwargs=plant_kwargs,
+                    feature_list=group_feats[key]["features"],
+                )
+                df = pd.merge(
+                    df,
+                    gdf_plant[["id"] + subset + feats_plant],
+                    how="left",
+                    on=subset + ["id"],
                 )
             if "sentinel" in key:
-                # self.rs_sentinel = self._check_empty_geom(self.rs_sentinel)
-
-                print(
-                    "\nLoading all available Sentinel data based on spatio-temporal "
-                    "response data.\nresponse_data: {0}\n"
+                logging.info(
+                    "Adding Sentinel data to feature matrix for response_data:\n{0}\n"
                     "".format(self.response_data)
                 )
                 gdf_stats = self.db.get_zonal_stats(
@@ -458,12 +410,35 @@ class FeatureData(Tables):
                     how="left",
                     on=subset + ["id"],
                 )
-                # df = pd.merge(
-                #     df,
-                #     gdf_stats,
-                #     how="left",
-                #     on=subset + ["date"] + subset_filter + [value_col],
-                # )
+            if "weather" in key:
+                logging.info(
+                    "Adding Weather data to feature matrix for response_data:\n{0}\n"
+                    "".format(self.response_data)
+                )
+                weather_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    weather_kwargs["select_extra"]
+                    if "select_extra" in weather_kwargs.keys()
+                    else []
+                )
+                feature_list_sql = self._swap_single_for_double_quotes(
+                    group_feats[key]["features"]
+                )
+                feats_weather = [
+                    literal_eval(f.split(" as ")[-1]) for f in feature_list_sql
+                ] + select_extra
+
+                gdf_weather = self.db.get_weather_summary_gis(
+                    response_data=self.response_data,
+                    date_origin_kwargs=group_feats[key]["date_origin_kwargs"],
+                    feature_list=feature_list_sql,
+                )
+                df = pd.merge(
+                    df,
+                    gdf_weather[["id"] + subset + feats_weather],
+                    how="left",
+                    on=subset + ["id"],
+                )
         if "rate_ntd" in group_feats:
             col_rate_n = group_feats["rate_ntd"]["col_rate_n"]
             col_rate_ntd_out = group_feats["rate_ntd"]["col_out"]
