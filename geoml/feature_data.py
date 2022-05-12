@@ -318,11 +318,7 @@ class FeatureData(Tables):
         """
         subset = db_utils.get_primary_keys(self.df_response)
 
-        for (
-            key
-        ) in (
-            group_feats
-        ):  # necessary because 'cropscan_wl_range1' must be differentiated
+        for key in group_feats:
             logging.info(
                 "Adding features to feature matrix:\n{0}\n" "".format(group_feats[key])
             )

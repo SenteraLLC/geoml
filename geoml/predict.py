@@ -56,6 +56,7 @@ class Predict(Tables):
         "image_search_method",
         "refit_X_full",
         "dir_out_pred",
+        "group_feats",
     )
 
     def __init__(self, **kwargs):
@@ -80,6 +81,7 @@ class Predict(Tables):
         self.image_search_method = "past"
         self.refit_X_full = False
         self.dir_out_pred = None
+        self.group_feats = None
 
         self._set_attributes_pred()
         self._set_params_from_kwargs_pred(**kwargs)
@@ -277,7 +279,85 @@ class Predict(Tables):
         }
         return keys
 
-    def _feats_x_select_data(self, df_feats, df_metadata):
+    def _feats_x_select_data(self, df_feats, df_metadata, group_feats):
+        """
+        Builds a dataframe with ``feats_x_select`` data.
+
+        Returns:
+            df_feats: DataFrame containing each of the feature names as
+                column names and the value (if not spatially aware) or
+                the array index (if spatially aware; e.g., sentinel image).
+            group_feats (dict): Instructions on how to build prediction feature
+                matrix.
+        """
+        subset = db_utils.get_primary_keys(df_feats)
+        response_data = df_feats[subset].to_dict("records")[0]
+        response_data["table_name"] = "field_bounds"
+        response_data["date_ref"] = datetime.strftime(
+            df_feats.iloc[0]["date"], "%Y-%m-%d"
+        )
+        response_data["value_col"] = None
+
+        for key in group_feats:
+            if "planting" in key:
+                plant_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    plant_kwargs["select_extra"]
+                    if "select_extra" in plant_kwargs.keys()
+                    else []
+                )
+                feats_plant = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+
+                gdf_plant = self.db.get_planting_summary_gis(
+                    response_data=response_data,
+                    date_origin_kwargs=plant_kwargs,
+                    feature_list=group_feats[key]["features"],
+                    predict=True,
+                )
+                df_feats = df_feats.sjoin(
+                    gdf_plant[[gdf_plant.geometry.name] + feats_plant], how="inner"
+                )
+                # df = pd.merge(
+                #     df,
+                #     gdf_plant[subset + feats_plant],
+                #     how="left",
+                #     on=subset + ["id"],
+                # )
+
+            # TODO: "applications"
+            # TODO: "weather"
+        if "dap" in self.feats_x_select:
+            df_feats = self.dap(df_feats)
+        if "dae" in self.feats_x_select:
+            df_feats = self.dae(df_feats)
+        if "rate_ntd_kgha" in self.feats_x_select:
+            df_feats_out = None
+            for r in range(len(df_feats)):
+                df_feat_single = gpd.GeoDataFrame(
+                    [df_feats.iloc[r]],
+                    crs=df_feats.crs,
+                    geometry=df_feats.geometry.name,
+                )
+                if df_feats_out is None:
+                    df_feats_out = self.rate_ntd(df_feat_single)
+                else:
+                    df_feats_out = pd.concat(
+                        [df_feats_out, self.rate_ntd(df_feat_single)], axis="index"
+                    )
+            df_feats = df_feats_out.copy()
+            # df_feats = self.rate_ntd(df_feats)
+        if any("wl_" in f for f in self.feats_x_select):
+            # For now, just add null placeholders as a new column
+            wl_names = [f for f in self.feats_x_select if "wl_" in f]
+            keys = self._get_array_img_band_idx(df_metadata, wl_names, tol=10)
+            for name in wl_names:
+                df_feats[name] = keys[name]
+            # TODO: Figure out how to decipher between Sentinel and other sources
+        return df_feats
+
+    def _feats_x_select_data_old(self, df_feats, df_metadata):
         """
         Builds a dataframe with ``feats_x_select`` data.
 
