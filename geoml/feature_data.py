@@ -267,8 +267,6 @@ class FeatureData(Tables):
                 df = pd.DataFrame(df.drop(columns=[df.geometry.name]))
         return df
 
-    def _swap_single_for_double_quotes(self, json_list):
-        return [s.replace("'", '"') for s in json_list]
 
     # group_feats = {
     #     "dae": "dae",
@@ -394,7 +392,7 @@ class FeatureData(Tables):
                     if "select_extra" in weather_kwargs.keys()
                     else []
                 )
-                feature_list_sql = self._swap_single_for_double_quotes(
+                feature_list_sql = db_utils.swap_single_for_double_quotes(
                     group_feats[key]["features"]
                 )
                 feats_weather = [

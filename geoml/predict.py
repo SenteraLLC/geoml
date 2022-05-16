@@ -348,7 +348,7 @@ class Predict(Tables):
                     if "select_extra" in weather_kwargs.keys()
                     else []
                 )
-                feature_list_sql = self._swap_single_for_double_quotes(
+                feature_list_sql = db_utils.swap_single_for_double_quotes(
                     group_feats[key]["features"]
                 )
                 feats_weather = [
@@ -630,7 +630,7 @@ class Predict(Tables):
         )
         # df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
 
-        df_feats = self._feats_x_select_data(df_feats, df_metadata)
+        df_feats = self._feats_x_select_data(df_feats, df_metadata, self.group_feats)
         # TODO: change when we get individual functions for each wx feature
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # if any([f for f in self.feats_x_select if f in self.weather_derived.columns]):
