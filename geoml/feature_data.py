@@ -324,13 +324,6 @@ class FeatureData(Tables):
             )
             if "applications" in key:
                 rate_kwargs = group_feats[key]["rate_kwargs"]
-                gdf_app = self.db.get_application_summary_gis(
-                    response_data=self.response_data,
-                    rate_kwargs=rate_kwargs,
-                    feature_list=group_feats[key]["features"],
-                    filter_last_x_days=group_feats[key]["filter_last_x_days"],
-                )
-
                 select_extra = (
                     rate_kwargs["select_extra"]
                     if "select_extra" in rate_kwargs.keys()
@@ -339,6 +332,14 @@ class FeatureData(Tables):
                 feats_apps = [
                     f.split(" as ")[-1] for f in group_feats[key]["features"]
                 ] + select_extra
+
+                gdf_app = self.db.get_application_summary_gis(
+                    response_data=self.response_data,
+                    rate_kwargs=rate_kwargs,
+                    feature_list=group_feats[key]["features"],
+                    filter_last_x_days=group_feats[key]["filter_last_x_days"],
+                    predict=False,
+                )
                 df = pd.merge(
                     df,
                     gdf_app[["id"] + subset + feats_apps],
@@ -360,6 +361,7 @@ class FeatureData(Tables):
                     response_data=self.response_data,
                     date_origin_kwargs=plant_kwargs,
                     feature_list=group_feats[key]["features"],
+                    predict=False,
                 )
                 df = pd.merge(
                     df,

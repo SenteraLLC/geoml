@@ -318,16 +318,30 @@ class Predict(Tables):
                 )
                 df_feats = df_feats.sjoin(
                     gdf_plant[[gdf_plant.geometry.name] + feats_plant], how="inner"
+                ).drop(columns=["index_right"])
+            if "applications" in key:
+                rate_kwargs = group_feats[key]["rate_kwargs"]
+                select_extra = (
+                    rate_kwargs["select_extra"]
+                    if "select_extra" in rate_kwargs.keys()
+                    else []
                 )
-                # df = pd.merge(
-                #     df,
-                #     gdf_plant[subset + feats_plant],
-                #     how="left",
-                #     on=subset + ["id"],
-                # )
-
-            # TODO: "applications"
+                feats_apps = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+                gdf_app = self.db.get_application_summary_gis(
+                    response_data=response_data,
+                    rate_kwargs=rate_kwargs,
+                    feature_list=group_feats[key]["features"],
+                    filter_last_x_days=group_feats[key]["filter_last_x_days"],
+                    predict=True,
+                )
+                df_feats = df_feats.sjoin(
+                    gdf_app[[gdf_app.geometry.name] + feats_apps], how="inner"
+                ).drop(columns=["index_right"])
             # TODO: "weather"
+            if "weather" in key:
+                pass
         if "dap" in self.feats_x_select:
             df_feats = self.dap(df_feats)
         if "dae" in self.feats_x_select:
@@ -357,7 +371,7 @@ class Predict(Tables):
             # TODO: Figure out how to decipher between Sentinel and other sources
         return df_feats
 
-    def _feats_x_select_data_old(self, df_feats, df_metadata):
+    def _feats_x_select_data_old(self, df_feats, df_metadata, group_feats):
         """
         Builds a dataframe with ``feats_x_select`` data.
 
