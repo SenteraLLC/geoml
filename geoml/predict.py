@@ -1,3 +1,4 @@
+from ast import literal_eval
 from copy import deepcopy
 from datetime import datetime
 from functools import partial
@@ -341,27 +342,49 @@ class Predict(Tables):
                 ).drop(columns=["index_right"])
             # TODO: "weather"
             if "weather" in key:
-                pass
-        if "dap" in self.feats_x_select:
-            df_feats = self.dap(df_feats)
-        if "dae" in self.feats_x_select:
-            df_feats = self.dae(df_feats)
-        if "rate_ntd_kgha" in self.feats_x_select:
-            df_feats_out = None
-            for r in range(len(df_feats)):
-                df_feat_single = gpd.GeoDataFrame(
-                    [df_feats.iloc[r]],
-                    crs=df_feats.crs,
-                    geometry=df_feats.geometry.name,
+                weather_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    weather_kwargs["select_extra"]
+                    if "select_extra" in weather_kwargs.keys()
+                    else []
                 )
-                if df_feats_out is None:
-                    df_feats_out = self.rate_ntd(df_feat_single)
-                else:
-                    df_feats_out = pd.concat(
-                        [df_feats_out, self.rate_ntd(df_feat_single)], axis="index"
-                    )
-            df_feats = df_feats_out.copy()
-            # df_feats = self.rate_ntd(df_feats)
+                feature_list_sql = self._swap_single_for_double_quotes(
+                    group_feats[key]["features"]
+                )
+                feats_weather = [
+                    literal_eval(f.split(" as ")[-1]) for f in feature_list_sql
+                ] + select_extra
+
+                gdf_weather = self.db.get_weather_summary_gis(
+                    response_data=response_data,
+                    date_origin_kwargs=group_feats[key]["date_origin_kwargs"],
+                    feature_list=feature_list_sql,
+                    predict=True,
+                )
+                df_feats = df_feats.sjoin(
+                    gdf_weather[[gdf_weather.geometry.name] + feats_weather],
+                    how="inner",
+                ).drop(columns=["index_right"])
+        # if "dap" in self.feats_x_select:
+        #     df_feats = self.dap(df_feats)
+        # if "dae" in self.feats_x_select:
+        #     df_feats = self.dae(df_feats)
+        # if "rate_ntd_kgha" in self.feats_x_select:
+        #     df_feats_out = None
+        #     for r in range(len(df_feats)):
+        #         df_feat_single = gpd.GeoDataFrame(
+        #             [df_feats.iloc[r]],
+        #             crs=df_feats.crs,
+        #             geometry=df_feats.geometry.name,
+        #         )
+        #         if df_feats_out is None:
+        #             df_feats_out = self.rate_ntd(df_feat_single)
+        #         else:
+        #             df_feats_out = pd.concat(
+        #                 [df_feats_out, self.rate_ntd(df_feat_single)], axis="index"
+        #             )
+        #     df_feats = df_feats_out.copy()
+        #     # df_feats = self.rate_ntd(df_feats)
         if any("wl_" in f for f in self.feats_x_select):
             # For now, just add null placeholders as a new column
             wl_names = [f for f in self.feats_x_select if "wl_" in f]
