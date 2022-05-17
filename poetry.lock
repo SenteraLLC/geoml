@@ -245,7 +245,7 @@ python-versions = ">=3.6"
 [[package]]
 name = "db"
 version = "0.1.4"
-description = ""
+description = "Library to interact with geoml Postgresql database, especially adding and retrieving data."
 category = "main"
 optional = false
 python-versions = "^3.9"
@@ -272,7 +272,7 @@ tqdm = "^4.62.3"
 type = "git"
 url = "git@github.com:SenteraLLC/db"
 reference = "POT-76-geoml-wx"
-resolved_reference = "8b06325818a7dfd97f0cfcee8a5449643dea33be"
+resolved_reference = "97d529277778a0c893a8320d2f6f9a1d890c44d4"
 
 [[package]]
 name = "debugpy"
