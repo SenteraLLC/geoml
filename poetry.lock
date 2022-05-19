@@ -271,8 +271,8 @@ tqdm = "^4.62.3"
 [package.source]
 type = "git"
 url = "git@github.com:SenteraLLC/db"
-reference = "POT-76-geoml-wx"
-resolved_reference = "97d529277778a0c893a8320d2f6f9a1d890c44d4"
+reference = "v0.1.4"
+resolved_reference = "85f0eb5388006eff26c66f0fb8261475ae4fc172"
 
 [[package]]
 name = "debugpy"
@@ -1770,7 +1770,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "d4f82a1ff221e1bddd54a5ea4ad2edfaa432d9d5d713d12a67ddc2b60df2f305"
+content-hash = "dc82b75846bcb54103fb9c928ae5f6b05698a0df659e4839f2f0b11fa44f39e4"
 
 [metadata.files]
 affine = [
