@@ -1,14 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 27 19:18:16 2020
-
-TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
-Insight Sensing Corporation. All rights reserved.
-
-@copyright: © Insight Sensing Corporation, 2020
-@author: Tyler J. Nigon
-@contributors: [Tyler J. Nigon]
-"""
+from ast import literal_eval
 from copy import deepcopy
 from datetime import datetime
 from functools import partial
@@ -17,13 +7,13 @@ import numpy as np
 import os
 import pandas as pd
 import rasterio as rio
+from rasterio.io import MemoryFile
 from rasterio.mask import mask as rio_mask
 
 from db import DBHandler
 
-# from spatial import Imagery
 import db.utilities as db_utils
-from db.sql.sql_constructors import closest_date_sql
+from db.sql.closest_date import closest_date_sql
 
 # import spatial.utilities as spatial_utils
 from geoml import Tables
@@ -67,6 +57,7 @@ class Predict(Tables):
         "image_search_method",
         "refit_X_full",
         "dir_out_pred",
+        "group_feats",
     )
 
     def __init__(self, **kwargs):
@@ -91,6 +82,7 @@ class Predict(Tables):
         self.image_search_method = "past"
         self.refit_X_full = False
         self.dir_out_pred = None
+        self.group_feats = None
 
         self._set_attributes_pred()
         self._set_params_from_kwargs_pred(**kwargs)
@@ -288,7 +280,121 @@ class Predict(Tables):
         }
         return keys
 
-    def _feats_x_select_data(self, df_feats, df_metadata):
+    def _feats_x_select_data(self, df_feats, df_metadata, group_feats):
+        """
+        Builds a dataframe with ``feats_x_select`` data.
+
+        Returns:
+            df_feats: DataFrame containing each of the feature names as
+                column names and the value (if not spatially aware) or
+                the array index (if spatially aware; e.g., sentinel image).
+            group_feats (dict): Instructions on how to build prediction feature
+                matrix.
+        """
+        subset = db_utils.get_primary_keys(df_feats)
+        response_data = df_feats[subset].to_dict("records")[0]
+        response_data["table_name"] = "field_bounds"
+        response_data["date_ref"] = datetime.strftime(
+            df_feats.iloc[0]["date"], "%Y-%m-%d"
+        )
+        response_data["value_col"] = None
+
+        for key in group_feats:
+            if "planting" in key:
+                plant_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    plant_kwargs["select_extra"]
+                    if "select_extra" in plant_kwargs.keys()
+                    else []
+                )
+                feats_plant = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+
+                gdf_plant = self.db.get_planting_summary_gis(
+                    response_data=response_data,
+                    date_origin_kwargs=plant_kwargs,
+                    feature_list=group_feats[key]["features"],
+                    predict=True,
+                )
+                df_feats = df_feats.sjoin(
+                    gdf_plant[[gdf_plant.geometry.name] + feats_plant], how="inner"
+                ).drop(columns=["index_right"])
+            if "applications" in key:
+                rate_kwargs = group_feats[key]["rate_kwargs"]
+                select_extra = (
+                    rate_kwargs["select_extra"]
+                    if "select_extra" in rate_kwargs.keys()
+                    else []
+                )
+                feats_apps = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+                gdf_app = self.db.get_application_summary_gis(
+                    response_data=response_data,
+                    rate_kwargs=rate_kwargs,
+                    feature_list=group_feats[key]["features"],
+                    filter_last_x_days=group_feats[key]["filter_last_x_days"],
+                    predict=True,
+                )
+                df_feats = df_feats.sjoin(
+                    gdf_app[[gdf_app.geometry.name] + feats_apps], how="inner"
+                ).drop(columns=["index_right"])
+            # TODO: "weather"
+            if "weather" in key:
+                weather_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    weather_kwargs["select_extra"]
+                    if "select_extra" in weather_kwargs.keys()
+                    else []
+                )
+                feature_list_sql = db_utils.swap_single_for_double_quotes(
+                    group_feats[key]["features"]
+                )
+                feats_weather = [
+                    literal_eval(f.split(" as ")[-1]) for f in feature_list_sql
+                ] + select_extra
+
+                gdf_weather = self.db.get_weather_summary_gis(
+                    response_data=response_data,
+                    date_origin_kwargs=group_feats[key]["date_origin_kwargs"],
+                    feature_list=feature_list_sql,
+                    predict=True,
+                )
+                df_feats = df_feats.sjoin(
+                    gdf_weather[[gdf_weather.geometry.name] + feats_weather],
+                    how="inner",
+                ).drop(columns=["index_right"])
+        # if "dap" in self.feats_x_select:
+        #     df_feats = self.dap(df_feats)
+        # if "dae" in self.feats_x_select:
+        #     df_feats = self.dae(df_feats)
+        # if "rate_ntd_kgha" in self.feats_x_select:
+        #     df_feats_out = None
+        #     for r in range(len(df_feats)):
+        #         df_feat_single = gpd.GeoDataFrame(
+        #             [df_feats.iloc[r]],
+        #             crs=df_feats.crs,
+        #             geometry=df_feats.geometry.name,
+        #         )
+        #         if df_feats_out is None:
+        #             df_feats_out = self.rate_ntd(df_feat_single)
+        #         else:
+        #             df_feats_out = pd.concat(
+        #                 [df_feats_out, self.rate_ntd(df_feat_single)], axis="index"
+        #             )
+        #     df_feats = df_feats_out.copy()
+        #     # df_feats = self.rate_ntd(df_feats)
+        if any("wl_" in f for f in self.feats_x_select):
+            # For now, just add null placeholders as a new column
+            wl_names = [f for f in self.feats_x_select if "wl_" in f]
+            keys = self._get_array_img_band_idx(df_metadata, wl_names, tol=10)
+            for name in wl_names:
+                df_feats[name] = keys[name]
+            # TODO: Figure out how to decipher between Sentinel and other sources
+        return df_feats
+
+    def _feats_x_select_data_old(self, df_feats, df_metadata, group_feats):
         """
         Builds a dataframe with ``feats_x_select`` data.
 
@@ -302,7 +408,21 @@ class Predict(Tables):
         if "dae" in self.feats_x_select:
             df_feats = self.dae(df_feats)
         if "rate_ntd_kgha" in self.feats_x_select:
-            df_feats = self.rate_ntd(df_feats)
+            df_feats_out = None
+            for r in range(len(df_feats)):
+                df_feat_single = gpd.GeoDataFrame(
+                    [df_feats.iloc[r]],
+                    crs=df_feats.crs,
+                    geometry=df_feats.geometry.name,
+                )
+                if df_feats_out is None:
+                    df_feats_out = self.rate_ntd(df_feat_single)
+                else:
+                    df_feats_out = pd.concat(
+                        [df_feats_out, self.rate_ntd(df_feat_single)], axis="index"
+                    )
+            df_feats = df_feats_out.copy()
+            # df_feats = self.rate_ntd(df_feats)
         if any("wl_" in f for f in self.feats_x_select):
             # For now, just add null placeholders as a new column
             wl_names = [f for f in self.feats_x_select if "wl_" in f]
@@ -312,18 +432,47 @@ class Predict(Tables):
             # TODO: Figure out how to decipher between Sentinel and other sources
         return df_feats
 
-    def _fill_array_X(self, array_img, df_feats):
+    def _mask_array_by_geom(self, img_shape, profile, geometry):
+        profile.update(driver="MEM", count=1)
+        with MemoryFile() as memfile:
+            with memfile.open(**profile) as ds_temp:
+                ds_temp.write(np.ones((1,) + img_shape[1:], dtype=float))
+                array_mask, _ = rio_mask(
+                    ds_temp,
+                    [geometry],
+                    nodata=profile["nodata"],
+                    filled=True,
+                    crop=False,
+                )
+        return array_mask
+
+    def _fill_array_X(self, array_img, df_feats, profile):
         """
         Populates array_X with all the features in df_feats
         """
         array_X_shape = (len(self.feats_x_select),) + array_img.shape[1:]
-        array_X = np.empty(array_X_shape, dtype=float)
+        array_X = np.zeros(array_X_shape, dtype=float)
 
-        for i, feat in enumerate(self.feats_x_select):
-            if "wl_" in feat:
-                array_X[i, :, :] = array_img[df_feats[feat], :, :] / 10000
-            else:
-                array_X[i, :, :] = df_feats[feat]
+        for i_fs, feat in enumerate(self.feats_x_select):
+            # Builds a 2D array of the feature to be added to array_X
+            array_feat = np.zeros((1,) + array_img.shape[1:], dtype=float)
+            for i in range(len(df_feats)):
+                geometry = df_feats.iloc[i][df_feats.geometry.name]
+                array_mask = self._mask_array_by_geom(
+                    array_img.shape, profile, geometry
+                )
+                mask_bool = np.array(array_mask, dtype=bool)
+
+                if "wl_" in feat:
+                    array_feat[mask_bool] = (
+                        array_img[df_feats.iloc[i][feat], :, :][mask_bool[0, :, :]]
+                        / 10000
+                    )
+
+                else:
+                    array_feat[mask_bool] = df_feats.iloc[i][feat]
+
+            array_X[i_fs, :, :] = array_feat[0, :, :]
         return array_X
 
     def _predict_and_reshape(self, array_X):
@@ -481,7 +630,7 @@ class Predict(Tables):
         )
         # df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
 
-        df_feats = self._feats_x_select_data(df_feats, df_metadata)
+        df_feats = self._feats_x_select_data(df_feats, df_metadata, self.group_feats)
         # TODO: change when we get individual functions for each wx feature
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # if any([f for f in self.feats_x_select if f in self.weather_derived.columns]):
@@ -499,7 +648,7 @@ class Predict(Tables):
         #         # get its value from weather_derived and add to df_feats
         #         df_feats[f] = weather_derived_filter[f].values[0]
 
-        array_X = self._fill_array_X(array_img, df_feats)
+        array_X = self._fill_array_X(array_img, df_feats, profile)
         mask = array_img[0] == 0
 
         array_pred = self._predict_and_reshape(array_X)
@@ -510,84 +659,3 @@ class Predict(Tables):
         if mask_by_bounds == True:
             array_pred, profile = self._mask_by_bounds(array_pred, profile, buffer_dist)
         return array_pred, profile
-
-    def predict_and_save(self, **kwargs):
-        """
-        Makes predictions for each geometry in ``gdf_pred`` and saves output
-        as an image.
-
-        This function does 2 tasks in addition to predict(): batch predicts for
-        all geom in ``gdf_pred``, and saves predictions as an image.
-
-        For spatially aware predictions. Builds a 3d array that contains
-        spatial data (x/y) as well as feaure data (z). The 3d array is reshaped
-        to 2d (x*y by z shape) and passed to the ``estimator.predict()``
-        function. After predictions are made, the 1d array is reshaped to 2d
-        and loaded as a rasterio object.
-        """
-        print("Making predictions on new data...")
-        self._set_params_from_kwargs_pred(**kwargs)
-
-        array_preds, df_metadatas = [], []
-        imagery = Imagery()
-        imagery.driver = "Gtiff"
-        for _, gdf_pred_s in self.gdf_pred.iterrows():
-            array_pred, ds, df_metadata = self.predict(gdf_pred_s)
-            array_preds.append(array_pred)
-            df_metadatas.append(df_metadata)
-
-            name_out = "petno3_ppm_20200713_r20m_css-farms-dalhart_cabrillas_c-06.tif"
-
-            fname_out = os.path.join(self.dir_out_pred, name_out)
-            imagery._save_image(
-                np.expand_dims(array_pred, axis=0),
-                ds.profile,
-                fname_out,
-                keep_xml=False,
-            )
-
-        return array_preds, df_metadatas
-
-    # 5. Save the resulting prediction array as a geotiff (and optionally save the
-    #    input "Xarray" image).
-    # 6. Consider storing another image providing an estimate of +/- of predicted
-    #    value (based on where it lies in the "predicted" axis of the
-    #    measured/predicted cross-validated test set.)
-
-
-#     def save_preds(self, fname_out):
-#         '''
-#         Saves a
-#         '''
-
-# fname_out = r'G:\Shared drives\Data\client_data\CSS Farms\preds_prototype\petiole-no3_20200714T172859_CSS-Farms-Dalhart_Cabrillas_C-18.tif'
-# my_imagery = Imagery()
-# my_imagery.driver = 'Gtiff'
-# rast = rio.open(fname_img)
-# metadata = rast.meta
-# my_imagery._save_image(array_pred, metadata, fname_out, keep_xml=False)
-
-# fname = r'G:\Shared drives\Data\client_data\CSS Farms\preds_prototype\petiole-no3_20200714T172859_CSS-Farms-Dalhart_Cabrillas_C-18.tif'
-# with rasterio.open(fname) as src:
-#     with rasterio.Env():
-#         profile = ds.profile
-#         profile = {'driver': 'GTiff',
-#                    'dtype': 'uint16',
-#                    'nodata': 0.0,
-#                    'width': 48,
-#                    'height': 24,
-#                    'count': 1,
-#                    'crs': CRS.from_epsg(32613),
-#                    'transform': Affine(20.0, 0.0, 695800.0, 0.0, -20.0, 3983280.0),
-#                    'tiled': False,
-#                    'interleave': 'band'}
-
-#     # And then change the band count to 1, set the
-#     # dtype to uint8, and specify LZW compression.
-#     profile.update(
-#         dtype=rasterio.uint8,
-#         count=1,
-#         compress='lzw')
-
-#     with rasterio.open('example.tif', 'w', **profile) as dst:
-#         dst.write(array.astype(rasterio.uint8), 1)

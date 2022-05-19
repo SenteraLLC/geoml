@@ -1,17 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr  1 14:42:05 2020
-
-TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
-Insight Sensing Corporation. All rights reserved.
-
-@copyright: © Insight Sensing Corporation, 2020
-@author: Tyler J. Nigon
-@contributors: [Tyler J. Nigon]
-"""
+from ast import literal_eval
 from copy import deepcopy
 from datetime import datetime
 import inspect
+import logging
 import numpy as np
 import os
 import pandas as pd
@@ -120,11 +111,6 @@ class FeatureData(Tables):
         self._get_random_seed()
         # self.tables = Tables(base_dir_data=self.base_dir_data)
 
-    # def set_params_from_kwargs(self, **kwargs):
-    #     print('_set_params_from_kwargs - entering')
-    #     print(kwargs)
-    #     print('_set_params_from_kwargs - exiting')
-
     def _set_params_from_dict_fd(self, config_dict):
         """
         Sets any of the parameters in ``config_dict`` to self as long as they
@@ -214,12 +200,6 @@ class FeatureData(Tables):
 
         if col.isnumeric() and int(col) >= wl_range[0] and int(col) <= wl_range[1]:
             labels_x.append(c)
-        # else:
-        #     print('Wavelength column <{0}> is not valid. Please note that '
-        #           'wavelength columns should begin with <prefix> and the rest '
-        #           'must include the wavelength value that can be interpreted '
-        #           'as an integer (be sure columns are not decimals).'
-        #           ''.format(c))
         return labels_x
 
     def _get_labels_x(self, group_feats, cols=None):
@@ -230,7 +210,7 @@ class FeatureData(Tables):
         """
         labels_x = []
         for key in group_feats:
-            print("Loading <group_feats> key: {0}".format(key))
+            logging.info("Loading <group_feats> key: {0}".format(key))
             if "wl_range" in key:
                 wl_range = group_feats[key]
                 assert cols is not None, "``cols`` must be passed."
@@ -242,8 +222,40 @@ class FeatureData(Tables):
                 or "weather_derived_res" in key
             ):
                 labels_x.extend(group_feats[key])
-            elif "rate_ntd" in key:
-                labels_x.append(group_feats[key]["col_out"])
+            elif "applications" in key:
+                apps_kwargs = group_feats[key]["rate_kwargs"]
+                select_extra = (
+                    apps_kwargs["select_extra"]
+                    if "select_extra" in apps_kwargs.keys()
+                    else []
+                )
+                feats_apps = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+                labels_x.extend(feats_apps)
+            elif "planting" in key:
+                plant_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    plant_kwargs["select_extra"]
+                    if "select_extra" in plant_kwargs.keys()
+                    else []
+                )
+                feats_plant = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+                labels_x.extend(feats_plant)
+            elif "weather" in key:
+                weather_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    weather_kwargs["select_extra"]
+                    if "select_extra" in weather_kwargs.keys()
+                    else []
+                )
+                feats_weather = [
+                    literal_eval(f.split(" as ")[-1])
+                    for f in group_feats[key]["features"]
+                ] + select_extra
+                labels_x.extend(feats_weather)
             else:
                 labels_x.append(group_feats[key])
         self.labels_x = labels_x
@@ -255,14 +267,149 @@ class FeatureData(Tables):
                 df = pd.DataFrame(df.drop(columns=[df.geometry.name]))
         return df
 
+
+    # group_feats = {
+    #     "dae": "dae",
+    #     "rate_ntd": {"col_rate_n": "rate_n_kgha", "col_out": "rate_ntd_kgha"},
+    #     "cropscan_wl_range1": [400, 900],
+    #     "weather": {
+    #         "date_origin_kwargs": {"table": "as_planted", "column": "date_plant"},
+    #         "features": [
+    #             'sum(w."precip_24h:mm") as "precip_csp:mm"',
+    #             'sum(w."evapotranspiration_24h:mm") as "evapotranspiration_csp:mm"',
+    #             'sum(w."global_rad_24h:MJ") as "global_rad_csp:MJ"',
+    #             'sum(w."gdd_10C30C_2m_24h:C") as "gdd_10C30C_2m_csp:C"',
+    #         ]
+    #     }
+    # }
+
+    def _clean_zonal_stats(self, gdf_stats, wl_min, wl_max):
+        # Assumes all rasters in db.reflectance have same bands and band order
+        rast_metadata = pd.read_sql(
+            "select rast_metadata from reflectance order by rid limit 1",
+            con=self.db.engine,
+        )["rast_metadata"].item()
+        bands = ["b{0}".format(i + 1) for i in range(rast_metadata["count"])]
+        cols = ["wl_{0:.0f}".format(round(wl)) for wl in rast_metadata["wavelength"]]
+        gdf_stats.rename(columns=dict(zip(bands, cols)), inplace=True)
+        gdf_stats.rename(columns={"geom": "geom_rast"}, inplace=True)
+        wl_drop, wl_keep = [], []
+        for c in gdf_stats.columns:
+            try:
+                if int(c.split("_")[-1]) < wl_min or int(c.split("_")[-1]) > wl_max:
+                    wl_drop.append(c)
+                else:
+                    wl_keep.append(c)
+            except:
+                pass
+        gdf_stats.drop(columns=wl_drop, inplace=True)
+        (
+            table_name_response,
+            value_col,
+            filter_kwargs,
+        ) = db_utils.pop_table_val_from_response_data(self.response_data)
+        return gdf_stats, wl_keep
+
     def _join_group_feats(self, df, group_feats, date_tolerance):
         """
         Joins predictors to ``df`` based on the contents of group_feats
         """
-        if "dae" in group_feats:
-            df = self.dae(df)  # add DAE
-        if "dap" in group_feats:
-            df = self.dap(df)  # add DAP
+        subset = db_utils.get_primary_keys(self.df_response)
+
+        for key in group_feats:
+            logging.info(
+                "Adding features to feature matrix:\n{0}\n" "".format(group_feats[key])
+            )
+            if "applications" in key:
+                rate_kwargs = group_feats[key]["rate_kwargs"]
+                select_extra = (
+                    rate_kwargs["select_extra"]
+                    if "select_extra" in rate_kwargs.keys()
+                    else []
+                )
+                feats_apps = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+
+                gdf_app = self.db.get_application_summary_gis(
+                    response_data=self.response_data,
+                    rate_kwargs=rate_kwargs,
+                    feature_list=group_feats[key]["features"],
+                    filter_last_x_days=group_feats[key]["filter_last_x_days"],
+                    predict=False,
+                )
+                df = pd.merge(
+                    df,
+                    gdf_app[["id"] + subset + feats_apps],
+                    how="left",
+                    on=subset + ["id"],
+                )
+            if "planting" in key:
+                plant_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    plant_kwargs["select_extra"]
+                    if "select_extra" in plant_kwargs.keys()
+                    else []
+                )
+                feats_plant = [
+                    f.split(" as ")[-1] for f in group_feats[key]["features"]
+                ] + select_extra
+
+                gdf_plant = self.db.get_planting_summary_gis(
+                    response_data=self.response_data,
+                    date_origin_kwargs=plant_kwargs,
+                    feature_list=group_feats[key]["features"],
+                    predict=False,
+                )
+                df = pd.merge(
+                    df,
+                    gdf_plant[["id"] + subset + feats_plant],
+                    how="left",
+                    on=subset + ["id"],
+                )
+            if "sentinel" in key:
+                gdf_stats = self.db.get_zonal_stats(
+                    response_data=self.response_data,
+                    tolerance=date_tolerance,  # days
+                    direction="nearest",  # ["nearest", "past", "future"]
+                    buffer=-20,
+                    stat="mean",
+                    units_expression="/10000",
+                    wide=True,
+                )
+                wl_min, wl_max = group_feats[key]
+                gdf_stats, wl_keep = self._clean_zonal_stats(gdf_stats, wl_min, wl_max)
+                df = pd.merge(
+                    df,
+                    gdf_stats[["id"] + subset + wl_keep],
+                    how="left",
+                    on=subset + ["id"],
+                )
+            if "weather" in key:
+                weather_kwargs = group_feats[key]["date_origin_kwargs"]
+                select_extra = (
+                    weather_kwargs["select_extra"]
+                    if "select_extra" in weather_kwargs.keys()
+                    else []
+                )
+                feature_list_sql = db_utils.swap_single_for_double_quotes(
+                    group_feats[key]["features"]
+                )
+                feats_weather = [
+                    literal_eval(f.split(" as ")[-1]) for f in feature_list_sql
+                ] + select_extra
+
+                gdf_weather = self.db.get_weather_summary_gis(
+                    response_data=self.response_data,
+                    date_origin_kwargs=group_feats[key]["date_origin_kwargs"],
+                    feature_list=feature_list_sql,
+                )
+                df = pd.merge(
+                    df,
+                    gdf_weather[["id"] + subset + feats_weather],
+                    how="left",
+                    on=subset + ["id"],
+                )
         if "rate_ntd" in group_feats:
             col_rate_n = group_feats["rate_ntd"]["col_rate_n"]
             col_rate_ntd_out = group_feats["rate_ntd"]["col_out"]
@@ -270,6 +417,10 @@ class FeatureData(Tables):
             df = self.rate_ntd(
                 df, col_rate_n=col_rate_n, col_rate_ntd_out=col_rate_ntd_out
             )
+        if "dae" in group_feats:
+            df = self.dae(df)  # add DAE
+        if "dap" in group_feats:
+            df = self.dap(df)  # add DAP
         if "weather_derived" in group_feats:
             self.weather_derived = self._check_empty_geom(self.weather_derived)
             df = self.join_closest_date(  # join weather by closest date
@@ -289,97 +440,6 @@ class FeatureData(Tables):
                 tolerance=0,
                 delta_label=None,
             )
-        for (
-            key
-        ) in (
-            group_feats
-        ):  # necessary because 'cropscan_wl_range1' must be differentiated
-            if "cropscan" in key:
-                df = self.join_closest_date(  # join cropscan by closest date
-                    df,
-                    self.rs_cropscan_res,
-                    left_on="date",
-                    right_on="date",
-                    tolerance=date_tolerance,
-                    delta_label="cropscan",
-                )
-            if "micasense" in key:
-                df = self.join_closest_date(  # join micasense by closest date
-                    df,
-                    self.rs_micasense_res,
-                    left_on="date",
-                    right_on="date",
-                    tolerance=date_tolerance,
-                    delta_label="micasense",
-                )
-            if "spad" in key:
-                df = self.join_closest_date(  # join spad by closest date
-                    df,
-                    self.rs_spad_res,
-                    left_on="date",
-                    right_on="date",
-                    tolerance=date_tolerance,
-                    delta_label="spad",
-                )
-            if "sentinel" in key:
-                # self.rs_sentinel = self._check_empty_geom(self.rs_sentinel)
-
-                print(
-                    "\nLoading all available Sentinel data based on spatio-temporal "
-                    "response data.\nresponse_data: {0}\n"
-                    "".format(self.response_data)
-                )
-                gdf_stats = self.db.get_zonal_stats(
-                    response_data=self.response_data,
-                    tolerance=date_tolerance,  # days
-                    direction="nearest",  # ["nearest", "past", "future"]
-                    buffer=-20,
-                    stat="mean",
-                    units_expression="/10000",
-                    wide=True,
-                )
-                # Assumes all rasters in db.reflectance have same bands and band order
-                rast_metadata = pd.read_sql(
-                    "select rast_metadata from reflectance order by rid limit 1",
-                    con=self.db.engine,
-                )["rast_metadata"].item()
-                bands = ["b{0}".format(i + 1) for i in range(11)]
-                cols = [
-                    "wl_{0:.0f}".format(round(wl)) for wl in rast_metadata["wavelength"]
-                ]
-                gdf_stats.rename(columns=dict(zip(bands, cols)), inplace=True)
-                gdf_stats.rename(columns={"geom": "geom_rast"}, inplace=True)
-                wl_min, wl_max = group_feats[key]
-                wl_drop = []
-                for c in gdf_stats.columns:
-                    try:
-                        if (
-                            int(c.split("_")[-1]) < wl_min
-                            or int(c.split("_")[-1]) > wl_max
-                        ):
-                            wl_drop.append(c)
-                    except:
-                        pass
-                gdf_stats.drop(columns=wl_drop, inplace=True)
-                subset = db_utils.get_primary_keys(self.df_response)
-                (
-                    table_name_response,
-                    value_col,
-                    filter_kwargs,
-                ) = db_utils.pop_table_val_from_response_data(self.response_data)
-                subset_filter = [
-                    c
-                    for c in list(filter_kwargs.keys())
-                    if c not in ["owner", "farm", "field_id", "year"]
-                ]
-                # df = pd.merge(df, gdf_stats, how="left", on=subset + ["date", "geom"])
-                df = pd.merge(
-                    df,
-                    gdf_stats,
-                    how="left",
-                    on=subset + ["date"] + subset_filter + [value_col],
-                )
-                # df["date"] = pd.to_datetime(df["date"].dt.date)
         return df
 
     def _load_df_response(self):
@@ -389,8 +449,8 @@ class FeatureData(Tables):
         response_data = deepcopy(self.response_data)
         table_name = response_data.pop("table_name")
         value_col = response_data.pop("value_col")
-        print(
-            "\nLoading response dataframe...\nTable: {0}\nkwargs: {1}\n"
+        logging.info(
+            "Loading response dataframe:\n\tTable: {0}\n\tkwargs: {1}\n"
             "".format(table_name, response_data)
         )
         df_response = self.db.get_table_df(table_name, **response_data)
@@ -409,48 +469,6 @@ class FeatureData(Tables):
         df_response = self._add_empty_geom(df_response)
         self.df_response = df_response
 
-    def _load_df_response_old(
-        self, tissue_col="tissue", measure_col="measure", value_col="value"
-    ):
-        """
-        Loads the response DataFrame based on <response_data>. The observations are
-        retrieved from the
-        <obs_tissue> table.
-        """
-        tissue = self.ground_truth_tissue
-        measure = self.ground_truth_measure
-        print(
-            "\nLoading response dataframe...\nTissue: {0}\nMeasure: {1}\n"
-            "".format(tissue, measure)
-        )
-        # fname_obs_tissue = os.path.join(self.base_dir_data, self.fname_obs_tissue)
-        # df_obs_tissue = self._read_csv_geojson(fname_obs_tissue)
-        self.labels_y_id = [tissue_col, measure_col]
-        self.label_y = value_col
-        if self.obs_tissue_res is not None:
-            obs_tissue = self.obs_tissue_res.copy()
-        elif self.obs_tissue is not None:
-            obs_tissue = self.obs_tissue.copy()
-        else:
-            raise ValueError(
-                "Both <obs_tissue> and <obs_tisue_res> are None. "
-                "Please be sure either <obs_tissue> or "
-                "<obs_tissue_res> is in <base_dir_data> or "
-                "<db_schema>."
-            )
-        if self.obs_tissue_res is not None and self.obs_tissue is not None:
-            raise ValueError(
-                "Both <obs_tissue> and <obs_tissue_res> are "
-                "populated, so we are unsure which table to "
-                "load. Please be sure only one of <obs_tissue> "
-                "or <obs_tissue_res> is in <base_dir_data> or "
-                "<db_schema>."
-            )
-        obs_tissue = obs_tissue[pd.notnull(obs_tissue[value_col])]
-        self.df_response = obs_tissue[
-            (obs_tissue[measure_col] == measure) & (obs_tissue[tissue_col] == tissue)
-        ]
-
     def _write_to_readme(self, msg, msi_run_id=None, row=None):
         """
         Writes ``msg`` to the README.txt file
@@ -463,7 +481,7 @@ class FeatureData(Tables):
         #     dir_out = os.path.join(self.dir_results, folder_name)
         # with open(os.path.join(self.dir_results, folder_name + '_README.txt'), 'a') as f:
         if self.dir_results is None:
-            print("<dir_results> must be set to create README file.")
+            logging.info("<dir_results> must be set to create README file.")
             return
         else:
             with open(os.path.join(self.dir_results, "README.txt"), "a") as f:
@@ -570,9 +588,9 @@ class FeatureData(Tables):
             )
 
         unique, counts = np.unique(groups, return_counts=True)
-        print("\nStratification groups: {0}".format(stratify_cols))
-        print("Number of stratification groups:  {0}".format(len(unique)))
-        print("Minimum number of splits allowed: {0}".format(min(counts)))
+        logging.info("\nStratification groups: {0}".format(stratify_cols))
+        logging.info("Number of stratification groups:  {0}".format(len(unique)))
+        logging.info("Minimum number of splits allowed: {0}".format(min(counts)))
         return groups
 
     def _check_sklearn_splitter(
@@ -780,12 +798,12 @@ class FeatureData(Tables):
 
         train_pct = (len(df_train) / (len(df_train) + len(df_test))) * 100
         test_pct = (len(df_test) / (len(df_train) + len(df_test))) * 100
-        print(
+        logging.info(
             '\nNumber of observations in the "training" set: {0} ({1:.1f}%)'.format(
                 len(df_train), train_pct
             )
         )
-        print(
+        logging.info(
             'Number of observations in the "test" set: {0} ({1:.1f}%)\n'.format(
                 len(df_test), test_pct
             )
@@ -889,10 +907,6 @@ class FeatureData(Tables):
         Saves both ``FeatureData.df_X`` and ``FeatureData.df_y`` to
         ``FeatureData.dir_results``.
         """
-        # if self.group_feats is None or self.label_y is None:
-        #     print('<group_feats> and <label_y> must be set to save data to '
-        #           '<dir_results>. Have you ran `get_feat_group_X_y()` yet?')
-        #     return
         dir_out = os.path.join(self.dir_results, self.label_y)
         os.makedirs(dir_out, exist_ok=True)
 
@@ -912,13 +926,13 @@ class FeatureData(Tables):
             stratify_vector = self.stratify_train
         elif train_test == "test":
             stratify_vector = self.stratify_test
-        print(
+        logging.info(
             "The number of observations in each cross-validation dataset "
             "are listed below.\nThe key represents the <stratify_{0}> ID, "
             "and the value represents the number of observations used from "
             "that stratify ID".format(train_test)
         )
-        print("Total number of observations: {0}".format(len(stratify_vector)))
+        logging.info("Total number of observations: {0}".format(len(stratify_vector)))
         train_list = []
         val_list = []
         for train_index, val_index in splitter:
@@ -934,12 +948,12 @@ class FeatureData(Tables):
                 val[uid] = n2
             train_list.append(train)
             val_list.append(val)
-        print("\nK-fold train set:")
-        print("Number of observations: {0}".format(len(train_index)))
-        print(*train_list, sep="\n")
-        print("\nK-fold validation set:")
-        print("Number of observations: {0}".format(len(val_index)))
-        print(*val_list, sep="\n")
+        logging.info("\nK-fold train set:")
+        logging.info("Number of observations: {0}".format(len(train_index)))
+        logging.info(*train_list, sep="\n")
+        logging.info("\nK-fold validation set:")
+        logging.info("Number of observations: {0}".format(len(val_index)))
+        logging.info(*val_list, sep="\n")
 
     def get_feat_group_X_y(self, **kwargs):
         """
@@ -1009,7 +1023,7 @@ class FeatureData(Tables):
         # print(len(df4))
         # print(len(df5))
 
-        print("Getting feature data...")
+        logging.info("Creating the training feature matrix.")
         self._set_params_from_kwargs_fd(**kwargs)
         df = self.df_response.copy()
         # df = self._get_response_df(self.ground_truth_tissue, self.ground_truth_measure)
@@ -1085,26 +1099,25 @@ class FeatureData(Tables):
             if "X" not in cv_split_kwargs_eval:  # sets X
                 cv_split_kwargs_eval["X"] = df_X_train
 
-        # print(len(cv_split_kwargs_eval['X']))
         if self.print_splitter_info == True:
             n_train = []
             n_val = []
             for idx_train, idx_val in cv.split(**cv_split_kwargs_eval):
                 n_train.append(len(idx_train))
                 n_val.append(len(idx_val))
-            print(
+            logging.info(
                 "Tuning splitter: number of cross-validation splits: {0}".format(
                     cv.get_n_splits(**cv_split_kwargs_eval)
                 )
             )
             train_pct = (np.mean(n_train) / (np.mean(n_train) + np.mean(n_val))) * 100
             val_pct = (np.mean(n_val) / (np.mean(n_train) + np.mean(n_val))) * 100
-            print(
+            logging.info(
                 "Number of observations in the (tuning) train set (avg): {0:.1f} ({1:.1f}%)".format(
                     np.mean(n_train), train_pct
                 )
             )
-            print(
+            logging.info(
                 "Number of observations in the (tuning) validation set (avg): {0:.1f} ({1:.1f}%)\n".format(
                     np.mean(n_val), val_pct
                 )
