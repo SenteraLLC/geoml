@@ -2,158 +2,211 @@
 
 API to retrieve training data, create X matrix, and perform feature selection, hyperparameter tuning, training, and model testing.
 
-## Build and test status
+## Setup and Installation (for development)
+Poetry is used to manage the environment and install the dependencies. After cloning from Github, install poetry and create the environment:
 
-### master
-[![codecov](https://codecov.io/gh/insight-sensing/geoml/branch/master/graph/badge.svg?token=45FYM8VS7H)](https://codecov.io/gh/insight-sensing/geoml)
-[![build](https://circleci.com/gh/insight-sensing/geoml/tree/master.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/geoml?branch=dev)
-
-### dev
-[![codecov](https://codecov.io/gh/insight-sensing/geoml/branch/dev/graph/badge.svg?token=45FYM8VS7H)](https://codecov.io/gh/insight-sensing/geoml)
-[![build](https://circleci.com/gh/insight-sensing/geoml/tree/dev.svg?style=svg&circle-token=4d961470ddaa2ed3b8a4b81d84d5e0edfb38f840)](https://app.circleci.com/pipelines/github/insight-sensing/geoml?branch=dev)
-
-## Installation
-
-### Windows
-1. [Set up SSH](https://github.com/SenteraLLC/install-instructions/blob/master/ssh_setup.md)
-2. Install [conda](https://github.com/SenteraLLC/install-instructions/blob/master/conda.md)
-3. Install package
 ```
 git clone git@github.com:SenteraLLC/geoml.git
 cd geoml
-conda env create -f requirements\environment_dev.yml
-conda activate geoml
-pip install .
-```
-There is an *environment_test.yml* file that can be used to create the environment and install the dependencies. After cloning from Github, create the environment:
-
-`conda env create -n test_env -f .geoml\requirements\environment_test.yml`
-
-### PyPI
-Some packages are not available on `conda` and must be installed from PyPI:
-```
-pip install postgis
-pip install -r .geoml\requirements\dev_pip.txt
-pip install -r .geoml\requirements\testing_pip.txt
+poetry shell
+poetry install
 ```
 
-Note: On Windows, the `postgis` dependency must be installed via `pip` since it is not available on conda-forge. Also note that the `find_program` function of `testing.postgresql` should be modified if using Windows (see [db issue #10](https://github.com/SenteraLLC/db/issues/10)).
+## Usage Example
 
-## Setup and Installation (Linux and MacOS)
-There is an *environment.yml* file that can be used to create the environment and install the dependencies. After cloning from Github, create the environment:
-```
-conda env create -n test_env -f .geoml\requirements\environment_test.yml
-conda install -n test_env -c conda-forge postgis
-```
-### PyPI
-Some packages are not available on `conda` and must be installed from PyPI:
-```
-pip install -r .geoml\requirements\dev_pip.txt
-pip install -r .geoml\requirements\testing_pip.txt
+### Before running the script
+``GeoML`` requires a direct connection to a PostgreSQL database to read and write data. It is recommended to store database connection credentials as environment variables. One way to do this is to create a `.env` file where your script is running that contains relevant credentials:
+
+- **Step 1:** One way to do this is to create an ``.env`` or ``.envrc`` file with the following variables to your project:
+
+<h5 a><strong><code>.env</code></strong></h5>
+
+``` bash
+DB_NAME=db_name
+DB_HOST=localhost
+DB_USER=analytics_user
+DB_PASSWORD=secretpassword
+DB_PORT=5432
 ```
 
-## Run tests
-Run tests to be sure everything is installed appropriately:
-`pytest geoml\tests`
+- **Step 2:** Add ``geoml`` to ``pyproject.toml`` in your project repo. This will install all dependencies.
 
-## Use
+<h5 a><strong><code>pyproject.toml</code></strong></h5>
 
-### Step 1:
-`GeoML` can be used via either flat files loaded from a local directory or via tables in a database connection. To connect to a database:
-
+``` toml
+...
+[tool.poetry.dependencies]
+geoml = { git = "https://github.com/SenteraLLC/geoml.git", branch = "main"}
+...
 ```
-from copy import deepcopy
-from datetime import datetime, date
+
+- **Step 3:** Install via poetry
+
+``` console
+poetry install
+```
+
+- **Step 4:** Establish a connection to ``DBHandler`` for owner's schema. Note that this assumes all the necessary tables have been loaded into the owner's database schema already.
+
+<h5 a><strong><code>connect_to_db.py</code></strong></h5>
+
+``` python
+from os import getenv
 from db import DBHandler
+
+
+owner = "css-farms-pasco"
+db_name = getenv("DB_NAME")
+db_host = getenv("DB_HOST")
+db_user = getenv("DB_USER")
+password = getenv("DB_PASSWORD")
+db_schema = owner.replace("-", "_")
+db_port = db_utils.ssh_bind_port(
+    SSH_HOST=getenv("SSH_HOST"),
+    SSH_USER=getenv("SSH_USER"),
+    ssh_private_key=getenv("SSH_PRIVATE_KEY"),
+    host=getenv("SSH_DB_HOST"),
+)
+
+db = DBHandler(
+    database=db_name,
+    host=db_host,
+    user=db_user,
+    password=password,
+    port=db_port,
+    schema=db_schema,
+)
+```
+
+- **Step 5:** Edit configuration settings to train to model as you wish:
+
+<h5 a><strong><code>edit_config.py</code></strong></h5>
+
+``` python
+from copy import deepcopy
+from datetime import datetime
+import json
+
+import numpy as np
+from sklearn.compose import TransformedTargetRegressor
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import RepeatedStratifiedKFold, train_test_split
+from sklearn.preprocessing import PowerTransformer
+
+
+with open("geoml/config.json") as f:
+    d = json.load(f)
+
+config_dict["FeatureData"]["date_train"] = datetime.now().date()
+config_dict["FeatureData"]["cv_method"] = train_test_split
+config_dict["FeatureData"]["cv_method_kwargs"]["stratify"] = 'df[["owner", "year"]]'
+config_dict["FeatureData"]["cv_method_tune"] = RepeatedStratifiedKFold
+
+config_dict["FeatureSelection"]["model_fs"] = Lasso()
+config_dict['FeatureSelection']['n_feats'] = 12
+
+config_dict["Training"]["regressor"] = TransformedTargetRegressor(
+    regressor=Lasso(),
+    transformer=PowerTransformer(copy=True, method="yeo-johnson", standardize=True),
+)
+config_dict["Training"]["param_grid"]["alpha"] = list(np.logspace(-4, 0, 5))
+config_dict["Training"]["scoring"] = (
+    "neg_mean_absolute_error",
+    "neg_mean_squared_error",
+    "r2",
+)
+
+config_dict["Predict"]["date_predict"] = datetime.now().date()
+config_dict["Predict"]["dir_out_pred"] = "/mnt/c/Users/Tyler/Downloads"
+```
+
+
+- **Step 6:** Edit configuration settings to train to model as you wish:
+
+<h5 a><strong><code>train_geoml.py</code></strong></h5>
+
+``` python
 from geoml import Training
-from geoml import Predict
-from geoml.tests import config as geoml_config
 
-db_name = 'insight_dev'
-db_host = 'localhost'
-db_user = 'postgres'
-password = 'bnEtP7C$qKFc'
-db_schema = 'dev_client'
-db_port = 5432
-base_dir_google = ('G:/Shared drives/Data')
-
-db = DBHandler(database=db_name, host=db_host, user=db_user,
-               password=password, port=db_port, schema=db_schema)
-
-base_dir_google = ('G:/Shared drives/Data')
-preds_dir = os.path.join(
-    base_dir_google, 'client_data/CSS Farms/preds_{0}'.format(year))
-```
-
-### Step 2:
-This assumes all the necessary tables have been loaded into `db` already. Next, add configuration settings and train a model:
-
-```
-date_master = datetime(2021, 7, 14)
-
-config_dict = deepcopy(geoml_config.config_dict)
-config_dict['Tables']['db'] = db
-config_dict['Tables']['base_dir_data'] = None
-config_dict['FeatureData']['group_feats'] = geoml_config.sentinel_test1
-config_dict['FeatureData']['group_feats']['weather_derived'] = ['gdd_c_ptd_cum']
-config_dict['FeatureData']['impute_method'] = None
-config_dict['FeatureData']['date_train'] = date_master
-config_dict['FeatureSelection']['n_feats'] = 6
 
 train = Training(config_dict=config_dict)
 train.fit()
 ```
 
-### Step 3:
-Grab an estimator to make prdictions with:
-```
+- **Step 7:** Grab an estimator to make predictions with:
+
+<h5 a><strong><code>predict_geoml_part1.py</code></strong></h5>
+
+``` python
+from geoml import Predict
+
+
 date_predict = date_master.date()
 year = date_predict.year
 config_dict['Predict']['train'] = train
-config_dict['Predict']['date_predict'] = date_predict
-# config_dict['Predict']['dir_out_pred'] = preds_dir
-config_dict['Predict']['dir_out_pred'] = os.path.join(preds_dir, 'tyler_local')
-config_dict['Predict']['refit_X_full'] = True
-config_dict['Predict']['primary_keys_pred'] = {'owner': 'css-farms-dalhart',
-                                               'farm': 'cabrillas',
-                                               'field_id': 'c-08',
-                                               'year': 2021}  # dummy keys
+config_dict['Predict']['primary_keys_pred'] = {
+    'owner': 'css-farms-pasco',
+    'farm': 'adams',
+    'field_id': 'adams-e',
+    'year': 2022
+}
 
 estimator = train.df_test.loc[
     train.df_test[train.df_test['feat_n'] == config_dict['FeatureSelection']['n_feats']].index,
-    'regressor'].item()
+    'regressor'
+].item()
 feats_x_select = train.df_test.loc[
     train.df_test[train.df_test['feat_n'] == config_dict['FeatureSelection']['n_feats']].index,
-    'feats_x_select'].item()
+    'feats_x_select'
+].item()
 
-predict = Predict(estimator=estimator, feats_x_select=feats_x_select,
-                  config_dict=config_dict)
+predict = Predict(
+    estimator=estimator,
+    feats_x_select=feats_x_select,
+    config_dict=config_dict
+)
 ```
 
-### Step 4:
-Make a prediction for each field and save output as a geotiff raster:
+- **Step 8:** Make a prediction for each field and save output as a geotiff raster:
 
-```
-os.chdir(preds_dir)  # predict_functions helper functions are located here
-import predict_functions as p
+<h5 a><strong><code>predict_geoml_part2.py</code></strong></h5>
 
+``` python
+from os import chdir
+import satellite.utils as sat_utils
+
+chdir(preds_dir)  # predict_functions helper functions are located here
 field_bounds = db.get_table_df('field_bounds', year=year)
 
+dir_out_pred = config_dict["Predict"]["dir_out_pred"]
+date_predict = config_dict["Predict"]["date_predict"]
 for idx, row in field_bounds.iterrows():
-    print(row['field_id'])
-    try:
-        predict = p.predict_and_save_as_raster(row, predict, date_predict)
-    except RuntimeError as e1:
-        print('\n{0}'.format(e1))
-        print('Missing data, so {0} will be skipped.\n'.format(row['field_id']))
-        continue
-    except AttributeError as e2:
-        print('\n{0}'.format(e2))
-        print('Missing N application data, so {0} will be skipped.\n'.format(row['field_id']))
-        continue
+    pkeys = {
+        "owner": row["owner"],
+        "farm": row["farm"],
+        "field_id": row["field_id"],
+        "year": row["year"],
+    }
+    array_pred, profile = predict.predict(
+        primary_keys_pred=pkeys
+    )
+    name_out = "petiole-no3-ppm_{0}_{1}_{2}_{3}_raw.tif".format(
+        date_predict.strftime("%Y-%m-%d"),
+        row["owner"],
+        row["farm"],
+        row["field_id"]
+    )
+    fname_out = os.path.join(
+        dir_out_pred, "by_date",
+        date_predict.strftime("%Y-%m-%d"),
+        name_out
+    )
+    sat_utils.save_image(
+        array_pred, profile, fname_out, driver="Gtiff", keep_xml=False
+    )
 ```
 
-By loading the output raster for CSS Farms - Cabrillas - C-24 into QGIS, we can see the spatial variation in predicted petiole nitrate:
+Here is an example raster loaded into QGIS. We can see the spatial variation in predicted petiole nitrate:
 ![Alt text](outputs/petiole-no3-ppm_2021-07-12_css-farms-dalhart_cabrillas_c-24_raw.png?raw=true "Petiole nitrate prediction from July 12, 2021")
 
 ## Classes
@@ -173,11 +226,3 @@ There are multiple classes that work together to perform all the necessary steps
 
 ### Prediction
 `Predict` inherits from an instance of `Training`, and consists of variables and functions to make predictions on new data with the previously trained models. `Predict` accesses the appropriate data from the connected database to make predictions (e.g., as_planted, weather, sentinel reflectance images, etc.), and a prediction is made for each observation via the features in the feature set.
-
-
-## License
-TRADE SECRET: CONFIDENTIAL AND PROPRIETARY INFORMATION.
-Insight Sensing Corporation. All rights reserved.
-© Insight Sensing Corporation, 2020
-
-This software contains confidential and proprietary information of Insight Sensing Corporation and is protected by copyright, trade secret, and other State and Federal laws. Its receipt or possession does not convey any rights to reproduce, disclose its contents, or to manufacture, use or sell anything it may describe. Reproduction, disclosure, or use without specific written authorization of Insight Sensing Corporation is strictly forbidden.
