@@ -9,7 +9,7 @@ Poetry is used to manage the environment and install the dependencies. After clo
 git clone git@github.com:SenteraLLC/geoml.git
 cd geoml
 poetry config virtualenvs.in-project true
-poetry shell
+poetry env use python3.9
 poetry install
 ```
 
