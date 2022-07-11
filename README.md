@@ -67,7 +67,8 @@ export SSH_DB_HOST=<analytics.<DB_HOST_ID>.us-east-1.rds.amazonaws.com>
 
 ## Usage Example
 
-- **Step 1:** Establish a connection to ``DBHandler`` for owner's schema. Note that this assumes all the necessary tables have been loaded into the owner's database schema already.
+### Step 1
+Establish a connection to ``DBHandler`` for owner's schema. Note that this assumes all the necessary tables have been loaded into the owner's database schema already.
 
 <h5 a><strong><code>connect_to_db.py</code></strong></h5>
 
@@ -99,7 +100,8 @@ db = DBHandler(
 )
 ```
 
-- **Step 2:** Edit configuration settings to train to model as you wish:
+### Step 2
+Edit configuration settings to train to model as you wish:
 
 <h5 a><strong><code>edit_config.py</code></strong></h5>
 
@@ -142,7 +144,8 @@ config_dict["Predict"]["dir_out_pred"] = "/mnt/c/Users/Tyler/Downloads"
 ```
 
 
-- **Step 3:** Create `Training` instance (which loads data and performs feature selection) and train the model:
+### Step 3
+Create `Training` instance (which loads data and performs feature selection) and train the model:
 
 <h5 a><strong><code>train_geoml.py</code></strong></h5>
 
@@ -154,7 +157,8 @@ train = Training(config_dict=config_dict)
 train.fit()
 ```
 
-- **Step 4:** Grab an estimator to make predictions with:
+### Step 4
+Grab an estimator to make predictions with:
 
 <h5 a><strong><code>predict_geoml_part1.py</code></strong></h5>
 
@@ -188,7 +192,8 @@ predict = Predict(
 )
 ```
 
-- **Step 5:** Make a prediction for each field and save output as a geotiff raster:
+### Step 5
+Make a prediction for each field and save output as a geotiff raster:
 
 <h5 a><strong><code>predict_geoml_part2.py</code></strong></h5>
 
