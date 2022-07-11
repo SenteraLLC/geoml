@@ -8,6 +8,7 @@ Poetry is used to manage the environment and install the dependencies. After clo
 ``` bash
 git clone git@github.com:SenteraLLC/geoml.git
 cd geoml
+poetry config virtualenvs.in-project true
 poetry shell
 poetry install
 ```
