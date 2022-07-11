@@ -29,7 +29,7 @@ DB_PASSWORD=secretpassword
 DB_PORT=5432
 ```
 
-- **Step 2:** Add ``geoml`` to ``pyproject.toml`` in your project repo. This will install all dependencies.
+- **Step 2:** Add ``geoml`` to ``pyproject.toml`` in your project repo and ``poetry install``. This will install all dependencies.
 
 <h5 a><strong><code>pyproject.toml</code></strong></h5>
 
@@ -40,13 +40,11 @@ geoml = { git = "https://github.com/SenteraLLC/geoml.git", branch = "main"}
 ...
 ```
 
-- **Step 3:** Install via poetry
-
 ``` console
 poetry install
 ```
 
-- **Step 4:** Establish a connection to ``DBHandler`` for owner's schema. Note that this assumes all the necessary tables have been loaded into the owner's database schema already.
+- **Step 3:** Establish a connection to ``DBHandler`` for owner's schema. Note that this assumes all the necessary tables have been loaded into the owner's database schema already.
 
 <h5 a><strong><code>connect_to_db.py</code></strong></h5>
 
@@ -78,7 +76,7 @@ db = DBHandler(
 )
 ```
 
-- **Step 5:** Edit configuration settings to train to model as you wish:
+- **Step 4:** Edit configuration settings to train to model as you wish:
 
 <h5 a><strong><code>edit_config.py</code></strong></h5>
 
@@ -95,7 +93,7 @@ from sklearn.preprocessing import PowerTransformer
 
 
 with open("geoml/config.json") as f:
-    d = json.load(f)
+    config_dict = json.load(f)
 
 config_dict["FeatureData"]["date_train"] = datetime.now().date()
 config_dict["FeatureData"]["cv_method"] = train_test_split
@@ -121,7 +119,7 @@ config_dict["Predict"]["dir_out_pred"] = "/mnt/c/Users/Tyler/Downloads"
 ```
 
 
-- **Step 6:** Edit configuration settings to train to model as you wish:
+- **Step 5:** Edit configuration settings to train to model as you wish:
 
 <h5 a><strong><code>train_geoml.py</code></strong></h5>
 
@@ -133,7 +131,7 @@ train = Training(config_dict=config_dict)
 train.fit()
 ```
 
-- **Step 7:** Grab an estimator to make predictions with:
+- **Step 6:** Grab an estimator to make predictions with:
 
 <h5 a><strong><code>predict_geoml_part1.py</code></strong></h5>
 
@@ -167,7 +165,7 @@ predict = Predict(
 )
 ```
 
-- **Step 8:** Make a prediction for each field and save output as a geotiff raster:
+- **Step 7:** Make a prediction for each field and save output as a geotiff raster:
 
 <h5 a><strong><code>predict_geoml_part2.py</code></strong></h5>
 
