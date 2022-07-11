@@ -3,33 +3,17 @@
 API to retrieve training data, create X matrix, and perform feature selection, hyperparameter tuning, training, and model testing.
 
 ## Setup and Installation (for development)
-Poetry is used to manage the environment and install the dependencies. After cloning from Github, install poetry and create the environment:
+Poetry is used to manage the environment and install the dependencies. After cloning from Github, install poetry and create the project environment (via `poetry`):
 
-```
+``` bash
 git clone git@github.com:SenteraLLC/geoml.git
 cd geoml
 poetry shell
 poetry install
 ```
 
-## Usage Example
-
-### Before running the script
-``GeoML`` requires a direct connection to a PostgreSQL database to read and write data. It is recommended to store database connection credentials as environment variables. One way to do this is to create a `.env` file where your script is running that contains relevant credentials:
-
-- **Step 1:** One way to do this is to create an ``.env`` or ``.envrc`` file with the following variables to your project:
-
-<h5 a><strong><code>.env</code></strong></h5>
-
-``` bash
-DB_NAME=db_name
-DB_HOST=localhost
-DB_USER=analytics_user
-DB_PASSWORD=secretpassword
-DB_PORT=5432
-```
-
-- **Step 2:** Add ``geoml`` to ``pyproject.toml`` in your project repo and ``poetry install``. This will install all dependencies.
+## Setup and Installation (used as a library)
+If using `geoml` as a dependency in your script, simply add it to the `pyproject.toml` in your project repo and `poetry install`. This will install `geoml` and all its dependencies.
 
 <h5 a><strong><code>pyproject.toml</code></strong></h5>
 
@@ -44,7 +28,46 @@ geoml = { git = "https://github.com/SenteraLLC/geoml.git", branch = "main"}
 poetry install
 ```
 
-- **Step 3:** Establish a connection to ``DBHandler`` for owner's schema. Note that this assumes all the necessary tables have been loaded into the owner's database schema already.
+
+## Environment Variables
+
+`geoml` requires a direct connection to a PostgreSQL database to read and write data. It is recommended to store database connection credentials as environment variables. One way to do this is to create an ``.env`` (and/or and ``.envrc``) file within your project directory that includes the necessary enviroment variables.
+
+*Note `.env` sets environment variables for IPyKernel/Jupyter, and `.envrc` sets environment variables for normal python console.*
+
+<h5 a><strong><code>.env</code></strong></h5>
+
+``` bash
+DB_NAME=db_name
+DB_HOST=localhost
+DB_USER=analytics_user
+DB_PASSWORD=secretpassword
+DB_PORT=5432
+
+SSH_HOST=bastion-lt-lb-<HOST_ID>.elb.us-east-1.amazonaws.com
+SSH_USER=<ssh_user>
+SSH_PRIVATE_KEY=<path/to/.ssh/id_rsa>
+SSH_DB_HOST=<analytics.<DB_HOST_ID>.us-east-1.rds.amazonaws.com>
+```
+
+<h5 a><strong><code>.envrc</code></strong></h5>
+
+``` bash
+export DB_NAME=db_name
+export DB_HOST=localhost
+export DB_USER=analytics_user
+export DB_PASSWORD=secretpassword
+export DB_PORT=5432
+
+export SSH_HOST=bastion-lt-lb-<HOST_ID>.elb.us-east-1.amazonaws.com
+export SSH_USER=<ssh_user>
+export SSH_PRIVATE_KEY=<path/to/.ssh/id_rsa>
+export SSH_DB_HOST=<analytics.<DB_HOST_ID>.us-east-1.rds.amazonaws.com>
+```
+
+## Usage Example
+
+- **Step 1:** Establish a connection to ``DBHandler`` for owner's schema. Note that this assumes all the necessary tables have been loaded into the owner's database schema already.
 
 <h5 a><strong><code>connect_to_db.py</code></strong></h5>
 
@@ -76,7 +99,7 @@ db = DBHandler(
 )
 ```
 
-- **Step 4:** Edit configuration settings to train to model as you wish:
+- **Step 2:** Edit configuration settings to train to model as you wish:
 
 <h5 a><strong><code>edit_config.py</code></strong></h5>
 
@@ -119,7 +142,7 @@ config_dict["Predict"]["dir_out_pred"] = "/mnt/c/Users/Tyler/Downloads"
 ```
 
 
-- **Step 5:** Edit configuration settings to train to model as you wish:
+- **Step 3:** Create `Training` instance (which loads data and performs feature selection) and train the model:
 
 <h5 a><strong><code>train_geoml.py</code></strong></h5>
 
@@ -131,7 +154,7 @@ train = Training(config_dict=config_dict)
 train.fit()
 ```
 
-- **Step 6:** Grab an estimator to make predictions with:
+- **Step 4:** Grab an estimator to make predictions with:
 
 <h5 a><strong><code>predict_geoml_part1.py</code></strong></h5>
 
@@ -165,7 +188,7 @@ predict = Predict(
 )
 ```
 
-- **Step 7:** Make a prediction for each field and save output as a geotiff raster:
+- **Step 5:** Make a prediction for each field and save output as a geotiff raster:
 
 <h5 a><strong><code>predict_geoml_part2.py</code></strong></h5>
 
