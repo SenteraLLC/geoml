@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "geoml"
-version = "0.1.5"
+version = "0.1.6"
 description = ""
 authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.8,<4.0"
 geopandas = ">=0.10.2"
 GeoAlchemy2 = "^0.12.1"
 keyring = "^23.6.0"
@@ -14,7 +14,7 @@ pygeos = "^0.12.0"
 Rtree = "^1.0.0"
 scikit-learn = "^1.1.1"
 seaborn = "^0.11.2"
-db = {git = "git@github.com:SenteraLLC/db", tag = "v0.1.5"}
+db = {git = "git@github.com:SenteraLLC/db", branch = "DEM-119-py3.9+"}
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.19.0"
