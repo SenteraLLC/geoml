@@ -21,15 +21,14 @@ import db.utilities as db_utils
 # from geoml import feature_groups
 from geoml import Tables
 
-
 class FeatureData(Tables):
+
     """
     Class that provides file management functionality specifically for research
     data that are used for the basic training of supervised regression models.
     This class assists in the loading, filtering, and preparation of research
     data for its use in a supervised regression model.
     """
-
     __allowed_params = (
         "fname_obs_tissue",
         "fname_cropscan",
@@ -109,12 +108,11 @@ class FeatureData(Tables):
         if self.dir_results is not None:
             os.makedirs(self.dir_results, exist_ok=True)
         self._get_random_seed()
-        # self.tables = Tables(base_dir_data=self.base_dir_data)
 
     def _set_params_from_dict_fd(self, config_dict):
         """
         Sets any of the parameters in ``config_dict`` to self as long as they
-        are in the ``__allowed_params`` list
+        are in the ``__allowed_params`` list. 
         """
         if config_dict is not None and "FeatureData" in config_dict:
             params_fd = config_dict["FeatureData"]
@@ -146,7 +144,7 @@ class FeatureData(Tables):
     def _set_attributes_fd(self):
         """
         Sets any class attribute to ``None`` that will be created in one of the
-        user functions
+        user functions.
         """
         self.df_X = None
         self.df_y = None
@@ -164,35 +162,23 @@ class FeatureData(Tables):
         self.stratify_train = None
         self.stratify_test = None
 
-        # self.df_obs_tissue = None
-        # self.df_tuber_biomdry_Mgha = None
-        # self.df_vine_biomdry_Mgha = None
-        # self.df_wholeplant_biomdry_Mgha = None
-        # self.df_tuber_biomfresh_Mgha = None
-        # self.df_canopy_cover_pct = None
-        # self.df_tuber_n_kgha = None
-        # self.df_vine_n_kgha = None
-        # self.df_wholeplant_n_kgha = None
-        # self.df_tuber_n_pct = None
-        # self.df_vine_n_pct = None
-        # self.df_wholeplant_n_pct = None
-        # self.df_petiole_no3_ppm = None
-        # self.df_cs = None
-        # self.df_wx = None
-
     def _handle_wl_cols(self, c, wl_range, labels_x, prefix="wl_"):
         """
         Checks for reflectance column validity with a prefix present.
 
-        Parameters:
-            c (``str``): The column label to evaluate. If it is numeric and
-                resembles an integer, it will be added to labels_x.
-            labels_x (``list``): The list that holds the x labels to use/keep.
-            prefix (``str``): The prefix to disregard when evaluating <c> for its
-                resemblance of an integer.
+        :param c: The column label to evaluate. If it is numeric and
+            resembles an integer, it will be added to ``labels_x``.
+        :type c: str
+        :param wl_range: ? 
+        :type wl_range: ?
+        :param labels_x: The list that holds the x labels to use/keep.
+        :type labels_x: list
+        :param prefix: The prefix to disregard when evaluating ``c`` for its
+            resemblance of an integer.
+        :type prefix: str
 
-        Note:
-            If prefix is set to '' or ``None``, <c> will be appended to <labels_x>.
+        Note: If prefix is set to '' or ``None``, ``c`` will be appended to ``labels_x``.
+
         """
         if not isinstance(c, str):
             c = str(c)
@@ -207,6 +193,12 @@ class FeatureData(Tables):
         Parses ``group_feats`` and returns a list of column headings so that
         a df can be subset to build the X matrix with only the appropriate
         features indicated by ``group_feats``.
+
+        :param group_feats: Requested features within the `config_dict`
+        :type group_feats: dict
+        :param cols: Name of columns from full feature matrix X
+        :type cols: list
+
         """
         labels_x = []
         for key in group_feats:
@@ -262,28 +254,28 @@ class FeatureData(Tables):
         return self.labels_x
 
     def _check_empty_geom(self, df):
+        """
+        THIS FUNCTION NEEDS A DOCSTRING
+
+        """
         if isinstance(df, gpd.GeoDataFrame):
             if all(df[~df[df.geometry.name].is_empty]):
                 df = pd.DataFrame(df.drop(columns=[df.geometry.name]))
         return df
 
-
-    # group_feats = {
-    #     "dae": "dae",
-    #     "rate_ntd": {"col_rate_n": "rate_n_kgha", "col_out": "rate_ntd_kgha"},
-    #     "cropscan_wl_range1": [400, 900],
-    #     "weather": {
-    #         "date_origin_kwargs": {"table": "as_planted", "column": "date_plant"},
-    #         "features": [
-    #             'sum(w."precip_24h:mm") as "precip_csp:mm"',
-    #             'sum(w."evapotranspiration_24h:mm") as "evapotranspiration_csp:mm"',
-    #             'sum(w."global_rad_24h:MJ") as "global_rad_csp:MJ"',
-    #             'sum(w."gdd_10C30C_2m_24h:C") as "gdd_10C30C_2m_csp:C"',
-    #         ]
-    #     }
-    # }
-
     def _clean_zonal_stats(self, gdf_stats, wl_min, wl_max):
+        """
+        Cleans up extracted reflectance information extracted in ``_join_feat_groups`` by 
+        tidying up column names and removing any bands that are outside of specified wavelength range. 
+
+        :param gdf_stats: Extracted reflectance information extracted from database for `df` observations. 
+        :type gdf_stats: geopandas.GeoDataFrame
+        :param wl_min: Minimum wavelength in accepted range
+        :type wl_min: int
+        :param wl_max: Maximum wavelength in accepted range
+        :type wl_max: int
+
+        """
         # Assumes all rasters in db.reflectance have same bands and band order
         rast_metadata = pd.read_sql(
             "select rast_metadata from reflectance order by rid limit 1",
@@ -312,8 +304,33 @@ class FeatureData(Tables):
 
     def _join_group_feats(self, df, group_feats, date_tolerance):
         """
-        Joins predictors to ``df`` based on the contents of group_feats
+        Loops through ``group_feats`` and gathers and joins all features to all 
+        observations in ``df``. 
+
+        :param df: Dataframe containing the response observations with primary keys and geometries
+        :type df: geopandas.GeoDataFrame
+        :param group_feats: The column headings to include in the X matrix. The following 
+            list of dictionary keys or keywords are currently recognized: 
+            "applications": agricultural inputs 
+            "planting": planting information 
+            "sentinel": Sentinel-2 satellite imagery 
+            "weather": Meteomatics weather variables
+            "rate_ntd": 
+            "dae": 
+            "dap":
+            "weather_derived":
+        :type group_feats: list or dict
+        :param data_tolerance: Number of days between the observation and satellite 
+            imagery acquisition date that will be allowed to join in the workflow. 
+            If dates are greater than ``date_tolerance`` apart, the join will not occur 
+            and the feature will be NA for that observation. 
+        :type data_tolerance: int
+
+        :return df: Joined GeoDataFrame that contains response observations and gathered
+            features. Missing values marked by NA. 
         """
+        
+        # primary keys include: ['owner', 'farm', 'field_id', 'year']
         subset = db_utils.get_primary_keys(self.df_response)
 
         for key in group_feats:
@@ -444,7 +461,8 @@ class FeatureData(Tables):
 
     def _load_df_response(self):
         """
-        Loads the response DataFrame based on <self.response_data>.
+        Loads the response DataFrame from database connection ``self.db`` based on ``self.response_data`` and 
+        saves it in ``self.df_response``. Loads all available data for given schema (i.e., without data range). 
         """
         response_data = deepcopy(self.response_data)
         table_name = response_data.pop("table_name")
@@ -471,7 +489,7 @@ class FeatureData(Tables):
 
     def _write_to_readme(self, msg, msi_run_id=None, row=None):
         """
-        Writes ``msg`` to the README.txt file
+        Writes ``msg`` to the README.txt file in ``self.dir_results``. 
         """
         # Note if I get here to modify foler_name or use msi_run_id:
         # Try to keep msi-run_id out of this class; instead, make all folder
@@ -489,7 +507,10 @@ class FeatureData(Tables):
 
     def _get_random_seed(self):
         """
-        Assign the random seed
+        Assign the random seed to be used and archived within the geoML workflow to ensure replicability. 
+        If no random seed is assigned through kwargs or the ``config_dict`` in ``self.random_seed``, a random 
+        integer between 0 and 1e6 will be chosen. 
+
         """
         if self.random_seed is None:
             self.random_seed = np.random.randint(0, 1e6)
@@ -498,7 +519,17 @@ class FeatureData(Tables):
         self._write_to_readme("Random seed: {0}".format(self.random_seed))
 
     def _add_empty_geom(self, gdf):
-        """Adds field_bounds geometry to all Empty gdf geometries"""
+        """
+        Adds field_bounds geometry to all Empty ``gdf`` geometries. In the geoML workflow, 
+        all data values must have an associated geometry, so, if none given, the value is assumed 
+        to represent the entire field. 
+
+        :param gdf: Dataframe to be checked for empty geometries 
+        :type gdf: geopandas.GeoDataFrame
+
+        :return gdf_out: geopandas.GeoDataframe with added field_bounds geometries where original geometry was Empty
+
+        """
         subset = db_utils.get_primary_keys(gdf)
         field_bounds = self.db.get_table_df("field_bounds")
 
@@ -506,8 +537,7 @@ class FeatureData(Tables):
         gdf_geom = gdf[~gdf[gdf.geometry.name].is_empty]
         gdf_nogeom = gdf[gdf[gdf.geometry.name].is_empty]
 
-        # Get field bounds where owner, farm, field_id, and year match obs_tissue_no_geom
-
+        # Get field bounds where owner, farm, field_id, and year match gdf_no_geom
         gdf_nogeom.drop(columns=[gdf.geometry.name], inplace=True)
         field_bounds.drop(columns=["id"], inplace=True)
         gdf_out = pd.concat(
@@ -515,58 +545,12 @@ class FeatureData(Tables):
         )
         return gdf_out
 
-    # def _get_response_df(
-    #     self, tissue, measure, tissue_col="tissue", measure_col="measure"
-    # ):
-    #     # ground_truth='vine_n_pct'):
-    #     """
-    #     Gets the relevant response dataframe
-
-    #     Parameters:
-    #         ground_truth_tissue (``str``): The tissue to use for the response
-    #             variable. Must be in "obs_tissue.csv", and dictates which table
-    #             to access to retrieve the relevant training data.
-    #         ground_truth_measure (``str``): The measure to use for the response
-    #             variable. Must be in "obs_tissue.csv"
-    #         tissue_col (``str``): The column name from "obs_tissue.csv" to look
-    #             for ``tissue``.
-    #         measure_col (``str``): The column name from "obs_tissue.csv" to
-    #             look for ``measure``.
-    #     """
-    #     tissue_list = (
-    #         self.df_response.groupby(by=[measure_col, tissue_col], as_index=False)
-    #         .first()[tissue_col]
-    #         .tolist()
-    #     )
-    #     measure_list = (
-    #         self.df_response.groupby(by=[measure_col, tissue_col], as_index=False)
-    #         .first()[measure_col]
-    #         .tolist()
-    #     )
-    #     avail_list = ["_".join(map(str, i)) for i in zip(tissue_list, measure_list)]
-    #     # avail_list = ["vine_n_pct", "pet_no3_ppm", "tuber_n_pct",
-    #     #               "biomass_kgha"]
-    #     msg = (
-    #         "``tissue``  and ``measure`` must be "
-    #         'one of:\n{0}.\nPlease see "obs_tissue" table to be sure your '
-    #         "intended data are available."
-    #         "".format(list(zip(tissue_list, measure_list)))
-    #     )
-    #     assert "_".join((tissue, measure)) in avail_list, msg
-
-    #     df = self.df_response[
-    #         (self.df_response[measure_col] == measure)
-    #         & (self.df_response[tissue_col] == tissue)
-    #     ]
-    #     df = self._add_empty_geom(df)
-    #     return df
-
     def _stratify_set(
         self, stratify_cols=["owner", "farm", "year"], train_test=None, df=None
     ):
         """
         Creates a 1-D array of the stratification IDs (to be used by k-fold)
-        for both the train and test sets: <stratify_train> and <stratify_test>
+        for both the train and test sets: ``stratify_train`` and ``stratify_test``
 
         Returns:
             groups (``numpy.ndarray): Array that asssigns each observation to
@@ -597,27 +581,29 @@ class FeatureData(Tables):
         self, cv_method, cv_method_kwargs, cv_split_kwargs=None, raise_error=False
     ):
         """
-        Checks <cv_method>, <cv_method_kwargs>, and <cv_split_kwargs> for
+        Checks ``cv_method``, ``cv_method_kwargs``, and ``cv_split_kwargs`` for
         continuity.
 
         Displays a UserWarning or raises ValueError if an invalid parameter
         keyword is provided.
 
-        Parameters:
-            raise_error (``bool``): If ``True``, raises a ``ValueError`` if
-                parameters do not appear to be available. Otherwise, simply
-                issues a warning, and will try to move forward anyways. This
-                exists because <inspect.getfullargspec(self.cv_method)[0]> is
-                used to get the arguments, but certain scikit-learn functions/
-                methods do not expose their arguments to be screened by
-                <inspect.getfullargspec>. Thus, the only way to use certain
-                splitter functions is to bypass this check.
+        :param raise_error: If ``True``, raises a ``ValueError`` if
+            parameters do not appear to be available. Otherwise, simply
+            issues a warning, and will try to move forward anyways. This
+            exists because ``inspect.getfullargspec(self.cv_method)[0]`` is
+            used to get the arguments, but certain scikit-learn functions/
+            methods do not expose their arguments to be screened by
+            ``inspect.getfullargspec``. Thus, the only way to use certain
+            splitter functions is to bypass this check.
+        :type raise_error: bool
+            raise_error (``bool``):
 
         Note:
             Does not check for the validity of the keyword argument(s). Also,
             the warnings does not work as fully intended because when
-            <inspect.getfullargspec(self.cv_method)[0]> returns an empty list,
+            ``inspect.getfullargspec(self.cv_method)[0]`` returns an empty list,
             there is no either a warning or ValueError can be raised.
+
         """
         if cv_split_kwargs is None:
             cv_split_kwargs = {}
@@ -686,8 +672,8 @@ class FeatureData(Tables):
 
     def _cv_method_check_random_seed(self, cv_method, cv_method_kwargs):
         """
-        If 'random_state' is a valid parameter in <cv_method>, sets from
-        <random_seed>.
+        If 'random_state' is a valid parameter in ``cv_method``, sets from ``random_seed``.
+
         """
         # cv_method_args = inspect.getfullargspec(cv_method)[0]
         # TODO: Add tests for all supported <cv_method>s
@@ -726,45 +712,45 @@ class FeatureData(Tables):
 
     def _train_test_split_df(self, df):
         """
-        Splits <df> into train and test sets.
+        Splits ``df`` into train and test sets using the ``cv_method`` specified. 
 
         This function is designed to handle any of the many scikit-learn
         "splitter classes". Documentation available at
         https://scikit-learn.org/stable/modules/classes.html#splitter-classes.
-        All parameters used by the <cv_method> function or the
-        <cv_method.split> method should be set via
-        <cv_method_kwargs> and <cv_split_kwargs>.
+        All parameters used by the <cv_method`` function or the
+        ``cv_method.split`` method should be set via
+        ``cv_method_kwargs`` and ``cv_split_kwargs``.
 
-        Parameters:
-            df (``pandas.DataFrame``): The df to split between train and test
-                sets.
-            cv_method (``sklearn.model_selection.SplitterClass``): The
-                scikit-learn method to use to split into training and test
-                groups. In addition to <SplitterClass>(es), <cv_method> can be
-                <sklearn.model_selection.train_test_split>, in which case
-                <cv_split_kwargs> is ignored and <cv_method_kwargs> should be
-                used to pass <cv_method> parameters that will be evaluated via
-                the eval() function.
-            cv_method_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method()``.
-            cv_split_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method.split()``. Note that the <X> kwarg defaults to
-                ``df`` if not set.
+        :param df: The df to split between train and test
+            sets.
+        :type df: pandas.DataFrame
+        :param cv_method: The scikit-learn method to use to split into training and 
+            test groups. In addition to ``SplitterClass``, ``cv_method`` can be
+            ``sklearn.model_selection.train_test_split``, in which case
+            ``cv_split_kwargs`` is ignored and ``cv_method_kwargs`` should be
+            used to pass ``cv_method`` parameters that will be evaluated via
+            the eval() function.
+        :type cv_method: sklearn.model_selection.SplitterClass
+        :param cv_method_kwargs: Keyword arguments to be passed to
+            ``cv_method``.
+        :type cv_method_kwargs: dict
+        :param cv_split_kwargs: Keyword arguments to be passed to
+            ``cv_method.split``. Note that the ``X`` kwarg defaults to
+            ``df`` if not set.
+        :type cv_split_kwargs: dict
 
         Note:
-            If <n_splits> is set for any <SplitterClass>, it is generally
+            If ``n_splits`` is set for any ``SplitterClass``, it is generally
             ignored. That is, if there are multiple splitting iterations
-            (<n_splits> greater than 1), only the first iteration is used to
+            (``n_splits`` greater than 1), only the first iteration is used to
             split between train and test sets.
         """
         cv_method = deepcopy(self.cv_method)
         cv_method_kwargs = deepcopy(self.cv_method_kwargs)
         cv_split_kwargs = deepcopy(self.cv_split_kwargs)
-        cv_method_kwargs = self._cv_method_check_random_seed(
-            cv_method, cv_method_kwargs
-        )
+        cv_method_kwargs = self._cv_method_check_random_seed(cv_method, cv_method_kwargs)
         if cv_method.__name__ == "train_test_split":
-            # Because train_test_split has **kwargs for options, random_state is not caught, so it should be set explicitly
+            # Because train_test_split has **kwargs for options, random_state is not caught, so it should be set explicitly. 
             cv_method_kwargs["random_state"] = self.random_seed
             if "arrays" in cv_method_kwargs:  # I think can only be <df>?
                 df = eval(cv_method_kwargs.pop("arrays", None))
@@ -817,12 +803,13 @@ class FeatureData(Tables):
 
     def _impute_missing_data(self, X, method="iterative"):
         """
-        Imputes missing data in X - sk-learn models will not work with null data
+        Imputes missing data in X - sk-learn models will not work with null data. 
 
-        Parameters:
-            method (``str``): should be one of "iterative" (takes more time)
-                or "knn" (default: "iterative").
+        :param method: Method to fill in missing data values. Allowed values include:
+            "iterative" (takes more time), "knn", or None. 
+        :type method: str
         """
+        # Do values need to be imputed?     
         if pd.isnull(X).any() is False:
             return X
 
@@ -834,40 +821,38 @@ class FeatureData(Tables):
             return X
         X_out = imp.fit_transform(X)
         return X_out
-        # if X.shape == X_out.shape:
-        #     return X_out  # does not impute if all nan columns (helps debug)
-        # else:
-        #     return X
 
     def _get_X_and_y(self, df, impute_method="iterative"):
         """
         Gets the X and y from df; y is determined by the ``y_label`` column.
-        This function depends on the having the following variables already
-        set:
+        This function depends on the folowing already set variables: 
             1. self.label_y
             2. self.group_feats
 
-        Parameters:
-            df (``pd.DataFrame``): The input dataframe to retrieve data from.
-            impute_method (``str``): The sk-learn imputation method for missing
-                data. If ``None``, then any row with missing data is removed
-                from the dataset.
+        :param df: The input dataframe to retrieve data from.
+        :type df: pandas.DataFrame
+        :param impute_method: The sk-learn imputation method for missing
+            data. If ``None``, then any row with missing data is removed
+            from the dataset. Must be one of: ["iterative","knn", None].
+        :type impute_method: str
+         
         """
         msg = '``impute_method`` must be one of: ["iterative", "knn", None]'
         assert impute_method in ["iterative", "knn", None], msg
 
+        # If the impute method is None, drop any row with an N/A value. Otherwise, 
+        # remove any NA observation. 
         if impute_method is None:
             df = df.dropna()
         else:
             df = df[pd.notnull(df[self.label_y])]
 
+        # Then, adjust the train and test dataframes 
         df_train = df[df["train_test"] == "train"]
         df_test = df[df["train_test"] == "test"]
 
-        # If number of cols are different, remove from both before assigning labels_x
-        cols_nan_train = df_train.columns[
-            df_train.isnull().all(0)
-        ]  # gets columns with all nan
+        # Identify which columns are NA and drop from test and train 
+        cols_nan_train = df_train.columns[df_train.isnull().all(0)] 
         cols_nan_test = df_test.columns[df_test.isnull().all(0)]
         if len(cols_nan_train) > 0 or len(cols_nan_test) > 0:
             df.drop(
@@ -875,6 +860,9 @@ class FeatureData(Tables):
             )
             df_train = df[df["train_test"] == "train"]
             df_test = df[df["train_test"] == "test"]
+        
+        # determine which columns should be included in X based on ``group_feats``
+        # and reduce train and test matrices
         labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
 
         X_train = df_train[labels_x].values
@@ -904,8 +892,8 @@ class FeatureData(Tables):
 
     def _save_df_X_y(self):
         """
-        Saves both ``FeatureData.df_X`` and ``FeatureData.df_y`` to
-        ``FeatureData.dir_results``.
+        Saves both ``self.df_X`` and ``self.df_y`` to
+        ``self.dir_results``.
         """
         dir_out = os.path.join(self.dir_results, self.label_y)
         os.makedirs(dir_out, exist_ok=True)
@@ -915,91 +903,106 @@ class FeatureData(Tables):
         self.df_X.to_csv(fname_out_X, index=False)
         self.df_y.to_csv(fname_out_y, index=False)
 
-    def _splitter_print(self, splitter, train_test="train"):
-        """
-        Checks the proportions of the stratifications in the dataset and prints
-        the number of observations in each stratified group. The keys are based
-        on the stratified IDs in <stratify_train> or <stratify_test>
-        """
-        df_X = self.df_X[self.df_X["self_test"] == train_test]
-        if train_test == "train":
-            stratify_vector = self.stratify_train
-        elif train_test == "test":
-            stratify_vector = self.stratify_test
-        logging.info(
-            "The number of observations in each cross-validation dataset "
-            "are listed below.\nThe key represents the <stratify_{0}> ID, "
-            "and the value represents the number of observations used from "
-            "that stratify ID".format(train_test)
-        )
-        logging.info("Total number of observations: {0}".format(len(stratify_vector)))
-        train_list = []
-        val_list = []
-        for train_index, val_index in splitter:
-            X_meta_train_fold = stratify_vector[train_index]
-            X_meta_val_fold = stratify_vector[val_index]
-            X_train_dataset_id = X_meta_train_fold[:]
-            train = {}
-            val = {}
-            for uid in np.unique(X_train_dataset_id):
-                n1 = len(np.where(X_meta_train_fold[:] == uid)[0])
-                n2 = len(np.where(X_meta_val_fold[:] == uid)[0])
-                train[uid] = n1
-                val[uid] = n2
-            train_list.append(train)
-            val_list.append(val)
-        logging.info("\nK-fold train set:")
-        logging.info("Number of observations: {0}".format(len(train_index)))
-        logging.info(*train_list, sep="\n")
-        logging.info("\nK-fold validation set:")
-        logging.info("Number of observations: {0}".format(len(val_index)))
-        logging.info(*val_list, sep="\n")
+    # def _splitter_print(self, splitter, train_test="train"):
+    #     """
+    #     Checks the proportions of the stratifications in the dataset and prints
+    #     the number of observations in each stratified group. The keys are based
+    #     on the stratified IDs in ``stratify_train`` or ``stratify_test``
+    #     """
+    #     df_X = self.df_X[self.df_X["self_test"] == train_test]
+    #     if train_test == "train":
+    #         stratify_vector = self.stratify_train
+    #     elif train_test == "test":
+    #         stratify_vector = self.stratify_test
+    #     logging.info(
+    #         "The number of observations in each cross-validation dataset "
+    #         "are listed below.\nThe key represents the ``stratify_{0}`` ID, "
+    #         "and the value represents the number of observations used from "
+    #         "that stratify ID".format(train_test)
+    #     )
+    #     logging.info("Total number of observations: {0}".format(len(stratify_vector)))
+    #     train_list = []
+    #     val_list = []
+    #     for train_index, val_index in splitter:
+    #         X_meta_train_fold = stratify_vector[train_index]
+    #         X_meta_val_fold = stratify_vector[val_index]
+    #         X_train_dataset_id = X_meta_train_fold[:]
+    #         train = {}
+    #         val = {}
+    #         for uid in np.unique(X_train_dataset_id):
+    #             n1 = len(np.where(X_meta_train_fold[:] == uid)[0])
+    #             n2 = len(np.where(X_meta_val_fold[:] == uid)[0])
+    #             train[uid] = n1
+    #             val[uid] = n2
+    #         train_list.append(train)
+    #         val_list.append(val)
+    #     logging.info("\nK-fold train set:")
+    #     logging.info("Number of observations: {0}".format(len(train_index)))
+    #     logging.info(*train_list, sep="\n")
+    #     logging.info("\nK-fold validation set:")
+    #     logging.info("Number of observations: {0}".format(len(val_index)))
+    #     logging.info(*val_list, sep="\n")
 
     def get_feat_group_X_y(self, **kwargs):
         """
-        Retrieves all the necessary columns in ``group_feats``, then filters
-        the dataframe so that it is left with only the identifying columns
-        (i.e., study, year, and plot_id), a column indicating if each
-        observation belongs to the train or test set (i.e., train_test), and
-        the feature columns indicated by ``group_feats``.
+        Retrieves all the necessary columns in ``self.group_feats`` for the observations in 
+        ``self.df_respons`` based on geometry using ``_join_group_feats`` and splits 
+        the full training dataset into test and train sets. The final dataframe includes 
+        the identifying columns (i.e., study, year, and plot_id), a column indicating if 
+        each observation belongs to the train or test set (i.e., train_test), and the 
+        feature columns indicated by ``group_feats``.
 
-        Parameters:
-            group_feats (``list`` or ``dict``): The column headings to include
-                in the X matrix. ``group_feats`` must follow the naming
-                conventions outlined in featuer_groups.py to ensure that the
-                intended features are joined to ``df_feat_group``.
-            ground_truth (``str``): Must be one of "vine_n_pct", "pet_no3_ppm",
-                or "tuber_n_pct"; dictates which table to access to retrieve
-                the relevant training data.
-            date_tolerance (``int``): Number of days away to still allow join
-                between response data and predictor features (if dates are
-                greater than ``date_tolerance``, the join will not occur and
-                data will be neglected). Only relevant if predictor features
-                were collected on a different day than response features.
-            cv_method (``sklearn.model_selection.SplitterClass``): The
-                scikit-learn method to use to split into training and test
-                groups.
-            cv_method_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method()``.
-            cv_split_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method.split()``. Note that the <X> kwarg defaults to
-                ``df`` if not set.
-            stratify (``list``): If not None, data is split in a stratified
-                fashion, using this as the class labels. Ignored if
-                ``cv_method`` is not "stratified". See
-                ``sklearn.model_selection.train_test_split()`` documentation
-                for more information. Note that if there are less than two
-                unique stratified "groups", an error will be raised.
-            impute_method (``str``): How to impute missing feature data. Must
-                be one of: ["iterative", "knn", None].
+        :param group_feats: The column headings to include in the X matrix. The following 
+            list of dictionary keys or keywords are currently recognized by :py:func:_join_group_feats:
+            * "applications": agricultural inputs 
+            * "planting": planting information 
+            * "sentinel": Sentinel-2 satellite imagery 
+            * "weather": Meteomatics weather variables
+            * "rate_ntd": 
+            * "dae": 
+            * "dap":
+            * "weather_derived":
+        :type group_feats: list or dict
+        :param data_tolerance: Number of days between the observation and satellite 
+            imagery acquisition date that will be allowed to join in the workflow. 
+            If dates are greater than ``date_tolerance`` apart, the join will not occur 
+            and the feature will be NA for that observation. 
+        :type data_tolerance: int
+
+        :param cv_method: The scikit-learn method to use to split into training and test
+            groups.
+        :type cv_method: sklearn.model_selection.SplitterCLass
+        :param cv_method_kwargs: Keyword arguments to be passed to ``cv_method``. 
+        :type cv_method_kwargs: dict
+
+        :param cv_split: 
+
+        :param cv_split_kwargs: Keyword arguments to be passed to ``cv_split``. 
+            Note that the ``X> kwarg defaults to ``df`` if not set.
+
+        :type cv_split_kwargs: dict
+        :param stratify: If not None, data is split in a stratified fashion, using 
+            this list as the class labels. Ignored if :param cv_method: is not "stratified". 
+            See ``sklearn.model_selection.train_test_split()`` documentation for more 
+            information. Note that if there are less than two unique stratified "groups", 
+            an error will be raised.
+        :type stratify:  list
+        :param impute_method: Method to impute missing feature data. Must be one of: 
+            ["iterative", "knn", None].
+        :type impute_method: str
+
+        :param ground_truth: Must be one of "vine_n_pct", "pet_no3_ppm",
+            or "tuber_n_pct"; dictates which table to access to retrieve
+            the relevant training data. DEPRECATED
+        :type ground_truth: str 
 
         Note:
             This function is designed to handle any of the many scikit-learn
             "splitter classes". Documentation available at
             https://scikit-learn.org/stable/modules/classes.html#splitter-classes.
-            All parameters used by the <cv_method> function or the
-            <cv_method.split> method should be set via
-            <cv_method_kwargs> and <cv_split_kwargs>.
+            All parameters used by the :param cv_method: function or the
+            :param cv_method.split: method should be set via :param cv_method_kwargs:
+            and :param cv_split_kwargs:.
 
         Example:
             >>> from geoml import FeatureData
@@ -1027,6 +1030,8 @@ class FeatureData(Tables):
         self._set_params_from_kwargs_fd(**kwargs)
         df = self.df_response.copy()
         # df = self._get_response_df(self.ground_truth_tissue, self.ground_truth_measure)
+
+        # Extract the features from `group_feats`
         df = self._join_group_feats(
             df, group_feats=self.group_feats, date_tolerance=self.date_tolerance
         )
@@ -1040,9 +1045,11 @@ class FeatureData(Tables):
             "".format(self.date_tolerance)
         )
 
+        # Reduce the training set to only include days before the training date
         df = df[df["date"] < self.date_train].reset_index()
-
         assert len(df) > 0, msg
+
+        # Split the data using the cv_method/cv_split from config
         df = self._train_test_split_df(df)
 
         X_train, X_test, y_train, y_test, df = self._get_X_and_y(

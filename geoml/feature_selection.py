@@ -22,7 +22,7 @@ from geoml import FeatureData
 
 class FeatureSelection(FeatureData):
     """
-    FeatureSelection inherits from ``FeatureData``, and carries out all tasks
+    FeatureSelection inherits from ``FeatureData`` and carries out all tasks
     related to feature selection before model tuning, training, and prediction.
     The information garnered from ``FeatureSelection`` is quite simply all the
     parameters required to duplicate a given number of features, as well as its
@@ -34,9 +34,10 @@ class FeatureSelection(FeatureData):
         1. inheritance (from ``FeatureData``), or
         2. kwargs passed to ``FeatureSelection`` on initialization
 
-    Parameters:
-        model_fs (``str``): The algorithm used to carry out feature selection
-        n_feats (``int``): The maximum number of features to consider
+    :param model_fs: Model used to carry out feature selection
+    :type model_fs: sklearn model class
+    :param n_feats: The maximum number of features within a model
+    :type n_feats: int
     """
 
     __allowed_params = (
@@ -101,6 +102,8 @@ class FeatureSelection(FeatureData):
         the ``__allowed_params`` list. Notice that if 'config_dict' is passed,
         then its contents are set before the rest of the kwargs, which are
         passed to ``FeatureSelection`` more explicitly.
+
+        Set up feature selection model as well. 
         """
         if "config_dict" in kwargs:
             self._set_params_from_dict_fs(kwargs.get("config_dict"))
@@ -114,7 +117,7 @@ class FeatureSelection(FeatureData):
     def _set_attributes_fs(self):
         """
         Sets any class attribute to ``None`` that will be created in one of the
-        user functions from the ``feature_selection`` class
+        user functions from the ``FeatureSelection`` class
         """
         self.model_fs_params_feats_min = None
         self.model_fs_params_feats_max = None
@@ -126,8 +129,8 @@ class FeatureSelection(FeatureData):
 
     def _set_model_fs(self):
         """
-        Actually initializes the sklearn model based on the model ``str``. If
-        the <random_seed> was not included in the <model_fs_params> (or if
+        Initializes the sklearn model ``self.model_fs``. If
+        the ``random_seed`` was not included in the ``model_fs_params`` (or if
         there is a discrepancy), the model's random state is set/reset to avoid
         any discrepancy.
         """
@@ -160,9 +163,12 @@ class FeatureSelection(FeatureData):
     def _f_feat_n_df(self, **kwargs):
         """
         Uses an ``sklearn`` model to determine the number of features selected
-        from a given set of parameters. The parameters to the model should be
-        passed via <kwargs>, which will be passed to the sklearn model
+        under a given set of hyperparameters. The parameters to the model should be
+        passed via ``kwargs``, which will be passed to the sklearn model
         instance.
+
+        :return df: ... 
+
         """
         cols = [
             "model_fs",
@@ -172,8 +178,12 @@ class FeatureSelection(FeatureData):
             "labels_x_select",
             "rank_x_select",
         ]
+        
+        # Fit the model
         self.model_fs.set_params(**kwargs)
         self.model_fs.fit(self.X_train, self.y_train)
+
+        # Select features based on importance weights
         model_bs = SelectFromModel(self.model_fs, prefit=True)
         feats = model_bs.get_support(indices=True)
         coefs = self.model_fs.coef_[feats]  # get ranking coefficients
@@ -358,7 +368,7 @@ class FeatureSelection(FeatureData):
     def _find_features_min(self):
         """
         Finds the model parameters that will result in having just a single
-        feature. <model_fs_params_feats_min> can be passed to ``_f_feat_n_df()``
+        feature. ``model_fs_params_adjust_min`` can be passed to ``_f_feat_n_df()``
         via ``**kwargs`` to return a dataframe with number of features,
         ranking, etc.
         """
@@ -392,7 +402,7 @@ class FeatureSelection(FeatureData):
     def _lasso_fs_df(self):
         """
         Creates a "template" dataframe that provides all the necessary
-        information for the ``Tuning`` class to achieve the specific number of
+        information for parameter tuning to achieve the specific number of
         features determined by the ``FeatureSelection`` class.
         """
         if self.n_feats > 1:
@@ -453,12 +463,13 @@ class FeatureSelection(FeatureData):
         to all features (max number of features varies by dataset), and be able
         to repeat the methods to derive any specific number of features.
 
-        Returns:
-            self.df_fs_params (``pd.DataFrame``): A "template" dataframe that
-                provides the sklearn model (``str``), the number of features
-                (``int``), the feature indices (``list``), the feature ranking
-                (``list``), and the parameters to recreate the feature
-                selection scenario (``dict``).
+        :return self.df_fs_params: A "template" dataframe that
+            provides the sklearn model (``str``), the number of features
+            (``int``), the feature indices (``list``), the feature ranking
+            (``list``), and the parameters to recreate the feature
+            selection scenario (``dict``).
+        :rtype: pandas.DataFrame
+            self.df_fs_params (``pd.DataFrame``):
 
         Example:
             >>> from geoml import FeatureSelection

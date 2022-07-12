@@ -3,17 +3,30 @@ import pandas as pd
 import geopandas as gpd
 from sqlalchemy import inspect
 import warnings
-
 from db import DBHandler
 import db.utilities as db_utils
 
-
 class Tables(object):
     """
-    Class for accessing tables that contain training data. In addition to
-    accessing the data (via either local files or connecting to a database),
-    this class makes the appropriate joins and has functions available to add
-    new columns to the table(s) that may be desireable regression features.
+    This class is created to access and organize training data. In addition to accessing the data 
+    (via either local files or connecting to a database), this class makes the appropriate joins and 
+    has functions available to add new columns to the table(s) that may be desireable regression features.
+
+    :param base_dir_data: The base directory containing all the tables available to be joined. 
+        Ignored if there is a valid connection to a database.
+    :type base_dir_data: str
+    :param table_names: The filenames of the various tables; these files must be in `base_dir_data`. 
+        Ignored if there is a valid connection to a database.
+    :type table_names: dict or str
+
+    Note:
+    To set the DB password in via keyring, adapt the following code block:
+        >>> db_name = 'test_db_pw'
+        >>> db_host = 'localhost'
+        >>> db_user = 'postgres'
+        >>> password = 'my_db_pw2!'
+        >>> service_name = '@'.join((db_name, db_host))  # 'test_db_pw@localhost'
+        >>> keyring.set_password(service_name, db_user, password)
     """
 
     __allowed_params = (
@@ -29,24 +42,8 @@ class Tables(object):
     )
 
     def __init__(self, **kwargs):
-        """
-        Parameters:
-            base_dir_data (``str``): The base directory containing all the
-                tables available to be joined. Ignored if there is a valid
-                connection to a database.
-            table_names (``dict`` of ``str``): The filenames of the various
-                tables; these files must be in ``base_dir_data``. Ignored if
-                there is a valid connection to a database.
 
-        Note:
-            To set the DB password in via keyring, adapt the following:
-            >>> db_name = 'test_db_pw'
-            >>> db_host = 'localhost'
-            >>> db_user = 'postgres'
-            >>> password = 'my_db_pw2!'
-            >>> service_name = '@'.join((db_name, db_host))  # 'test_db_pw@localhost'
-            >>> keyring.set_password(service_name, db_user, password)
-        """
+        print("\nLoading tables from database...")
         self.db_name = None
         self.db_host = None
         self.db_user = None
