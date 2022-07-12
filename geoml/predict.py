@@ -317,9 +317,20 @@ class Predict(Tables):
                     feature_list=group_feats[key]["features"],
                     predict=True,
                 )
+                # if no information, then make NA feats_plant values 
+                if gdf_plant.empty: 
+                    gdf_plant = gpd.GeoDataFrame(
+                        columns = ['geom'] + feats_plant,
+                        geometry = 'geom',
+                        crs = df_feats.crs
+                    )
+                    gdf_plant['geom'] = df_feats['geom']
+
+                # join the two dataframes
                 df_feats = df_feats.sjoin(
                     gdf_plant[[gdf_plant.geometry.name] + feats_plant], how="inner"
                 ).drop(columns=["index_right"])
+
             if "applications" in key:
                 rate_kwargs = group_feats[key]["rate_kwargs"]
                 select_extra = (
@@ -337,6 +348,16 @@ class Predict(Tables):
                     filter_last_x_days=group_feats[key]["filter_last_x_days"],
                     predict=True,
                 )
+
+                # if no information, then make NA feats_apps values 
+                if gdf_app.empty: 
+                    gdf_app = gpd.GeoDataFrame(
+                        columns = ['geom'] + feats_apps,
+                        geometry = 'geom',
+                        crs = df_feats.crs
+                    )
+                    gdf_app['geom'] = df_feats['geom']
+
                 df_feats = df_feats.sjoin(
                     gdf_app[[gdf_app.geometry.name] + feats_apps], how="inner"
                 ).drop(columns=["index_right"])
@@ -361,6 +382,16 @@ class Predict(Tables):
                     feature_list=feature_list_sql,
                     predict=True,
                 )
+
+                # if no information, then make NA feats_weather values 
+                if gdf_weather.empty: 
+                    gdf_weather = gpd.GeoDataFrame(
+                        columns = ['geom'] + feats_weather,
+                        geometry = 'geom',
+                        crs = df_feats.crs
+                    )
+                    gdf_weather['geom'] = df_feats['geom']
+
                 df_feats = df_feats.sjoin(
                     gdf_weather[[gdf_weather.geometry.name] + feats_weather],
                     how="inner",
@@ -448,14 +479,19 @@ class Predict(Tables):
 
     def _fill_array_X(self, array_img, df_feats, profile):
         """
-        Populates array_X with all the features in df_feats
+        Populates array_X with all the features in df_feats. 
+        Masked values are represented with -9999. 
         """
+        # Initializes an NA array 
         array_X_shape = (len(self.feats_x_select),) + array_img.shape[1:]
-        array_X = np.zeros(array_X_shape, dtype=float)
+        array_X = np.empty(array_X_shape, dtype = float)
+        array_X[:] = np.NaN 
 
+        # Loops through each feature in `feats_x_select` to be added to array
         for i_fs, feat in enumerate(self.feats_x_select):
-            # Builds a 2D array of the feature to be added to array_X
-            array_feat = np.zeros((1,) + array_img.shape[1:], dtype=float)
+            # Builds a 2D NA array of the feature to be added to array_X
+            array_feat = np.empty((1,) + array_img.shape[1:], dtype=float)
+            array_feat[:] = -9999
             for i in range(len(df_feats)):
                 geometry = df_feats.iloc[i][df_feats.geometry.name]
                 array_mask = self._mask_array_by_geom(
@@ -630,7 +666,13 @@ class Predict(Tables):
         )
         # df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
 
+        # Get all data for prediction feature matrix based on `group_feats`
+        # NA values returned if features are missing for a field
         df_feats = self._feats_x_select_data(df_feats, df_metadata, self.group_feats)
+
+        if any(df_feats.iloc[0].isna()): 
+            raise ValueError('The following features are NULL: ' + ', '.join(df_feats.columns[df_feats.iloc[0].isna()]))
+        
         # TODO: change when we get individual functions for each wx feature
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # if any([f for f in self.feats_x_select if f in self.weather_derived.columns]):
@@ -648,6 +690,8 @@ class Predict(Tables):
         #         # get its value from weather_derived and add to df_feats
         #         df_feats[f] = weather_derived_filter[f].values[0]
 
+        # Create 3D array for field
+        # NA values in this array represent missing values, -9999 represents masked values
         array_X = self._fill_array_X(array_img, df_feats, profile)
         mask = array_img[0] == 0
 
