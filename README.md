@@ -3,32 +3,37 @@
 API to retrieve training data, create X matrix, and perform feature selection, hyperparameter tuning, training, and model testing.
 
 ## Setup and Installation (for development)
-Poetry is used to manage the environment and install the dependencies. After cloning from Github, install poetry and create the project environment (via `poetry`):
-
+1) [Set up SSH](https://github.com/SenteraLLC/install-instructions/blob/master/ssh_setup.md)
+2) Install [pyenv](https://github.com/SenteraLLC/install-instructions/blob/master/pyenv.md) and [poetry](https://python-poetry.org/docs/#installation).
+3) Install package
 ``` bash
 git clone git@github.com:SenteraLLC/geoml.git
 cd geoml
+pyenv install $(cat .python-version)
 poetry config virtualenvs.in-project true
-poetry env use python3.9
+poetry env use $(cat .python-version)
 poetry install
+```
+4) Set up `pre-commit` to ensure all commits to adhere to **black** and **PEP8** style conventions.
+``` bash
+poetry run pre-commit install
 ```
 
 ## Setup and Installation (used as a library)
-If using `geoml` as a dependency in your script, simply add it to the `pyproject.toml` in your project repo and `poetry install`. This will install `geoml` and all its dependencies.
+If using `geoml` as a dependency in your script, simply add it to the `pyproject.toml` in your project repo.
 
 <h5 a><strong><code>pyproject.toml</code></strong></h5>
 
 ``` toml
-...
 [tool.poetry.dependencies]
 geoml = { git = "https://github.com/SenteraLLC/geoml.git", branch = "main"}
-...
 ```
+
+Install `geoml` and all its dependencies via `poetry install`.
 
 ``` console
 poetry install
 ```
-
 
 ## Environment Variables
 
