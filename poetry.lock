@@ -356,9 +356,9 @@ tqdm = "^4.64.0"
 
 [package.source]
 type = "git"
-url = "git@github.com:SenteraLLC/db"
+url = "git@github.com:SenteraLLC/db-geoml"
 reference = "DEM-119-py3.9+"
-resolved_reference = "d75c37743da1a4e8bf8e6974b29c24f67c028755"
+resolved_reference = "eaa9f8aecf3472455ad239992b95b2051b62a9f7"
 
 [[package]]
 name = "debugpy"
@@ -2256,7 +2256,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<4.0"
-content-hash = "98a3e1737b550da569954fb952d343ae8000f5528ffec6d5113899791bbf6e46"
+content-hash = "4ba814ae076b2a6a8ec7b284c594d9a0fe1094571bb37eefd41ed7811acedc54"
 
 [metadata.files]
 affine = [
