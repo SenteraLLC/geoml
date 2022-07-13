@@ -1,0 +1,125 @@
+{
+    "Tables": {
+        "db_name": "potato",
+        "db_host": "localhost",
+        "db_user": "anayltics_user",
+        "password": null,
+        "db_schema": null,
+        "db_port": null,
+        "db": null,
+        "base_dir_data": null
+    },
+    "FeatureData": {
+        "random_seed": 999,
+        "dir_results": null,
+        "response_data": {
+            "table_name": "obs_tissue",
+            "value_col": "value",
+            "owner": "css-farms-dalhart",
+            "tissue": "petiole",
+            "measure": "no3_ppm"
+        },
+        "group_feats": {
+            "sentinel_wl_range": [
+                400,
+                2200
+            ],
+            "planting": {
+                "date_origin_kwargs": {
+                    "table_name": "as_planted",
+                    "date_column": "date_plant",
+                    "select_extra": []
+                },
+                "features": [
+                    "EXTRACT(DAY from r.date_ref - r.date_origin) as days_elapsed"
+                ]
+            },
+            "weather": {
+                "date_origin_kwargs": {
+                    "table_name": "as_planted",
+                    "date_column": "date_plant",
+                    "select_extra": []
+                },
+                "features": [
+                    "sum(w.'precip_24h:mm') as 'precip_csp:mm'",
+                    "sum(w.'evapotranspiration_24h:mm') as 'evapotranspiration_csp:mm'",
+                    "sum(w.'global_rad_24h:MJ') as 'global_rad_csp:MJ'",
+                    "sum(w.'gdd_10C30C_2m_24h:C') as 'gdd_10C30C_2m_csp:C'"
+                ]
+            }
+        },
+        "date_train": "PLACEHOLDER",
+        "date_tolerance": 3,
+        "cv_method": "PLACEHOLDER",
+        "cv_method_kwargs": {
+            "test_size": "0.4",
+            "stratify": "PLACEHOLDER"
+        },
+        "cv_split_kwargs": null,
+        "impute_method": "iterative",
+        "train_test": "train",
+        "cv_method_tune": "PLACEHOLDER",
+        "cv_method_tune_kwargs": {
+            "n_splits": 4,
+            "n_repeats": 3
+        },
+        "cv_split_tune_kwargs": {
+            "y": [
+                "farm",
+                "year"
+            ]
+        },
+        "print_out_fd": false,
+        "print_splitter_info": false
+    },
+    "FeatureSelection": {
+        "model_fs": "PLACEHOLDER",
+        "model_fs_params_set": {
+            "max_iter": 100000,
+            "selection": "cyclic",
+            "warm_start": true
+        },
+        "model_fs_params_adjust_min": {
+            "alpha": 1
+        },
+        "model_fs_params_adjust_max": {
+            "alpha": 1e-3
+        },
+        "n_feats": 12,
+        "n_linspace": 150,
+        "print_out_fs": false
+    },
+    "Training": {
+        "regressor": "PLACEHOLDER",
+        "regressor_params": {
+            "max_iter": 100000,
+            "selection": "cyclic",
+            "warm_start": true
+        },
+        "param_grid": {
+            "alpha": "PLACEHOLDER"
+        },
+        "n_jobs_tune": 2,
+        "scoring": "PLACEHOLDER",
+        "refit": "neg_mean_absolute_error",
+        "rank_scoring": "neg_mean_absolute_error",
+        "print_out_train": false
+    },
+    "Predict": {
+        "train": null,
+        "loc_df_test": null,
+        "estimator": null,
+        "feats_x_select": null,
+        "date_predict": "PLACEHOLDER",
+        "gdf_pred": null,
+        "primary_keys_pred": {
+            "owner": "owner",
+            "farm": "farm",
+            "field_id": "field_id",
+            "year": 0
+        },
+        "image_search_method": "past",
+        "refit_X_full": true,
+        "dir_out_pred": null
+    }
+}
