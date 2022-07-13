@@ -670,6 +670,7 @@ class Predict(Tables):
         # NA values returned if features are missing for a field
         df_feats = self._feats_x_select_data(df_feats, df_metadata, self.group_feats)
 
+        # Raise error and prevent further action if any features are completely NA 
         if any(df_feats.iloc[0].isna()): 
             raise ValueError('The following features are NULL: ' + ', '.join(df_feats.columns[df_feats.iloc[0].isna()]))
         
@@ -691,7 +692,7 @@ class Predict(Tables):
         #         df_feats[f] = weather_derived_filter[f].values[0]
 
         # Create 3D array for field
-        # NA values in this array represent missing values, -9999 represents masked values
+        # -9999 represents masked values; NA values will represent missing data 
         array_X = self._fill_array_X(array_img, df_feats, profile)
         mask = array_img[0] == 0
 
