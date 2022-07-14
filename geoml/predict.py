@@ -280,6 +280,41 @@ class Predict(Tables):
         }
         return keys
 
+    def _check_empty_feat_query(self, gdf_feat_query, feat_names, geom, geom_crs):
+        """
+        Checks returned SQL query to see if feature data was available in table for field.
+        If nothing was found in the query, an NA column is created with the field's geom to
+        ensure the feature is preserved in the spatial join. A SQL query will return an empty
+        GDF if no data in the database is available that overlaps with (1) the field boundaries
+        (i.e., ``geom``) for the desired year/crop season.
+
+        :param gdf_feat_query: Output result of PostGIS query from ownwer database.
+        :type gdf_feat_query: geopandas.GeoDataFrame
+        :param feat_names: List of feature names that were supposed to be extracted in SQL query.
+        :type feat_names: list
+        :param geom: Field boundary geometry of the field for which data is being extracted
+        :type geom: shapely.geometry
+        :param geom_crs: geographic coordinate reference system for ``geom``
+        :type geom_crs: pyproj.crs.crs.CRS
+
+        :return gdf_feat_query: If not empty, gdf_feat_query is returned. OW, it is a GDF with
+            NA values for ``feat_names`` with ``geom`` as a geometry
+        :rtype: geopandas.GeoDataFrame
+        """
+
+        # If the gdf is empty, create an NA GDF with NA values and the field GEOM
+        # OWS, just return the original GDF
+        if gdf_feat_query.empty:
+
+            gdf_feat_query = gpd.GeoDataFrame(
+                columns=["geom"] + feat_names,
+                geometry="geom",
+                crs=geom_crs,
+            )
+            gdf_feat_query["geom"] = geom
+
+        return gdf_feat_query
+
     def _feats_x_select_data(self, df_feats, df_metadata, group_feats):
         """
         Builds a dataframe with ``feats_x_select`` data.
@@ -317,9 +352,16 @@ class Predict(Tables):
                     feature_list=group_feats[key]["features"],
                     predict=True,
                 )
+
+                gdf_plant = self._check_empty_feat_query(
+                    gdf_plant, feats_plant, df_feats["geom"], df_feats.crs
+                )
+
+                # join the two dataframes
                 df_feats = df_feats.sjoin(
                     gdf_plant[[gdf_plant.geometry.name] + feats_plant], how="inner"
                 ).drop(columns=["index_right"])
+
             if "applications" in key:
                 rate_kwargs = group_feats[key]["rate_kwargs"]
                 select_extra = (
@@ -337,9 +379,15 @@ class Predict(Tables):
                     filter_last_x_days=group_feats[key]["filter_last_x_days"],
                     predict=True,
                 )
+
+                gdf_app = self._check_empty_feat_query(
+                    gdf_app, feats_apps, df_feats["geom"], df_feats.crs
+                )
+
                 df_feats = df_feats.sjoin(
                     gdf_app[[gdf_app.geometry.name] + feats_apps], how="inner"
                 ).drop(columns=["index_right"])
+
             # TODO: "weather"
             if "weather" in key:
                 weather_kwargs = group_feats[key]["date_origin_kwargs"]
@@ -361,6 +409,11 @@ class Predict(Tables):
                     feature_list=feature_list_sql,
                     predict=True,
                 )
+
+                gdf_weather = self._check_empty_feat_query(
+                    gdf_weather, feats_weather, df_feats["geom"], df_feats.crs
+                )
+
                 df_feats = df_feats.sjoin(
                     gdf_weather[[gdf_weather.geometry.name] + feats_weather],
                     how="inner",
@@ -446,16 +499,35 @@ class Predict(Tables):
                 )
         return array_mask
 
-    def _fill_array_X(self, array_img, df_feats, profile):
+    def _fill_array_X(self, array_img, df_feats, profile, masked_val=-9999):
         """
-        Populates array_X with all the features in df_feats
-        """
-        array_X_shape = (len(self.feats_x_select),) + array_img.shape[1:]
-        array_X = np.zeros(array_X_shape, dtype=float)
+        Populates array_X with all the features in df_feats.
+        Masked values are represented with -9999 by default.
 
+        :param array_img:
+        :type array_img:
+        :param df_feats:
+        :type df_feats:
+        :param profile:
+        :type profile:
+        :param masked_val: Value to be used in ``array_X`` that
+            will appear in all cells in the array outside of the field.
+            These values will be masked after prediction by ``array_img``.
+        :type masked_val: float
+
+        """
+        # Initializes an NA array
+        array_X_shape = (len(self.feats_x_select),) + array_img.shape[1:]
+        array_X = np.empty(array_X_shape, dtype=float)
+        array_X[:] = np.NaN
+
+        array_feat_template = np.empty((1,) + array_img.shape[1:], dtype=float)
+        array_feat_template[:] = masked_val
+
+        # Loops through each feature in `feats_x_select` to be added to array
         for i_fs, feat in enumerate(self.feats_x_select):
-            # Builds a 2D array of the feature to be added to array_X
-            array_feat = np.zeros((1,) + array_img.shape[1:], dtype=float)
+            # Builds a 2D NA array of the feature to be added to array_X
+            array_feat = array_feat_template.copy()
             for i in range(len(df_feats)):
                 geometry = df_feats.iloc[i][df_feats.geometry.name]
                 array_mask = self._mask_array_by_geom(
@@ -630,7 +702,17 @@ class Predict(Tables):
         )
         # df_feats = pd.DataFrame(data=[data_feats], columns=cols_feats)
 
+        # Get all data for prediction feature matrix based on `group_feats`
+        # NA values returned if features are missing for a field
         df_feats = self._feats_x_select_data(df_feats, df_metadata, self.group_feats)
+
+        # Raise error and prevent further action if any features are completely NA
+        if any(df_feats.iloc[0].isna()):
+            raise ValueError(
+                "The following features are NULL: "
+                + ", ".join(df_feats.columns[df_feats.iloc[0].isna()])
+            )
+
         # TODO: change when we get individual functions for each wx feature
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # if any([f for f in self.feats_x_select if f in self.weather_derived.columns]):
@@ -648,6 +730,8 @@ class Predict(Tables):
         #         # get its value from weather_derived and add to df_feats
         #         df_feats[f] = weather_derived_filter[f].values[0]
 
+        # Create 3D array for field
+        # -9999 represents masked values; NA values will represent missing data
         array_X = self._fill_array_X(array_img, df_feats, profile)
         mask = array_img[0] == 0
 
