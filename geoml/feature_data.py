@@ -164,6 +164,8 @@ class FeatureData(Tables):
         self.stratify_train = None
         self.stratify_test = None
 
+        self.full_X = None
+
         # self.df_obs_tissue = None
         # self.df_tuber_biomdry_Mgha = None
         # self.df_vine_biomdry_Mgha = None
@@ -266,7 +268,6 @@ class FeatureData(Tables):
             if all(df[~df[df.geometry.name].is_empty]):
                 df = pd.DataFrame(df.drop(columns=[df.geometry.name]))
         return df
-
 
     # group_feats = {
     #     "dae": "dae",
@@ -839,67 +840,33 @@ class FeatureData(Tables):
         # else:
         #     return X
 
-    def _get_X_and_y(self, df, impute_method="iterative"):
+    def _get_X_and_y(self, df):
         """
-        Gets the X and y from df; y is determined by the ``y_label`` column.
-        This function depends on the having the following variables already
+        Gets the X and y from df for both the train and test datasets;
+        y is determined by the ``y_label`` column.
+        This function depends on having the following variables already
         set:
             1. self.label_y
             2. self.group_feats
 
-        Parameters:
-            df (``pd.DataFrame``): The input dataframe to retrieve data from.
-            impute_method (``str``): The sk-learn imputation method for missing
-                data. If ``None``, then any row with missing data is removed
-                from the dataset.
+        :param df: the full data frame which contains features and response variable and
+            has already been marked for splitting with the `train_test` column
+        :type df: pandas.DataFrame
         """
-        msg = '``impute_method`` must be one of: ["iterative", "knn", None]'
-        assert impute_method in ["iterative", "knn", None], msg
-
-        if impute_method is None:
-            df = df.dropna()
-        else:
-            df = df[pd.notnull(df[self.label_y])]
 
         df_train = df[df["train_test"] == "train"]
         df_test = df[df["train_test"] == "test"]
 
-        # If number of cols are different, remove from both before assigning labels_x
-        cols_nan_train = df_train.columns[
-            df_train.isnull().all(0)
-        ]  # gets columns with all nan
-        cols_nan_test = df_test.columns[df_test.isnull().all(0)]
-        if len(cols_nan_train) > 0 or len(cols_nan_test) > 0:
-            df.drop(
-                list(cols_nan_train) + list(cols_nan_test), axis="columns", inplace=True
-            )
-            df_train = df[df["train_test"] == "train"]
-            df_test = df[df["train_test"] == "test"]
-        labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
-
-        X_train = df_train[labels_x].values
-        X_test = df_test[labels_x].values
+        X_train = df_train[self.labels_x].values
+        X_test = df_test[self.labels_x].values
         y_train = df_train[self.label_y].values
         y_test = df_test[self.label_y].values
-
-        X_train = self._impute_missing_data(X_train, method=impute_method)
-        X_test = self._impute_missing_data(X_test, method=impute_method)
-        if impute_method is not None:  # Add imputed data back to df
-            df_train.iloc[
-                :, [df.columns.get_loc(c) for c in labels_x if c in df]
-            ] = X_train
-            df_test.iloc[
-                :, [df.columns.get_loc(c) for c in labels_x if c in df]
-            ] = X_test
-            df = pd.concat([df_train, df_test], axis=0)
-
-        msg = "There is a different number of columns in <X_train> than in " "<X_test>."
-        assert X_train.shape[1] == X_test.shape[1], msg
 
         self.X_train = X_train
         self.X_test = X_test
         self.y_train = y_train
         self.y_test = y_test
+
         return X_train, X_test, y_train, y_test, df
 
     def _save_df_X_y(self):
@@ -1017,37 +984,65 @@ class FeatureData(Tables):
             Shape of testing vector "y":  (65,)
         """
 
-        # print(len(df1))
-        # print(len(df2))
-        # print(len(df3))
-        # print(len(df4))
-        # print(len(df5))
-
         logging.info("Creating the training feature matrix.")
         self._set_params_from_kwargs_fd(**kwargs)
         df = self.df_response.copy()
-        # df = self._get_response_df(self.ground_truth_tissue, self.ground_truth_measure)
+
+        # check to see if there are any NULL observations and remove them so we don't extract data for them
+        df = df[pd.notnull(df[self.label_y])]
+
+        # remove all obeservations on or after date_train so we don't extract data for them
+        df = df[df["date"] < self.date_train].reset_index()
+
+        # make sure there is data left after all of the removals
+        msg1 = (
+            "After removing null observations and limiting df to before "
+            "{0}, there are no obseravtions left for training. "
+            "Check that there are a sufficient number of observations for "
+            "this customer and time period."
+            "".format(self.date_train)
+        )
+        assert len(df) > 0, msg1
+
+        # extract features from `group_feats` for all observations in `df`
         df = self._join_group_feats(
             df, group_feats=self.group_feats, date_tolerance=self.date_tolerance
         )
 
+        # save full X for now
+        self.full_X = df
+
         # TODO: Check impute_method
-        msg = (
-            "After joining feature data with response data and filtering "
-            "by <date_tolerance={0}>, there are no observations left. "
-            "Check that there are a sufficient number of observations with "
-            "both feature and response data within the date tolerance."
+        # perform imputation on X if desired or drop NA rows
+        labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+
+        msg2 = '``impute_method`` must be one of: ["iterative", "knn", None]'
+        assert self.impute_method in ["iterative", "knn", None], msg2
+
+        if self.impute_method is None:
+            df = df.dropna()
+        else:
+            # check to make sure there are no columns with all NA values prior to imputing
+            cols_nan = df.columns[df.isnull().all(0)]
+            if len(cols_nan) > 0:
+                df.drop(list(cols_nan), axis="columns", inplace=True)
+            X_df = df[labels_x].values
+            X_df = self._impute_missing_data(X_df, method=self.impute_method)
+            df.iloc[:, [df.columns.get_loc(c) for c in labels_x if c in df]] = X_df
+
+        # make sure there is data left with the specified date_tolerance
+        msg3 = (
+            "After removing all observations which have NA values for the "
+            "desired features, no observations remain. Re-consider features to "
+            "be included or date_tolerance of {0}."
             "".format(self.date_tolerance)
         )
+        assert len(df) > 0, msg3
 
-        df = df[df["date"] < self.date_train].reset_index()
-
-        assert len(df) > 0, msg
+        # now that we have the complete training feature matrix, split data
         df = self._train_test_split_df(df)
 
-        X_train, X_test, y_train, y_test, df = self._get_X_and_y(
-            df, impute_method=self.impute_method
-        )
+        _ = self._get_X_and_y(df)
 
         subset = db_utils.get_primary_keys(df)
         labels_id = subset + ["date", "train_test"]
