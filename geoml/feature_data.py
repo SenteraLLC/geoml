@@ -867,7 +867,11 @@ class FeatureData(Tables):
         self.y_train = y_train
         self.y_test = y_test
 
-        return X_train, X_test, y_train, y_test, df
+        subset = db_utils.get_primary_keys(df)
+        labels_id = subset + ["date", "train_test"]
+        self.df_X = df[labels_id + self.labels_x]
+        self.df_y = df[labels_id + self.labels_y_id + [self.label_y]]
+        self.labels_id = labels_id
 
     def _save_df_X_y(self):
         """
@@ -991,10 +995,10 @@ class FeatureData(Tables):
         # check to see if there are any NULL observations and remove them so we don't extract data for them
         df = df[pd.notnull(df[self.label_y])]
 
-        # remove all obeservations on or after date_train so we don't extract data for them
+        # remove all observations on or after date_train so we don't extract data for them
         df = df[df["date"] < self.date_train].reset_index()
 
-        # make sure there is data left after all of the removals
+        # CHECKPOINT: make sure there is data left after all of the removals
         msg1 = (
             "After removing null observations and limiting df to before "
             "{0}, there are no obseravtions left for training. "
@@ -1008,50 +1012,64 @@ class FeatureData(Tables):
         df = self._join_group_feats(
             df, group_feats=self.group_feats, date_tolerance=self.date_tolerance
         )
-
-        # save full X for now
         self.full_X = df
 
-        # TODO: Check impute_method
-        # perform imputation on X if desired or drop NA rows
-        labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+        # handle missing feature data using impute method
+        df = self._manage_missing_feat_data(df)
 
-        msg2 = '``impute_method`` must be one of: ["iterative", "knn", None]'
-        assert self.impute_method in ["iterative", "knn", None], msg2
-
-        if self.impute_method is None:
-            df = df.dropna()
-        else:
-            # check to make sure there are no columns with all NA values prior to imputing
-            cols_nan = df.columns[df.isnull().all(0)]
-            if len(cols_nan) > 0:
-                df.drop(list(cols_nan), axis="columns", inplace=True)
-            X_df = df[labels_x].values
-            X_df = self._impute_missing_data(X_df, method=self.impute_method)
-            df.iloc[:, [df.columns.get_loc(c) for c in labels_x if c in df]] = X_df
-
-        # make sure there is data left with the specified date_tolerance
-        msg3 = (
+        # CHECKPOINT: make sure there is data left with the specified date_tolerance
+        msg2 = (
             "After removing all observations which have NA values for the "
             "desired features, no observations remain. Re-consider features to "
             "be included or date_tolerance of {0}."
             "".format(self.date_tolerance)
         )
-        assert len(df) > 0, msg3
+        assert len(df) > 0, msg2
 
         # now that we have the complete training feature matrix, split data
         df = self._train_test_split_df(df)
 
-        _ = self._get_X_and_y(df)
-
-        subset = db_utils.get_primary_keys(df)
-        labels_id = subset + ["date", "train_test"]
-        self.df_X = df[labels_id + self.labels_x]
-        self.df_y = df[labels_id + self.labels_y_id + [self.label_y]]
-        self.labels_id = labels_id
+        # organize X and y data across train and test sets
+        self._get_X_and_y(df)
 
         if self.dir_results is not None:
             self._save_df_X_y()
+
+    def _manage_missing_feat_data(self, df):
+
+        """
+        This function handles missing data within the training feature matrix.
+        If there is no missing data, then `df` is returned unchanged.
+
+        If ``self.impute_method`` is None, then all rows with NA values are dropped.
+        Otherwise, the missing data values are imputed following the method prescribed
+        by ``self.impute_method``. Prior to imputation, all fully NA columns are removed.
+
+        :param df: full feature training matrix (X and y)
+        :type df: geopandas.geodataframe.GeoDataFrame
+        """
+
+        msg = '``impute_method`` must be one of: ["iterative", "knn", None]'
+        assert self.impute_method in ["iterative", "knn", None], msg
+
+        if self.impute_method is None:
+            df = df.dropna()
+            labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+        else:
+            # check to make sure there are no columns with all NA values prior to imputing
+            cols_nan = df.columns[df.isnull().all(0)]
+            if len(cols_nan) > 0:
+                df.drop(list(cols_nan), axis="columns", inplace=True)
+
+            # which columns remain after NA drops?
+            labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+
+            # perform imputation
+            X_df = df[labels_x].values
+            X_df = self._impute_missing_data(X_df, method=self.impute_method)
+            df.iloc[:, [df.columns.get_loc(c) for c in labels_x if c in df]] = X_df
+
+        return df
 
     def get_tuning_splitter(self, **kwargs):
         self._set_params_from_kwargs_fd(**kwargs)
