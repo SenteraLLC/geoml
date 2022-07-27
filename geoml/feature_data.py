@@ -849,9 +849,10 @@ class FeatureData(Tables):
             1. self.label_y
             2. self.group_feats
 
-        :param df: the full data frame which contains features and response variable and
+        Args:
+            df (pandas.DataFrame): full data frame which contains features and response variable and
             has already been marked for splitting with the `train_test` column
-        :type df: pandas.DataFrame
+
         """
 
         df_train = df[df["train_test"] == "train"]
@@ -1045,8 +1046,9 @@ class FeatureData(Tables):
         Otherwise, the missing data values are imputed following the method prescribed
         by ``self.impute_method``. Prior to imputation, all fully NA columns are removed.
 
-        :param df: full feature training matrix (X and y)
-        :type df: geopandas.geodataframe.GeoDataFrame
+        Args:
+            df (geopandas.geodataframe.GeoDataFrame): full feature training matrix (X and y)
+
         """
 
         msg = '``impute_method`` must be one of: ["iterative", "knn", None]'
