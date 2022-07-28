@@ -1,22 +1,18 @@
+import inspect
+import logging
+import os
+import warnings
 from ast import literal_eval
 from copy import deepcopy
 from datetime import datetime
-import inspect
-import logging
-import numpy as np
-import os
-import pandas as pd
-import geopandas as gpd
-import warnings
-
-from copy import deepcopy
-from sklearn.model_selection import RepeatedStratifiedKFold
-from sklearn.model_selection import train_test_split
-from sklearn.impute import KNNImputer
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
 
 import db.utilities as db_utils
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer, KNNImputer
+from sklearn.model_selection import RepeatedStratifiedKFold, train_test_split
 
 # from geoml import feature_groups
 from geoml import Tables
@@ -148,6 +144,7 @@ class FeatureData(Tables):
         Sets any class attribute to ``None`` that will be created in one of the
         user functions
         """
+        self.df_X_y = None
         self.df_X = None
         self.df_y = None
 
@@ -184,7 +181,7 @@ class FeatureData(Tables):
         """
         Checks for reflectance column validity with a prefix present.
 
-        Parameters:
+        Args:
             c (``str``): The column label to evaluate. If it is numeric and
                 resembles an integer, it will be added to labels_x.
             labels_x (``list``): The list that holds the x labels to use/keep.
@@ -266,7 +263,6 @@ class FeatureData(Tables):
             if all(df[~df[df.geometry.name].is_empty]):
                 df = pd.DataFrame(df.drop(columns=[df.geometry.name]))
         return df
-
 
     # group_feats = {
     #     "dae": "dae",
@@ -522,7 +518,7 @@ class FeatureData(Tables):
     #     """
     #     Gets the relevant response dataframe
 
-    #     Parameters:
+    #     Args:
     #         ground_truth_tissue (``str``): The tissue to use for the response
     #             variable. Must be in "obs_tissue.csv", and dictates which table
     #             to access to retrieve the relevant training data.
@@ -603,7 +599,7 @@ class FeatureData(Tables):
         Displays a UserWarning or raises ValueError if an invalid parameter
         keyword is provided.
 
-        Parameters:
+        Args:
             raise_error (``bool``): If ``True``, raises a ``ValueError`` if
                 parameters do not appear to be available. Otherwise, simply
                 issues a warning, and will try to move forward anyways. This
@@ -728,34 +724,28 @@ class FeatureData(Tables):
         """
         Splits <df> into train and test sets.
 
-        This function is designed to handle any of the many scikit-learn
-        "splitter classes". Documentation available at
-        https://scikit-learn.org/stable/modules/classes.html#splitter-classes.
-        All parameters used by the <cv_method> function or the
-        <cv_method.split> method should be set via
-        <cv_method_kwargs> and <cv_split_kwargs>.
-
-        Parameters:
-            df (``pandas.DataFrame``): The df to split between train and test
-                sets.
-            cv_method (``sklearn.model_selection.SplitterClass``): The
-                scikit-learn method to use to split into training and test
-                groups. In addition to <SplitterClass>(es), <cv_method> can be
-                <sklearn.model_selection.train_test_split>, in which case
-                <cv_split_kwargs> is ignored and <cv_method_kwargs> should be
-                used to pass <cv_method> parameters that will be evaluated via
-                the eval() function.
-            cv_method_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method()``.
-            cv_split_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method.split()``. Note that the <X> kwarg defaults to
-                ``df`` if not set.
+        Any of the many scikit-learn "splitter classes" should be supported
+        (documentation available at: https://scikit-learn.org/stable/modules/classes.html#splitter-classes)
+        All parameters used by the ``cv_method`` function or the ``cv_method.split``
+        method should be set via ``cv_method_kwargs`` and ``cv_split_kwargs``.
 
         Note:
             If <n_splits> is set for any <SplitterClass>, it is generally
             ignored. That is, if there are multiple splitting iterations
             (<n_splits> greater than 1), only the first iteration is used to
             split between train and test sets.
+
+        Args:
+            df (``DataFrame``): The df to split between train and test sets.
+            cv_method (``sklearn.model_selection.SplitterClass``): The scikit-learn
+            method to use to split into training and test groups. In addition to
+            ``SplitterClass``(es), ``cv_method`` can be
+            ``sklearn.model_selection.train_test_split``, in which case
+            ``cv_split_kwargs`` is ignored and ``cv_method_kwargs`` should be used to
+            pass ``cv_method`` parameters to be evaluated via the eval() function.
+            cv_method_kwargs (``dict``): Kwargs to be passed to ``cv_method()``.
+            cv_split_kwargs (``dict``): Kwargs to be passed to ``cv_method.split()``.
+            Note that the ``X`` kwarg defaults to ``df`` if not set.
         """
         cv_method = deepcopy(self.cv_method)
         cv_method_kwargs = deepcopy(self.cv_method_kwargs)
@@ -819,7 +809,7 @@ class FeatureData(Tables):
         """
         Imputes missing data in X - sk-learn models will not work with null data
 
-        Parameters:
+        Args:
             method (``str``): should be one of "iterative" (takes more time)
                 or "knn" (default: "iterative").
         """
@@ -839,68 +829,39 @@ class FeatureData(Tables):
         # else:
         #     return X
 
-    def _get_X_and_y(self, df, impute_method="iterative"):
+    def _get_X_and_y(self, df):
         """
-        Gets the X and y from df; y is determined by the ``y_label`` column.
-        This function depends on the having the following variables already
+        Gets the X and y from df for both the train and test datasets;
+        y is determined by the ``y_label`` column.
+        This function depends on having the following variables already
         set:
             1. self.label_y
             2. self.group_feats
 
-        Parameters:
-            df (``pd.DataFrame``): The input dataframe to retrieve data from.
-            impute_method (``str``): The sk-learn imputation method for missing
-                data. If ``None``, then any row with missing data is removed
-                from the dataset.
-        """
-        msg = '``impute_method`` must be one of: ["iterative", "knn", None]'
-        assert impute_method in ["iterative", "knn", None], msg
+        Args:
+            df (pandas.DataFrame): full data frame which contains features and response variable and
+            has already been marked for splitting with the `train_test` column
 
-        if impute_method is None:
-            df = df.dropna()
-        else:
-            df = df[pd.notnull(df[self.label_y])]
+        """
 
         df_train = df[df["train_test"] == "train"]
         df_test = df[df["train_test"] == "test"]
 
-        # If number of cols are different, remove from both before assigning labels_x
-        cols_nan_train = df_train.columns[
-            df_train.isnull().all(0)
-        ]  # gets columns with all nan
-        cols_nan_test = df_test.columns[df_test.isnull().all(0)]
-        if len(cols_nan_train) > 0 or len(cols_nan_test) > 0:
-            df.drop(
-                list(cols_nan_train) + list(cols_nan_test), axis="columns", inplace=True
-            )
-            df_train = df[df["train_test"] == "train"]
-            df_test = df[df["train_test"] == "test"]
-        labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
-
-        X_train = df_train[labels_x].values
-        X_test = df_test[labels_x].values
+        X_train = df_train[self.labels_x].values
+        X_test = df_test[self.labels_x].values
         y_train = df_train[self.label_y].values
         y_test = df_test[self.label_y].values
-
-        X_train = self._impute_missing_data(X_train, method=impute_method)
-        X_test = self._impute_missing_data(X_test, method=impute_method)
-        if impute_method is not None:  # Add imputed data back to df
-            df_train.iloc[
-                :, [df.columns.get_loc(c) for c in labels_x if c in df]
-            ] = X_train
-            df_test.iloc[
-                :, [df.columns.get_loc(c) for c in labels_x if c in df]
-            ] = X_test
-            df = pd.concat([df_train, df_test], axis=0)
-
-        msg = "There is a different number of columns in <X_train> than in " "<X_test>."
-        assert X_train.shape[1] == X_test.shape[1], msg
 
         self.X_train = X_train
         self.X_test = X_test
         self.y_train = y_train
         self.y_test = y_test
-        return X_train, X_test, y_train, y_test, df
+
+        subset = db_utils.get_primary_keys(df)
+        labels_id = subset + ["date", "train_test"]
+        self.df_X = df[labels_id + self.labels_x]
+        self.df_y = df[labels_id + self.labels_y_id + [self.label_y]]
+        self.labels_id = labels_id
 
     def _save_df_X_y(self):
         """
@@ -955,51 +916,51 @@ class FeatureData(Tables):
         logging.info("Number of observations: {0}".format(len(val_index)))
         logging.info(*val_list, sep="\n")
 
-    def get_feat_group_X_y(self, **kwargs):
+    def _manage_missing_feat_data(self, df):
         """
-        Retrieves all the necessary columns in ``group_feats``, then filters
-        the dataframe so that it is left with only the identifying columns
-        (i.e., study, year, and plot_id), a column indicating if each
-        observation belongs to the train or test set (i.e., train_test), and
-        the feature columns indicated by ``group_feats``.
-
-        Parameters:
-            group_feats (``list`` or ``dict``): The column headings to include
-                in the X matrix. ``group_feats`` must follow the naming
-                conventions outlined in featuer_groups.py to ensure that the
-                intended features are joined to ``df_feat_group``.
-            ground_truth (``str``): Must be one of "vine_n_pct", "pet_no3_ppm",
-                or "tuber_n_pct"; dictates which table to access to retrieve
-                the relevant training data.
-            date_tolerance (``int``): Number of days away to still allow join
-                between response data and predictor features (if dates are
-                greater than ``date_tolerance``, the join will not occur and
-                data will be neglected). Only relevant if predictor features
-                were collected on a different day than response features.
-            cv_method (``sklearn.model_selection.SplitterClass``): The
-                scikit-learn method to use to split into training and test
-                groups.
-            cv_method_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method()``.
-            cv_split_kwargs (``dict``): Keyword arguments to be passed to
-                ``cv_method.split()``. Note that the <X> kwarg defaults to
-                ``df`` if not set.
-            stratify (``list``): If not None, data is split in a stratified
-                fashion, using this as the class labels. Ignored if
-                ``cv_method`` is not "stratified". See
-                ``sklearn.model_selection.train_test_split()`` documentation
-                for more information. Note that if there are less than two
-                unique stratified "groups", an error will be raised.
-            impute_method (``str``): How to impute missing feature data. Must
-                be one of: ["iterative", "knn", None].
+        Manages missing data from the training feature matrix.
 
         Note:
-            This function is designed to handle any of the many scikit-learn
-            "splitter classes". Documentation available at
-            https://scikit-learn.org/stable/modules/classes.html#splitter-classes.
-            All parameters used by the <cv_method> function or the
-            <cv_method.split> method should be set via
-            <cv_method_kwargs> and <cv_split_kwargs>.
+            - If there isn't missing data, ``df`` is returned unchanged.
+            - If ``self.impute_method`` is ``None``, then all rows with NA values are dropped.
+            - If ``self.impute_method`` is not ``None``, the missing data values are
+              imputed following ``self.impute_method``.
+            - Prior to imputation, all fully NA columns are removed.
+
+        Args:
+            df (``GeoDataFrame``): full feature training matrix (X and y)
+        """
+        msg = '``impute_method`` must be one of: ["iterative", "knn", None]'
+        assert self.impute_method in ["iterative", "knn", None], msg
+
+        if self.impute_method is None and df.isna().any(axis=None):
+            df = df.dropna()
+            labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+        else:
+            # check to make sure there are no columns with all NA values prior to imputing
+            cols_nan = df.columns[df.isna().all(0)]
+            if len(cols_nan) > 0:
+                df.drop(list(cols_nan), axis="columns", inplace=True)
+
+            # which columns remain after NA drops?
+            labels_x = self._get_labels_x(self.group_feats, cols=df.columns)
+
+            # perform imputation
+            X_df = df[labels_x].values
+            X_df = self._impute_missing_data(X_df, method=self.impute_method)
+            df.iloc[:, [df.columns.get_loc(c) for c in labels_x if c in df]] = X_df
+        return df
+
+    def get_feat_group_X_y(self, **kwargs):
+        """
+        Constructs the training feature matrix and response vector based on config settings.
+
+        Note:
+            - Step 1: Checks for and drops NULL observations.
+            - Step 2: Checks for and drops observations on or after ``date_train``.
+            - Step 3: Creates training features for all observations based on ``group_feats``.
+            - Step 4: Handles missing feature data based on ``impute_method``.
+            - Step 5: Splits data into training and test sets based on ``cv_method``.
 
         Example:
             >>> from geoml import FeatureData
@@ -1017,43 +978,52 @@ class FeatureData(Tables):
             Shape of testing vector "y":  (65,)
         """
 
-        # print(len(df1))
-        # print(len(df2))
-        # print(len(df3))
-        # print(len(df4))
-        # print(len(df5))
-
-        logging.info("Creating the training feature matrix.")
+        logging.info("Constructing the training feature matrix.")
         self._set_params_from_kwargs_fd(**kwargs)
-        df = self.df_response.copy()
-        # df = self._get_response_df(self.ground_truth_tissue, self.ground_truth_measure)
-        df = self._join_group_feats(
-            df, group_feats=self.group_feats, date_tolerance=self.date_tolerance
+
+        df1_nn_obs = self.df_response[
+            pd.notnull(self.df_response[self.label_y])
+        ]  # check to see if there are any NULL observations and remove them so we don't extract data for them
+
+        df2_valid_date = df1_nn_obs[
+            df1_nn_obs["date"] < self.date_train
+        ].reset_index()  # remove all observations on or after date_train so we don't extract data for them
+        msg1 = (
+            "After removing null observations and limiting df to before {0}, there "
+            "are no obseravtions left for training. Check that there are a sufficient "
+            "number of observations for this customer and time period.".format(
+                self.date_train
+            )
         )
+        assert (
+            len(df2_valid_date) > 0
+        ), msg1  # CHECKPOINT: make sure there is data left after all of the removals
 
-        # TODO: Check impute_method
-        msg = (
-            "After joining feature data with response data and filtering "
-            "by <date_tolerance={0}>, there are no observations left. "
-            "Check that there are a sufficient number of observations with "
-            "both feature and response data within the date tolerance."
-            "".format(self.date_tolerance)
+        df3_X_y = self._join_group_feats(
+            df2_valid_date,
+            group_feats=self.group_feats,
+            date_tolerance=self.date_tolerance,
+        )  # extract features from `group_feats` for all observations in `df2_valid_date`
+        self.df_X_y = df3_X_y.copy()
+
+        df4_impute = self._manage_missing_feat_data(
+            df3_X_y
+        )  # handle missing feature data using impute method
+        msg2 = (
+            "After removing all observations which have NA values for the desired "
+            "features, no observations remain. Re-consider features to be included or "
+            "date_tolerance of {0}.".format(self.date_tolerance)
         )
+        assert (
+            len(df4_impute) > 0
+        ), msg2  # CHECKPOINT: make sure there is data left with the specified date_tolerance
 
-        df = df[df["date"] < self.date_train].reset_index()
-
-        assert len(df) > 0, msg
-        df = self._train_test_split_df(df)
-
-        X_train, X_test, y_train, y_test, df = self._get_X_and_y(
-            df, impute_method=self.impute_method
-        )
-
-        subset = db_utils.get_primary_keys(df)
-        labels_id = subset + ["date", "train_test"]
-        self.df_X = df[labels_id + self.labels_x]
-        self.df_y = df[labels_id + self.labels_y_id + [self.label_y]]
-        self.labels_id = labels_id
+        df5_cv_split = self._train_test_split_df(
+            df4_impute
+        )  # now that we have the complete training feature matrix, split data
+        self._get_X_and_y(
+            df5_cv_split
+        )  # organize X and y data across train and test sets
 
         if self.dir_results is not None:
             self._save_df_X_y()
