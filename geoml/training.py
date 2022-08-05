@@ -9,13 +9,14 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+import re
 from copy import deepcopy
+
 import numpy as np
 import pandas as pd
+from sklearn.base import clone
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
 
 from geoml import FeatureSelection
 
@@ -74,7 +75,6 @@ class Training(FeatureSelection):
 
         self._set_params_from_kwargs_train(**kwargs)
         self._set_attributes_train()
-        # self._set_regressor()
 
     def _set_params_from_dict_train(self, config_dict):
         """
@@ -104,28 +104,20 @@ class Training(FeatureSelection):
             for k, v in kwargs.items():
                 if k in self.__class__.__allowed_params:
                     setattr(self, k, v)
-                    # print(k)
-                    # print(v)
-                    # print('')
-        # Now, after all kwargs are set, set the regressor
+
         if "regressor" in kwargs:
-            self._set_regressor()
+            self._set_regressor()  # now, after all kwargs are set, set the regressor
         elif kwargs.get("config_dict") is None:
             pass
         elif "config_dict" in kwargs and "Training" in kwargs.get("config_dict"):
             params_fd = kwargs.get("config_dict")["Training"]
-            # print(params_fd.keys())
             if "regressor" in kwargs.get("config_dict")["Training"].keys():
                 self._set_regressor()
-        #     ('config_dict' in kwargs and 'regressor' in kwargs.get('config_dict')['Training'].items())):
-        #     print('setting regressor')
-        # if k == 'regressor':
-        # self._set_regressor()
 
     def _set_attributes_train(self):
         """
         Sets any class attribute to ``None`` that will be created in one of the
-        user functions from the ``feature_selection`` class
+        user functions from the ``FeatureSelection`` class
         """
         self.df_tune = None
         self.df_test_full = None
@@ -133,28 +125,56 @@ class Training(FeatureSelection):
         self.df_pred_full = None
         self.df_test = None
 
+    def _check_regressor(self):
+        """
+        Checks ``self.regressor`` to
+        ensure compatibility with GeoML workflow.
+
+        NOTE: This function will be made much simpler once we more firmly
+        set the structure of ``self.regressor`` in DEM-113.
+        """
+
+        if "regressor" in self.regressor.get_params().keys():
+            estimator_type = self.regressor.get_params()["regressor"]._estimator_type
+        else:
+            estimator_type = self.regressor._estimator_type
+
+        msg1 = (
+            f"The estimator type of the given regressor is {estimator_type}.",
+            "GeoML can currently only handle 'regression' estimator types.",
+            "Please select a different sklearn model.",
+        )
+        assert estimator_type == "regressor", " ".join(msg1)  # check estimator type
+
     def _set_regressor(self):
         """
-        Applies tuning parameters to the sklearn model(s) listed in
-        <params_dict>. If the <random_seed> was not included in
-        <model_tun_params> (or if there is a discrepancy), the model's random
-        state is set/reset to avoid any discrepancy.
+        Sets parameters for training sklearn regressor object according to
+        ``self.regressor_params``. If applicable, set model's ``random_state``
+        to ``self.random_seed``.
+
+        NOTE: This function will be made much simpler once we more firmly
+        set the structure of ``self.regressor`` in DEM-113.
         """
         if self.regressor_params is None:
             self.regressor_params = {}
+
         if "regressor" in self.regressor.get_params().keys():
-            self.regressor_key = "regressor__"
+            nests = max(
+                [
+                    len(re.findall(pattern="regressor__", string=k))
+                    for k in self.regressor.get_params().keys()
+                ]
+            )
+            self.regressor_key = "regressor__" * nests
             self.regressor_params = self._param_grid_add_key(
                 self.regressor_params, self.regressor_key
             )
             self.regressor.set_params(**self.regressor_params)
-            # check if setting only a single parameter inside "regressor" keeps
-            # all the old parameters!
-            # Yes, as long as it is accessed via regressor.regressor instead of
-            # reseting regressor (via regressor.set_params(regressor=Lasso()))
-            # estimator_level1 = type(my_train.regressor).__name__
-            # estimator_level2 = type(my_train.regressor.regressor).__name__
-            self.regressor_name = type(self.regressor.regressor).__name__
+
+            self.regressor_name = type(
+                self.regressor.get_params()["regressor__" * (nests - 1) + "regressor"]
+            ).__name__
+
             try:
                 self.regressor.set_params(
                     **{self.regressor_key + "random_state": self.random_seed}
@@ -166,6 +186,7 @@ class Training(FeatureSelection):
                 )
         else:
             self.regressor.set_params(**self.regressor_params)
+            self.regressor_key = ""
             self.regressor_name = type(self.regressor).__name__
             try:
                 self.regressor.set_params(**{"random_state": self.random_seed})
@@ -175,17 +196,15 @@ class Training(FeatureSelection):
                     "<random_state> cannot be set.\n"
                 )
 
-    def _param_grid_add_key(self, param_grid_dict, key="regressor__"):
+    def _param_grid_add_key(self, param_grid_dict, key):
         """
-        Define tuning parameter grids for pipeline or transformed regressor
-        key.
+        Define tuning parameter grids for nested regressors (e.g.,
+        pipeline or transformed target regressor).
 
-        Parameters:
+        Args:
             param_grid_dict (``dict``): The parameter dictionary.
             key (``str``, optional): String to prepend to the ``sklearn`` parameter
-                keys; should either be "transformedtargetregressor__regressor__"
-                for pipe key or "regressor__" for transformer key (default:
-                "regressor__").
+                keys to match ``self.regressor.get_params().keys()``.
 
         Returns:
             param_grid_mod: A modified version of <param_grid_dict>
@@ -202,14 +221,6 @@ class Training(FeatureSelection):
         """
         if self.n_jobs_tune > 0:
             pre_dispatch = int(self.n_jobs_tune * 2)
-        if "regressor" in self.regressor.get_params().keys():
-            msg = (
-                "The <regressor> estimator appears to be a nested object "
-                "(such as a pipeline or TransformedTargetRegressor). Thus,"
-                "<regrssor_key> must be properly set via "
-                "``_set_regressor()``."
-            )
-            assert self.regressor_key == "regressor__", msg
         param_grid = self._param_grid_add_key(self.param_grid, self.regressor_key)
 
         kwargs_grid_search = {
@@ -218,7 +229,6 @@ class Training(FeatureSelection):
             "scoring": self.scoring,
             "n_jobs": self.n_jobs_tune,
             "pre_dispatch": pre_dispatch,
-            # 'cv': self.kfold_repeated_stratified(),
             "cv": self.get_tuning_splitter(),
             "refit": self.refit,
             "return_train_score": True,
@@ -279,10 +289,10 @@ class Training(FeatureSelection):
 
     def _get_tune_results(self, df, rank=1):
         """
-        Retrieves all training and validation scores for a given <rank>. The
-        first scoring string (from ``self.scoring``) is used to
+        Retrieves all training and validation scores for a given ``rank``. The
+        first scoring string (from ``self.scoring``) is used to determine ranking.
 
-        Parameters:
+        Args:
             df (``pd.DataFrame``): Dataframe containing results from
                 ``_tune_grid_search``.
             rank (``int``): The rank to retrieve values for (1 is highest rank).
@@ -306,14 +316,9 @@ class Training(FeatureSelection):
 
         params_tuning = df[df[rank_scoring] == rank]["params"].values[0]
         self.regressor.set_params(**params_tuning)
-        # params_all = self.regressor.regressor.get_params()
         params_all = self.regressor.get_params()
         data.extend([params_all, params_tuning])
-        # plist = [params_all]
-        # print(params_tuning)
-        # # print(params_all['regressor'])
-        # print(self.regressor.regressor)
-        # self.df = df
+
         for scoring in self.scoring:
             score_train_s = "mean_train_" + scoring
             std_train_s = "std_train_" + scoring
@@ -324,28 +329,9 @@ class Training(FeatureSelection):
             score_val = df[df[rank_scoring] == rank][score_test_s].values[0]
             std_val = df[df[rank_scoring] == rank][std_test_s].values[0]
             data.extend([score_train, std_train, score_val, std_val])
-            # print(data)
 
         df_tune1 = pd.DataFrame(data=[data], columns=self._get_df_tune_cols())
         return df_tune1
-
-    # def _prep_pred_dfs(df_test, feat_n_list, y_label='nup_kgha'):
-    #     cols_scores = ['feat_n', 'feats', 'score_train_mae', 'score_test_mae',
-    #                    'score_train_rmse', 'score_test_rmse',
-    #                    'score_train_r2', 'score_test_r2']
-
-    #     cols_meta = ['study', 'date', 'plot_id', 'trt', 'rate_n_pp_kgha',
-    #                  'rate_n_sd_plan_kgha', 'rate_n_total_kgha', 'growth_stage',
-    #     cols = list(df_y.columns)
-    #     cols.remove('value')
-    #     cols.extend(['value_obs', 'value_pred'])
-
-    #     feat_n_list = list(my_train.df_tune['feat_n'])
-    #     cols_preds = cols_meta + feat_n_list
-    #     df_pred = pd.DataFrame(columns=cols_preds)
-    #     df_pred[cols_meta] = df_test[cols_meta]
-    #     df_score = pd.DataFrame(columns=cols_scores)
-    #     return df_pred, df_score
 
     def _error(self, train_or_test="train"):
         """
@@ -382,18 +368,18 @@ class Training(FeatureSelection):
         X = np.concatenate((self.X_train_select, self.X_test_select))
         y = np.concatenate((self.y_train, self.y_test))
         self.regressor.fit(X, y)
-        # print(self.regressor.score(X, y))
 
     def _get_test_results(self, df):
         """
         Trains the model for "current" tuning scenario and computes the
-        train and test errors. The train errors in df_train are different than
-        that of the train errors in df_tune because tuning uses k-fold cross-
-        validation of the training set, whereas df_train uses the full training
+        train and test errors. The train errors in ``self.df_test`` are different than
+        that of the train errors in ``self.df_tune`` because tuning uses k-fold cross-
+        validation of the training set, whereas ``self.df_test`` uses the full training
         set.
 
-        Parameters:
-            df (``pd.DataFrame``):
+        Args:
+            df (``pd.DataFrame``): DataFrame containing features, parameters, etc.
+                of current model tuning scenario
         """
         data = [
             df.iloc[0]["uid"],
@@ -414,7 +400,12 @@ class Training(FeatureSelection):
         msg = "<params_regressor> are not equal. (this is a bug)"
         assert self.regressor.get_params() == df["params_regressor"].values[0], msg
 
-        self.regressor.fit(self.X_train_select, self.y_train)
+        if "regressor" in self.regressor.get_params().keys():
+            self.regressor.fit(self.X_train_select, self.y_train)
+        else:
+            mod = clone(self.regressor)  # clone the model to allow for refitting
+            mod.fit(self.X_train_select, self.y_train)
+            self.regressor = deepcopy(mod)
 
         y_pred_train, train_neg_mae, train_neg_rmse, train_r2 = self._error(
             train_or_test="train"
@@ -441,82 +432,13 @@ class Training(FeatureSelection):
         )
         return df_test_full1, y_pred_test, y_pred_train
 
-        # estimator = df_tune_filtered2.iloc[0]['regressor']
-        # estimator1 = estimator.replace('\n', '')
-
-    # def _execute_tuning(X, y, model_list, param_grid_dict,
-    #                    alpha, standardize, scoring, scoring_refit,
-    #                    max_iter, random_seed, key, df_train, n_splits, n_repeats,
-    #                    print_results=False):
-    #     '''
-    #     Execute model tuning, saving gridsearch hyperparameters for each number
-    #     of features.
-    #     '''
-    #     df_tune = None
-    #     for idx in self.df_fs_params.index:
-    #         X_train_select, X_test_select = self.fs_get_X_select(idx)
-    #         print('Number of features: {0}'.format(len(feats)))
-
-    #         param_grid_dict = param_grid_add_key(param_grid_dict, key)
-
-    #         df_tune_grid = self._tune_grid_search()
-    #         df_tune_rank = self._get_tune_results(df_tune_grid, rank=1)
-    #         if df_tune is None:
-    #             df_tune = df_tune_rank.copy()
-    #         else:
-    #             df_tune.append(df_tune_rank)
-
-    #         if print_results is True:
-    #             print('{0}:'.format(self.regressor_name))
-    #             print('R2: {0:.3f}\n'.format(df_temp['score_val_r2'].values[0]))
-    #     df_tune = df_tune.sort_values('feat_n').reset_index(drop=True)
-    #     self.df_tune = df_tune
-
-    # def _execute_tuning_pp(
-    #         logspace_list, X1, y1, model_list, param_grid_dict, standardize,
-    #         scoring, scoring_refit, max_iter, random_seed, key, df_train,
-    #         n_splits, n_repeats, df_tune_all_list):
-    #     '''
-    #     Actual execution of hyperparameter tuning via multi-core processing
-    #     '''
-    #     # chunks = chunk_by_n(reversed(logspace_list))
-    #     chunk_size = int(len(logspace_list) / (os.cpu_count()*2)) + 1
-    #     with ProcessPoolExecutor() as executor:
-    #         # for alpha, df_tune_feat_list in zip(reversed(logspace_list), executor.map(execute_tuning, it.repeat(X1), it.repeat(y1), it.repeat(model_list), it.repeat(param_grid_dict), reversed(logspace_list),
-    #         #                                                                           it.repeat(standardize), it.repeat(scoring), it.repeat(scoring_refit), it.repeat(max_iter), it.repeat(random_seed),
-    #         #                                                                           it.repeat(key), it.repeat(df_train), it.repeat(n_splits), it.repeat(n_repeats))):
-    #         for df_tune_feat_list in executor.map(execute_tuning, it.repeat(X1), it.repeat(y1), it.repeat(model_list), it.repeat(param_grid_dict), reversed(logspace_list),
-    #                                               it.repeat(standardize), it.repeat(scoring), it.repeat(scoring_refit), it.repeat(max_iter), it.repeat(random_seed),
-    #                                               it.repeat(key), it.repeat(df_train), it.repeat(n_splits), it.repeat(n_repeats), chunksize=chunk_size):
-    #                 # chunksize=chunk_size))
-
-    #             # print('df: {0}'.format(df_tune_feat_list))
-
-    #             # print('type: {0}'.format(type(df_tune_feat_list[0])))
-    #             df_tune_all_list = append_tuning_results(df_tune_all_list, df_tune_feat_list)
-    #     return df_tune_all_list
-
-    # def _set_df_pred_idx(self):
-    #     df = self.df_test
-    #     idx_full = self.df_pred.columns.get_level_values(level=0)
-    #     idx_filtered = []
-    #     for i in idx_full:
-    #         # print(i)
-    #         if i in self.df_y.columns:
-    #             idx_filtered.append(i)
-    #         elif i in list(df['index_full']):
-    #             idx_filtered.append(df[df['index_full'] == i].index[0])
-    #         else:
-    #             idx_filtered.append(np.nan)  # keep -1
-    #     self.df_pred.columns = pd.MultiIndex.from_arrays([idx_full, idx_filtered], names=('full', 'filtered'))
-
     def _filter_test_results(self, scoring="test_neg_mae"):
         """
         Remove dupilate number of features (keep only lowest error)
 
-        Parameters:
+        Args:
             scoring (``str``): If there are multiple scenarios with the same
-                number of features, <scoring> corresponds to the <df_test_full>
+                number of features, ``scoring`` corresponds to the ``df_test_full``
                 column that will be used to determine which scenario to keep
                 (keeps the highest).
         """
@@ -538,11 +460,9 @@ class Training(FeatureSelection):
         df_filtered = self.df_test_full[idx].drop_duplicates(
             ["regressor_name", "feat_n"]
         )
-        # df_filtered.reset_index(level=df_filtered.index.names, inplace=True)
-        # df_filtered = df_filtered.rename(columns={'index': 'index_full'})
+
         df_filtered.reset_index(drop=True, inplace=True)
         self.df_test = df_filtered
-        # self._set_df_pred_idx()
 
     def _get_uid(self, idx):
         if self.df_test_full is None:
@@ -554,7 +474,7 @@ class Training(FeatureSelection):
     def fit(self, **kwargs):
         """
         Perform tuning for each unique scenario from ``FeatureSelection``
-        (i.e., for each row in <df_fs_params>).
+        (i.e., for each row in ``df_fs_params``).
 
         Example:
             >>> from geoml import Training
@@ -588,14 +508,14 @@ class Training(FeatureSelection):
             if df_tune is None:
                 df_tune = df_tune_rank.copy()
             else:
-                df_tune = df_tune.append(df_tune_rank)
+                df_tune = pd.concat([df_tune, df_tune_rank], axis=0)
             df_test_full1, y_pred_test, y_pred_train = self._get_test_results(
                 df_tune_rank
             )
             if df_test_full is None:
                 df_test_full = df_test_full1.copy()
             else:
-                df_test_full = df_test_full.append(df_test_full1)
+                df_test_full = pd.concat([df_test_full, df_test_full1], axis=0)
 
             if self.print_out_train is True:
                 print("{0}:".format(self.regressor_name))
@@ -608,7 +528,6 @@ class Training(FeatureSelection):
             if y_pred_test is not None:  # have to store y_pred while we have it
                 df_pred[uid] = y_pred_test
                 df_pred_full[uid] = np.concatenate([y_pred_train, y_pred_test])
-                # df_pred[(uid, np.nan)] = y_pred
 
         self.df_tune = df_tune
         self.df_test_full = df_test_full
