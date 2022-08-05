@@ -370,7 +370,7 @@ tqdm = "^4.64.0"
 
 [package.source]
 type = "git"
-url = "git@github.com:SenteraLLC/db-geoml"
+url = "ssh://git@github.com/SenteraLLC/db-geoml.git"
 reference = "main"
 resolved_reference = "7a942e37e139b6a9c755cc93b8048ec6beefcab3"
 
@@ -2314,7 +2314,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<4.0"
-content-hash = "aae7e87a8c99f311a29de3b78a14d0566d595396227a0158e87f5fb74e1a7bfb"
+content-hash = "23658ea73429653911efac9f8a8fbba5ccb6d3abb4dd134b2a47603dcc4b6619"
 
 [metadata.files]
 affine = [
