@@ -9,15 +9,14 @@ Insight Sensing Corporation. All rights reserved.
 @author: Tyler J. Nigon
 @contributors: [Tyler J. Nigon]
 """
+import re
 from copy import deepcopy
+
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
 from sklearn.base import clone
-import re
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import GridSearchCV
 
 from geoml import FeatureSelection
 
@@ -517,14 +516,14 @@ class Training(FeatureSelection):
             if df_tune is None:
                 df_tune = df_tune_rank.copy()
             else:
-                df_tune = pd.concat([df_tune, df_tune_rank])
+                df_tune = pd.concat([df_tune, df_tune_rank], axis=0)
             df_test_full1, y_pred_test, y_pred_train = self._get_test_results(
                 df_tune_rank
             )
             if df_test_full is None:
                 df_test_full = df_test_full1.copy()
             else:
-                df_test_full = pd.concat([df_test_full, df_test_full1])
+                df_test_full = pd.concat([df_test_full, df_test_full1], axis=0)
 
             if self.print_out_train is True:
                 print("{0}:".format(self.regressor_name))
