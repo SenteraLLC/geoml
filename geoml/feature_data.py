@@ -440,7 +440,9 @@ class FeatureData(Tables):
 
     def _load_df_response(self):
         """
-        Loads the response DataFrame based on <self.response_data>.
+        Loads the response DataFrame based on ``self.response_data``.
+        Checks that target variable is of dtype[float64] in the Pandas
+        DataFrame.
         """
         response_data = deepcopy(self.response_data)
         table_name = response_data.pop("table_name")
@@ -455,7 +457,19 @@ class FeatureData(Tables):
                 "No response data is present. Please add data to database, or adjust "
                 "<response_data> config parameters.\ntable_name: {0}"
                 "".format(self.response_data)
-            )
+            )  # check to ensure there is data available
+
+        target_type = type(df_response[value_col].dtypes).__name__
+        msg2 = (
+            f"The target variable is of {target_type}.",
+            "GeoML can currently only handle regression problems and",
+            "requires that the target variable be of dtype[float64].",
+            "Please reframe your ML problem.",
+        )
+        assert target_type == "dtype[float64]", " ".join(
+            msg2
+        )  # check target variable type
+
         self.labels_y_id = list(response_data.keys())
         self.label_y = value_col
 
