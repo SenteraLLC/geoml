@@ -135,15 +135,7 @@ class Training(FeatureSelection):
         """
 
         if "regressor" in self.regressor.get_params().keys():
-            nests = max(
-                [
-                    len(re.findall(pattern="regressor__", string=k))
-                    for k in self.regressor.get_params().keys()
-                ]
-            )
-            estimator_type = self.regressor.get_params()[
-                "regressor__" * (nests - 1) + "regressor"
-            ]._estimator_type
+            estimator_type = self.regressor.get_params()["regressor"]._estimator_type
         else:
             estimator_type = self.regressor._estimator_type
 
