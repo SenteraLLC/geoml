@@ -377,6 +377,3 @@ def cross_validation(
     model_info["mae_rel_test"] = mae_rel_test
 
     return Series(model_info).to_frame().T.copy()
-
-
-""
