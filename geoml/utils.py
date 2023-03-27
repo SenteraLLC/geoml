@@ -63,7 +63,8 @@ def evaluate_error(y_test, y_pred, y_mean):
     return mae, mae_rel, rmse, rmse_rel, r2
 
 
-def train_and_test(
+# TODO: Review the implementation of this function to ensure its generalizability to other projects
+def train_and_test_abi(
     pipeline,
     search,
     x_train,
