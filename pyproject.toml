@@ -1,22 +1,23 @@
 [tool.poetry]
 name = "geoml"
-version = "0.1.9"
+version = "1.0.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
-python = "~3.9.13"
+python = "~3.10.4"
 geopandas = "^0.12.2"
 shapely = "1.8.5.post1"
 GeoAlchemy2 = "^0.12.1"
 keyring = "^23.6.0"
+pandas = "^1.5.3"
 pip = "^22.1.2"
 pygeos = "^0.12.0"
+pyproj = "3.4.1"
 Rtree = "^1.0.0"
 scikit-learn = "^1.1.1"
 seaborn = "^0.11.2"
 db = {git = "git@github.com:SenteraLLC/db-geoml", branch = "main"}
-pandas = "^1.5.3"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.19.0"
