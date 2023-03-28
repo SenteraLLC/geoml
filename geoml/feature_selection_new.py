@@ -38,14 +38,13 @@ def get_n_feats_selected(
     return feat_n_sel
 
 
-# TODO: Will this ever get caught in a while loop?
-# TODO: Do we want to allow for zero features to be selected? If so, we should rethink our alpha range for modeling with one candidate feature.
 def find_alpha_to_minimize_n_feats(
     x_train: array,
     y_train: array,
     labels_x: List[str],
     alpha_initial: float = 1,
     random_state: float = 99,
+    iter_limit: int = 500,
 ) -> float:
     """Find (rough) minimum Lasso alpha parameter that results in the fitted model having one feature.
 
@@ -60,6 +59,7 @@ def find_alpha_to_minimize_n_feats(
         labels_x (List[str]): List of length m which contains feature names in order of appearance in `x_train`
         alpha_initial (float): Initial value of alpha to test for n_feature minimization
         random_state (float): Random state for given Lasso model for reproducibility
+        iter_limit (int): Total number of iterations to allow in while loop for alpha optimization
     """
     # test intial value of alpha
     feat_n_sel = get_n_feats_selected(
@@ -71,13 +71,17 @@ def find_alpha_to_minimize_n_feats(
     )
     alpha_now = alpha_initial
 
-    # if there is only one feature to be selected, then tuning will take care of alpha value
-    if len(labels_x) == 1:
-        return alpha_now
+    iter_count = -1
 
     # if initial value results in 1 feature, roughly minimize alpha to obtain 1 feature
     if feat_n_sel <= 1:
         while feat_n_sel <= 1:
+            iter_count += 1
+            if iter_count >= iter_limit:
+                raise Exception(
+                    f"Iteration limit reached. Reducing alpha to {alpha_now} did not achieve 1 feature."
+                )
+
             params_last = alpha_now
             alpha_now /= 1.2
             feat_n_sel = get_n_feats_selected(
@@ -87,10 +91,17 @@ def find_alpha_to_minimize_n_feats(
                 alpha=alpha_now,
                 random_state=random_state,
             )
+
         alpha_final = params_last
     else:
         # if initial value is too low, need to increase alpha to eliminate more features
         while feat_n_sel > 1:
+            iter_count += 1
+            if iter_count >= iter_limit:
+                raise Exception(
+                    f"Iteration limit reached. Increasing alpha to {alpha_now} did not achieve 1 feature."
+                )
+
             alpha_now *= 1.2
             feat_n_sel = get_n_feats_selected(
                 x_train=x_train,
@@ -111,6 +122,7 @@ def find_alpha_to_get_n_feats(
     labels_x: List[str],
     alpha_initial: float = 1,
     random_state: float = 99,
+    iter_limit: int = 500,
 ) -> float:
     """Find (rough) maximum Lasso alpha parameter that results in the fitted model having `n_feats`.
 
@@ -142,10 +154,18 @@ def find_alpha_to_get_n_feats(
         labels_x (List[str]): List of length m which contains feature names in order of appearance in `x_train`
         alpha_initial (float): Initial value of alpha to test for n features
         random_state (float): Random state for given Lasso model for reproducibility
+        iter_limit (int): Total number of iterations to allow in while loop for alpha optimization
 
     Returns:
         Maximum alpha value (float) to achieve `n_feats` features in model setting or None if `n_feats` could not be achieved.
     """
+    msg = "The length of `labels_x` must be equal to the number of columns in `x_train`"
+    assert len(labels_x) == x_train.shape[1], msg
+
+    assert (
+        len(labels_x) >= n_feats
+    ), f"We cannot select {n_feats} features when only {len(labels_x)} are available in `x_train`."
+
     # test intial value of alpha
     feat_n_sel = get_n_feats_selected(
         x_train=x_train,
@@ -156,13 +176,21 @@ def find_alpha_to_get_n_feats(
     )
     alpha_now = alpha_initial
 
-    # if we only have one feature, let's just return the initial value
+    iter_count = -1
+
+    # if we only have one feature, let's just return 0 because we know that will give 1 feature
     if len(labels_x) == 1:
-        return alpha_now
+        return 0
 
     # more feats selected than n_feats => need a greater alpha value
     if feat_n_sel >= n_feats:
         while feat_n_sel >= n_feats:
+            iter_count += 1
+            if iter_count >= iter_limit:
+                raise Exception(
+                    f"Iteration limit reached. Increasing alpha to {alpha_now} did not achieve {n_feats} features."
+                )
+
             alpha_now *= 10
             feat_n_sel = get_n_feats_selected(
                 x_train=x_train,
@@ -176,6 +204,12 @@ def find_alpha_to_get_n_feats(
     else:
         # too few features => need a lower alpha value
         while (feat_n_sel < n_feats) and (alpha_now > 0):
+            iter_count += 1
+            if iter_count >= iter_limit:
+                raise Exception(
+                    f"Iteration limit reached. Reducing alpha to {alpha_now} did not achieve {n_feats} features."
+                )
+
             alpha_now /= 10
             feat_n_sel = get_n_feats_selected(
                 x_train=x_train,
