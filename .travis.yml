@@ -1,8 +1,9 @@
 language: python
-python: 3.9
+python: "3.10"
+dist: focal
 
 install:
-  - 'pip install poetry'
+  - 'pip install poetry==1.3.2'
   - 'poetry install'
 
 script:
