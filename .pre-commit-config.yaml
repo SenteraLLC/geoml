@@ -7,7 +7,6 @@ exclude: >
       geoml/profile_keys.py|
       geoml/tables.py|
       geoml/training.py|
-      geoml/utils.py|
       geoml/tests/|
       conftest.py
   )
