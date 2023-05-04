@@ -2279,46 +2279,45 @@ files = [
 
 [[package]]
 name = "pygeos"
-version = "0.12.0"
+version = "0.14"
 description = "GEOS wrapped in numpy ufuncs"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 files = [
-    {file = "pygeos-0.12.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e3593360f1a93d2a6fe1ea75fa84882186bd3851d187e4c4bbb586495c748e3d"},
-    {file = "pygeos-0.12.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:ec4112b69823866fa966ec4869e1b51b6560d892c65c20b3fb065266519046e2"},
-    {file = "pygeos-0.12.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:75b5b0aefffb6b7747df299414df4f2e160e3a8993d2b6a86b805fb5b0196f13"},
-    {file = "pygeos-0.12.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:26fae3eabb83a15348c2c3f78892114aca9bc4efaa342ab2fa3fa39a85e05dc5"},
-    {file = "pygeos-0.12.0-cp310-cp310-win_amd64.whl", hash = "sha256:b4ec8fe577ca7ba6dd046481cdb736f99961216fcb54c84211287a10d1158459"},
-    {file = "pygeos-0.12.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:6db68dc4583c88222d32cc624622234a97080b3c4650f0c0e12987664d49f374"},
-    {file = "pygeos-0.12.0-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:da856315a4047d581300d860dd2aa01438e64121570bed46c81ad0a90f477db0"},
-    {file = "pygeos-0.12.0-cp36-cp36m-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:3cf6d734aea07f04c7644ae24e303a447e96ea123ea524ab309e492ca683240e"},
-    {file = "pygeos-0.12.0-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:12e06ec4417453f1a95d36b8ba8822569c30f6938dd4a7bac97433cab641b61f"},
-    {file = "pygeos-0.12.0-cp36-cp36m-win32.whl", hash = "sha256:ea7f3ea9c76f8c94ed9b360b4d6249c44d5bc48c8db5cb3a5d4b017e51d1bd8a"},
-    {file = "pygeos-0.12.0-cp36-cp36m-win_amd64.whl", hash = "sha256:a6cf496887f25b99427624399bcd07107660e6f9135466c33dc60ad9bd4c9ebe"},
-    {file = "pygeos-0.12.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:f155f268676ff7b20a553a542a436be0f8df14233c873facc80214d836d6463b"},
-    {file = "pygeos-0.12.0-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f74abd81487839532c7110721f3b1450d0c6bcfb5e18c45d604ddeb75ec99f86"},
-    {file = "pygeos-0.12.0-cp37-cp37m-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6ac4ddfbe548d8a3e93732577b8a6d4df071f038338f6c400466b3c2bfe3dc78"},
-    {file = "pygeos-0.12.0-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:504a03330147d2bb3309f291f4333db892cdba40a66ac4f3db8a2672dff7cf4f"},
-    {file = "pygeos-0.12.0-cp37-cp37m-win32.whl", hash = "sha256:e3bcfb55e966aea26ff8e9b8fd314cee618c363f639e83b1eaaefb66bc97e7b0"},
-    {file = "pygeos-0.12.0-cp37-cp37m-win_amd64.whl", hash = "sha256:835b7b1b2ef44453ff9d759dd67ee17fb89a52d8cdbd4d1655bf0be6ccfd90c3"},
-    {file = "pygeos-0.12.0-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:60d103b4c099940ad73f0b193f65dfc77f957646451b8a399e4f1f5835c57ab6"},
-    {file = "pygeos-0.12.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:5bc1b9a548848f9c69c913eca8ab0bb9164b35a28da51f86fcc0887c553bd863"},
-    {file = "pygeos-0.12.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:11cb186f6cb9a2453a990a3e9894f861d308c574170d1c6f55a598cb11b87579"},
-    {file = "pygeos-0.12.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b8fcb175645f57d7a6fa153a1582f9dbf625bb69c55267207b1bc8d2b983013b"},
-    {file = "pygeos-0.12.0-cp38-cp38-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:2453c07c9b8a24054f897ed56e8046c7dd743939f7f5d6637fdeafdccc411f29"},
-    {file = "pygeos-0.12.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:962df97f937d6656ce9293e7072318e99860b0d41f61df9017551855a8bc188e"},
-    {file = "pygeos-0.12.0-cp38-cp38-win32.whl", hash = "sha256:d72e3691e47f44b49d3a23f05bb55eca34ed28b0e7b1b4aeb50207a95ae83f8f"},
-    {file = "pygeos-0.12.0-cp38-cp38-win_amd64.whl", hash = "sha256:41119e394ea90bf8f697613f530cf92c77ab98346c19cb19beba33a82fd5b91d"},
-    {file = "pygeos-0.12.0-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:dfad4c0a4b60861f8e571ca409ce128859d26e1ac26a15ee071cf1f222431fdd"},
-    {file = "pygeos-0.12.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:aeaf1f9ae45cf35a25ccdeb2b083e057b31d98cf9351bfc42a59352130ff5c31"},
-    {file = "pygeos-0.12.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:59971b44e3b8f61e96b159acdc5f9347b94766a4efb94af7b926b1c4958b60d4"},
-    {file = "pygeos-0.12.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:efcbd52e5602d758b1ff42e67b91b33b1599667b478d0be9c13e17b286cbfcf0"},
-    {file = "pygeos-0.12.0-cp39-cp39-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:47e7b2614d8982f841e33cc1f18d39b7a654d4d7958d456e4765ff4a9c76589b"},
-    {file = "pygeos-0.12.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1f045632a940905c2f380544450bbcd48556b529bdfb9320aac777d90990fc25"},
-    {file = "pygeos-0.12.0-cp39-cp39-win32.whl", hash = "sha256:d2fefb3a9cf96d1ee4841772464e82b2ae3a8ddf3caf14ecb04c5fcdae6a7248"},
-    {file = "pygeos-0.12.0-cp39-cp39-win_amd64.whl", hash = "sha256:25b94e8bc755a8d3e50661995556b2c27d253bfdd55aa719ea3c202de44a9569"},
-    {file = "pygeos-0.12.0.tar.gz", hash = "sha256:3c41542ef67c66015f443ae3e6e683503a8a221f9c24fb2380f6ae42aed1600a"},
+    {file = "pygeos-0.14-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:cfad06eae27e7236a9dc1a6d1c278525d4cf79422cd05ac6513d55032ff0b6b6"},
+    {file = "pygeos-0.14-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bf00c2be6ea9816875636cfe139ff5ac53e9b99e0e7ce38c92cf67b69cf2d6be"},
+    {file = "pygeos-0.14-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:785bb70f2d3bcf331e1fa14f17d95e7aa045e0a56114e25cf1976cae29f0419a"},
+    {file = "pygeos-0.14-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:169a9fafa047dee10ef98479eb0f60bfbf5c688d8228a1c785c1c8ca154345b1"},
+    {file = "pygeos-0.14-cp310-cp310-win32.whl", hash = "sha256:7cae0518ee249984a5b57ec3501e135b3f455a3c173846cc3d314b4f63f7ead9"},
+    {file = "pygeos-0.14-cp310-cp310-win_amd64.whl", hash = "sha256:138f4da97f91f475ba41ee3a2249f59ec39ce2058144a4f97bb19e57d7a6bc1b"},
+    {file = "pygeos-0.14-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:de8261998e7a767cfa4ecf4eea3cc5648cc8afcf57d0286ceaf2e63db3c85adf"},
+    {file = "pygeos-0.14-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:251a663ac32312641111d00976878758637ebab40354f97f544abbd4cea3e677"},
+    {file = "pygeos-0.14-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:f6dc30f459f9474fb1eb161291ff7b6258d73c27f8020a0d5683d9d98ffec3d0"},
+    {file = "pygeos-0.14-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:67fb8f47978fff46f6f209d3aae094c3530ad70cce6b7baafc01f077549770c2"},
+    {file = "pygeos-0.14-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:987facbd0283ab1990ff490681898a93690e8181f8c92e37c5e23d630750ef4c"},
+    {file = "pygeos-0.14-cp311-cp311-win32.whl", hash = "sha256:a5bae1772f0d333e38689bf691c23e3416d797711bfed8086d78c91d63cd373a"},
+    {file = "pygeos-0.14-cp311-cp311-win_amd64.whl", hash = "sha256:6d41973d0361712e53d54489d0c1cc6d37b941e5c808bfd51c461e36c0b4758b"},
+    {file = "pygeos-0.14-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:e415467b6f73bcd0762dbb49d7d27188ccf1883dd94620d081a46b177b1d8696"},
+    {file = "pygeos-0.14-cp37-cp37m-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:61f9151ace84c69b9f51fce07d1ec784335a06eb8f83efbf36d9812e15ee1501"},
+    {file = "pygeos-0.14-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fc8939d6f4478918e65149f7eaea44b4a8a42d5ac210ab98a03fd49413f17375"},
+    {file = "pygeos-0.14-cp37-cp37m-win32.whl", hash = "sha256:b99dda430d097de75b0ae2a3015ab2f744168b867d404c2271369b5ca39778bc"},
+    {file = "pygeos-0.14-cp37-cp37m-win_amd64.whl", hash = "sha256:9a45f20437ee4bcae3b73983fdb141f1d2fddb1ea9019018c175ea9b520c44cb"},
+    {file = "pygeos-0.14-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:b951deb677c9209bbedbeac59be0e19681ba26385232bd657329560db7ca8b42"},
+    {file = "pygeos-0.14-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:357188219364398dcadd2e03b3524411d578b1be98a9e0f0fa1fc877bf5f881c"},
+    {file = "pygeos-0.14-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:f27079a4211ad7c6b05b85915c74e6a549030a3281a2bc992218a46b1d34d82b"},
+    {file = "pygeos-0.14-cp38-cp38-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:3e90515f20025fbbf5d4080e6a0192c93957f7b7d60279834e2afab5129b6163"},
+    {file = "pygeos-0.14-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:726893ddf186fe396dea22b4ef76b71db73132d034efc4d22bd8bb3d5a6ab649"},
+    {file = "pygeos-0.14-cp38-cp38-win32.whl", hash = "sha256:d371cf676adece6ff956230226867afcd0fd468de2b6ead39b445f2f25f59e6f"},
+    {file = "pygeos-0.14-cp38-cp38-win_amd64.whl", hash = "sha256:7de3388b97880f16b98a4ad67bd81e1fb7e34b856cecef050db095e26d3fd1f0"},
+    {file = "pygeos-0.14-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:f51a46e0c3f305c6d08296bb70cf0e94e8fe4ce827acf32499e4d11164d005aa"},
+    {file = "pygeos-0.14-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:aa0d90565d64c4e359219dd88b55c9fede39c0c80c12537b84228a28e8a0a723"},
+    {file = "pygeos-0.14-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:4194c8068dc856a6fbd8cb3e26bc450fc6f7058315780df082cd389f7f5064ec"},
+    {file = "pygeos-0.14-cp39-cp39-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:85935aaf69c5fa6a7e3e4363e8fa429ecacad23535999233923ed3ad33d203eb"},
+    {file = "pygeos-0.14-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9ad6c749665badc4c66fcfea5a18b440f24b4c6e1df755391663598a709fa8f8"},
+    {file = "pygeos-0.14-cp39-cp39-win32.whl", hash = "sha256:a545ba2fd37a350a3373f274bc6d5ff61a94249f154ded9c5a1b7badb89c9bf4"},
+    {file = "pygeos-0.14-cp39-cp39-win_amd64.whl", hash = "sha256:c7b3eee65b07c0adb0ca5668ac55b3c51699bbae67e541fc00c6a9b53bb6ddfb"},
+    {file = "pygeos-0.14.tar.gz", hash = "sha256:30fbc17f64844200b85133b885fcfb65541b8779531f6ef4f8fe467d3fba7623"},
 ]
 
 [package.dependencies]
@@ -3390,4 +3389,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10.4"
-content-hash = "f5eedfd6ab5884189e076958524a415061e20e92c75de75037563d944374d062"
+content-hash = "28d7ddfa88e6629052dcaae95ff5fdd397203b053096368ab169eeac43e92859"
