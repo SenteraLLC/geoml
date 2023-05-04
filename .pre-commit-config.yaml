@@ -1,3 +1,16 @@
+exclude: >
+  (?x)^(
+      geoml/feature_data.py|
+      geoml/feature_selection.py|
+      geoml/join_tables.py|
+      geoml/predict.py|
+      geoml/profile_keys.py|
+      geoml/tables.py|
+      geoml/training.py|
+      geoml/utils.py|
+      geoml/tests/
+  )
+
 repos:
 - repo: https://github.com/pycqa/isort
   rev: 5.12.0
