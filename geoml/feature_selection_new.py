@@ -18,6 +18,7 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.linear_model import Lasso
 from sklearn.svm import LinearSVC
 from sklearn.utils._testing import ignore_warnings
+from tqdm import tqdm
 
 FS_PARAMS = {
     "Lasso": {
@@ -389,6 +390,8 @@ def lasso_feature_selection(
     # determine bounds of alpha parameter to test
     logging.info("Finding alpha to minimize number of features...")
     alpha_min_feats = _find_alpha_to_minimize_n_feats(config=config)
+
+    logging.info("Finding alpha to get maximum number of features...")
     if n_feats > 1:
         alpha_max_feats = _find_alpha_to_get_n_feats(n_feats=n_feats, config=config)
         assert alpha_max_feats is not None, "Did not find alpha to get `n_feats`"
@@ -401,7 +404,8 @@ def lasso_feature_selection(
 
     # loop through all alpha values and get resulting features under each fit
     df = None
-    for val in param_val_list:
+    for ind in tqdm(range(len(param_val_list)), desc="Creating `df_model_fs`:"):
+        val = param_val_list[ind]
         df_temp = _get_feats_for_alpha(config=config, alpha=val)
         if df is None:
             df = df_temp.copy()
