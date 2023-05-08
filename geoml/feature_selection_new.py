@@ -1,4 +1,5 @@
 """Refactored feature selection functions to be re-integrated into GeoML."""
+import logging
 from os.path import join
 from pathlib import Path
 from typing import Any, List
@@ -15,35 +16,129 @@ from scipy.stats import rankdata
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.feature_selection import SelectFromModel
 from sklearn.linear_model import Lasso
+from sklearn.svm import LinearSVC
 from sklearn.utils._testing import ignore_warnings
+
+FS_PARAMS = {
+    "Lasso": {
+        "precompute": True,
+        "max_iter": 100000,
+        "tol": 0.001,
+        "warm_start": True,
+        "selection": "cyclic",
+        "random_state": None,
+        "alpha": None,
+    },
+    "LogisticRegression": {
+        "max_iter": 100,
+        "tol": 0.001,
+        "warm_start": True,
+        "solver": "saga",
+        "penalty": "l1",
+        "random_state": None,
+        "C": None,
+    },
+    "LinearSVC": {
+        "max_iter": 100,
+        "dual": False,
+        "tol": 0.001,
+        "penalty": "l1",
+        "random_state": None,
+        "C": None,
+    },
+}
 
 
 @ignore_warnings(category=ConvergenceWarning)
-def get_n_feats_selected(
-    x_train: array,
-    y_train: array,
-    labels_x: List[str],
+def _fit_model_fs(config: dict, alpha: float) -> Any:
+    """Set parameters and fit feature selection model based on `config` and `alpha`."""
+    # get feature selection model type based on `response_type`
+    if config["response_type"] == "regression":
+        model_fs = Lasso()
+        par_name = "alpha"
+    else:
+        model_fs = LinearSVC()
+        par_name = "C"
+
+    model_fs_name = type(model_fs).__name__
+
+    # get and set parameters
+    model_fs_params = FS_PARAMS[model_fs_name]
+    model_fs_params["random_state"] = config["random_state"]
+    model_fs_params[par_name] = 1 / alpha
+
+    model_fs.set_params(**model_fs_params)
+    model_fs.fit(config["X"], config["y"])
+
+    return model_fs
+
+
+def _get_feats_for_alpha(
+    config: dict,
     alpha: float,
-    random_state: float = 99,
+) -> DataFrame:
+    """Fit a Lasso model with alpha to predict `y_train` using `x_train`.
+
+    Args:
+        config (dict): Dictionary containing `x_train`, `y_train`, `labels_x`, `random_state`, & `response_type`
+        alpha (float): Lasso alpha parameter to be used when fitting model
+
+    Returns DataFrame row with information on the fitted model, including number of features,
+    features selected, and their ranking by the Lasso model.
+    """
+    cols = [
+        "model_fs",
+        "params_fs",
+        "feat_n",
+        "feats_x_select",
+        "labels_x_select",
+        "rank_x_select",
+    ]
+
+    model_fs = _fit_model_fs(config=config, alpha=alpha)
+    model_fs_name = type(model_fs).__name__
+
+    model_bs = SelectFromModel(model_fs, prefit=True)
+    feats = model_bs.get_support(indices=True)
+
+    if len(model_fs.coef_.shape) == 2:
+        coefs = model_fs.coef_[:, feats]
+    else:
+        coefs = model_fs.coef_[feats]  # get ranking coefficents
+
+    feat_ranking = rankdata(-abs(coefs), method="min")
+
+    feats_x_select = [config["labels_x"][i] for i in feats]
+    data = [
+        model_fs_name,
+        model_fs.get_params(),
+        len(feats),
+        tuple(feats),
+        tuple(feats_x_select),
+        tuple(feat_ranking),
+    ]
+    df = DataFrame(data=[data], columns=cols)
+
+    return df
+
+
+def _get_n_feats_selected(
+    config: dict,
+    alpha: float,
 ) -> int:
     """Get the number of features selected based on a Lasso model setting."""
-    df = get_lasso_feats(
-        x_train=x_train,
-        y_train=y_train,
-        labels_x=labels_x,
+    df = _get_feats_for_alpha(
+        config=config,
         alpha=alpha,
-        random_state=random_state,
     )
     feat_n_sel = df["feat_n"].values[0]
+
     return feat_n_sel
 
 
-def find_alpha_to_minimize_n_feats(
-    x_train: array,
-    y_train: array,
-    labels_x: List[str],
+def _find_alpha_to_minimize_n_feats(
+    config: dict,
     alpha_initial: float = 1,
-    random_state: float = 99,
     iter_limit: int = 500,
 ) -> float:
     """Find (rough) minimum Lasso alpha parameter that results in the fitted model having one feature.
@@ -54,21 +149,12 @@ def find_alpha_to_minimize_n_feats(
     This will give the upper bound value for alpha, since higher alpha decreases # of selected features.
 
     Args:
-        x_train (numpy.array): Array of size n x m containing m predictors for model fitting
-        y_train (numpy.array): Array of size n x 1 with response variable
-        labels_x (List[str]): List of length m which contains feature names in order of appearance in `x_train`
+        config (dict): Dictionary containing `x_train`, `y_train`, `labels_x`, `random_state`, & `response_type`
         alpha_initial (float): Initial value of alpha to test for n_feature minimization
-        random_state (float): Random state for given Lasso model for reproducibility
         iter_limit (int): Total number of iterations to allow in while loop for alpha optimization
     """
     # test intial value of alpha
-    feat_n_sel = get_n_feats_selected(
-        x_train=x_train,
-        y_train=y_train,
-        labels_x=labels_x,
-        alpha=alpha_initial,
-        random_state=random_state,
-    )
+    feat_n_sel = _get_n_feats_selected(config=config, alpha=alpha_initial)
     alpha_now = alpha_initial
 
     iter_count = -1
@@ -84,13 +170,7 @@ def find_alpha_to_minimize_n_feats(
 
             params_last = alpha_now
             alpha_now /= 1.2
-            feat_n_sel = get_n_feats_selected(
-                x_train=x_train,
-                y_train=y_train,
-                labels_x=labels_x,
-                alpha=alpha_now,
-                random_state=random_state,
-            )
+            feat_n_sel = _get_n_feats_selected(config=config, alpha=alpha_now)
 
         alpha_final = params_last
     else:
@@ -103,25 +183,16 @@ def find_alpha_to_minimize_n_feats(
                 )
 
             alpha_now *= 1.2
-            feat_n_sel = get_n_feats_selected(
-                x_train=x_train,
-                y_train=y_train,
-                labels_x=labels_x,
-                alpha=alpha_now,
-                random_state=random_state,
-            )
+            feat_n_sel = _get_n_feats_selected(config=config, alpha=alpha_now)
         alpha_final = alpha_now
 
     return alpha_final
 
 
-def find_alpha_to_get_n_feats(
+def _find_alpha_to_get_n_feats(
     n_feats: int,
-    x_train: array,
-    y_train: array,
-    labels_x: List[str],
+    config: dict,
     alpha_initial: float = 1,
-    random_state: float = 99,
     iter_limit: int = 500,
 ) -> float:
     """Find (rough) maximum Lasso alpha parameter that results in the fitted model having `n_feats`.
@@ -149,37 +220,29 @@ def find_alpha_to_get_n_feats(
 
     Args:
         n_feats (int): Number of features to obtain in model
-        x_train (numpy.array): Array of size n x m containing m predictors for model fitting
-        y_train (numpy.array): Array of size n x 1 with response variable
-        labels_x (List[str]): List of length m which contains feature names in order of appearance in `x_train`
+        config (dict): Dictionary containing `x_train`, `y_train`, `labels_x`, `random_state`, & `response_type`
         alpha_initial (float): Initial value of alpha to test for n features
-        random_state (float): Random state for given Lasso model for reproducibility
         iter_limit (int): Total number of iterations to allow in while loop for alpha optimization
 
     Returns:
         Maximum alpha value (float) to achieve `n_feats` features in model setting or None if `n_feats` could not be achieved.
     """
     msg = "The length of `labels_x` must be equal to the number of columns in `x_train`"
-    assert len(labels_x) == x_train.shape[1], msg
+    assert len(config["labels_x"]) == config["X"].shape[1], msg
 
+    n_feats_available = len(config["labels_x"])
     assert (
-        len(labels_x) >= n_feats
-    ), f"We cannot select {n_feats} features when only {len(labels_x)} are available in `x_train`."
+        n_feats_available >= n_feats
+    ), f"We cannot select {n_feats} features when only {n_feats_available} are available in `x_train`."
 
     # test intial value of alpha
-    feat_n_sel = get_n_feats_selected(
-        x_train=x_train,
-        y_train=y_train,
-        labels_x=labels_x,
-        alpha=alpha_initial,
-        random_state=random_state,
-    )
+    feat_n_sel = _get_n_feats_selected(config=config, alpha=alpha_initial)
     alpha_now = alpha_initial
 
     iter_count = -1
 
     # if we only have one feature, let's just return 0 because we know that will give 1 feature
-    if len(labels_x) == 1:
+    if n_feats_available == 1:
         return 0
 
     # more feats selected than n_feats => need a greater alpha value
@@ -192,13 +255,7 @@ def find_alpha_to_get_n_feats(
                 )
 
             alpha_now *= 10
-            feat_n_sel = get_n_feats_selected(
-                x_train=x_train,
-                y_train=y_train,
-                labels_x=labels_x,
-                alpha=alpha_now,
-                random_state=random_state,
-            )
+            feat_n_sel = _get_n_feats_selected(config=config, alpha=alpha_now)
         alpha_lower = alpha_now / 10
         alpha_upper = alpha_now
     else:
@@ -211,13 +268,7 @@ def find_alpha_to_get_n_feats(
                 )
 
             alpha_now /= 10
-            feat_n_sel = get_n_feats_selected(
-                x_train=x_train,
-                y_train=y_train,
-                labels_x=labels_x,
-                alpha=alpha_now,
-                random_state=random_state,
-            )
+            feat_n_sel = _get_n_feats_selected(config=config, alpha=alpha_now)
 
         # if alpha_now reaches 0, a model given `n_feats` seems unlikely to be useful
         # let's try a lower number of features
@@ -229,13 +280,11 @@ def find_alpha_to_get_n_feats(
                 print(
                     f"Could not reasonably achieve {n_feats} features. Trying with `n_feats`={n_feats-1}"
                 )
-                return find_alpha_to_get_n_feats(
+                return _find_alpha_to_get_n_feats(
                     n_feats=n_feats - 1,
-                    x_train=x_train,
-                    y_train=y_train,
-                    labels_x=labels_x,
+                    config=config,
                     alpha_initial=alpha_initial,
-                    random_state=random_state,
+                    iter_limit=iter_limit,
                 )
         else:
             alpha_lower = alpha_now
@@ -250,13 +299,7 @@ def find_alpha_to_get_n_feats(
         optimization function, we find the greatest value of alpha to achieve
         `n_feats`.
         """
-        feat_n_sel = get_n_feats_selected(
-            x_train=x_train,
-            y_train=y_train,
-            labels_x=labels_x,
-            alpha=alpha,
-            random_state=random_state,
-        )
+        feat_n_sel = _get_n_feats_selected(config=config, alpha=alpha)
         if feat_n_sel != n_feats:
             return 0
         else:
@@ -265,7 +308,7 @@ def find_alpha_to_get_n_feats(
     # To be sure we get the global minimum, we need to narrow in a bit more.
     # Here, we figure out where `n_feats` is achieved along `xline`. Then, we expand
     # one index outside of that range in both directions and pass to optimization function.
-    xline = logspace(log(alpha_lower), log(alpha_upper), num=1000, base=np_e)
+    xline = logspace(log(alpha_lower), log(alpha_upper), num=100, base=np_e)
     yline = [maximize_alpha(a, n_feats) for a in xline]
     x_inds = [i for i in range(len(yline)) if yline[i] != 0]
     first_ind = x_inds[0] if x_inds[0] == 0 else x_inds[0] - 1
@@ -289,76 +332,15 @@ def find_alpha_to_get_n_feats(
         )
 
 
-def get_lasso_feats(
-    x_train: array,
-    y_train: array,
-    labels_x: List[str],
-    alpha: float,
-    random_state: float = 99,
-) -> DataFrame:
-    """Fit a Lasso model with alpha to predict `y_train` using `x_train`.
-
-    Args:
-        x_train (numpy.array): Array of size n x m containing m predictors for model fitting
-        y_train (numpy.array): Array of size n x 1 with response variable
-        labels_x (List[str]): List of length m which contains feature names in order of appearance in `x_train`
-        alpha (float): Lasso alpha parameter to be used when fitting model
-        random_state (float): Random state for given Lasso model for reproducibility
-
-    Returns DataFrame row with information on the fitted model, including number of features,
-    features selected, and their ranking by the Lasso model.
-    """
-    cols = [
-        "model_fs",
-        "params_fs",
-        "feat_n",
-        "feats_x_select",
-        "labels_x_select",
-        "rank_x_select",
-    ]
-
-    model_fs = Lasso()
-    model_fs_name = type(model_fs).__name__
-    model_fs_params = {
-        "precompute": True,
-        "max_iter": 100000,
-        "tol": 0.001,
-        "warm_start": True,
-        "selection": "cyclic",
-        "random_state": random_state,
-        "alpha": alpha,
-    }
-    model_fs.set_params(**model_fs_params)
-
-    model_fs.fit(x_train, y_train)
-
-    model_bs = SelectFromModel(model_fs, prefit=True)
-    feats = model_bs.get_support(indices=True)
-    coefs = model_fs.coef_[feats]  # get ranking coefficents
-    feat_ranking = rankdata(-abs(coefs), method="min")
-
-    feats_x_select = [labels_x[i] for i in feats]
-    data = [
-        model_fs_name,
-        model_fs.get_params(),
-        len(feats),
-        tuple(feats),
-        tuple(feats_x_select),
-        tuple(feat_ranking),
-    ]
-    df = DataFrame(data=[data], columns=cols)
-
-    return df
-
-
 def lasso_feature_selection(
     x_train: array,
     y_train: array,
     labels_x: List[str],
     n_feats: int,
     scaler: Any = None,
+    response_type: str = "regression",
     random_state: float = 99,
-    n_linspace: int = 1000,
+    n_linspace: int = 100,
     plot_save: bool = False,
     model_dir: str = None,
     model_name: str = "model",
@@ -395,21 +377,20 @@ def lasso_feature_selection(
     else:
         x_train_copy = copy(x_train)
 
+    # set up model config to keep things clean
+    config = {
+        "X": x_train_copy,
+        "y": y_train,
+        "labels_x": labels_x,
+        "response_type": response_type,
+        "random_state": random_state,
+    }
+
     # determine bounds of alpha parameter to test
-    alpha_min_feats = find_alpha_to_minimize_n_feats(
-        x_train=x_train_copy,
-        y_train=y_train,
-        labels_x=labels_x,
-        random_state=random_state,
-    )
+    logging.info("Finding alpha to minimize number of features...")
+    alpha_min_feats = _find_alpha_to_minimize_n_feats(config=config)
     if n_feats > 1:
-        alpha_max_feats = find_alpha_to_get_n_feats(
-            n_feats=n_feats,
-            x_train=x_train_copy,
-            y_train=y_train,
-            labels_x=labels_x,
-            random_state=random_state,
-        )
+        alpha_max_feats = _find_alpha_to_get_n_feats(n_feats=n_feats, config=config)
         assert alpha_max_feats is not None, "Did not find alpha to get `n_feats`"
     else:
         alpha_max_feats = alpha_min_feats * 0.1
@@ -421,13 +402,7 @@ def lasso_feature_selection(
     # loop through all alpha values and get resulting features under each fit
     df = None
     for val in param_val_list:
-        df_temp = get_lasso_feats(
-            x_train=x_train_copy,
-            y_train=y_train,
-            labels_x=labels_x,
-            alpha=val,
-            random_state=random_state,
-        )
+        df_temp = _get_feats_for_alpha(config=config, alpha=val)
         if df is None:
             df = df_temp.copy()
         else:
@@ -442,12 +417,10 @@ def lasso_feature_selection(
         plot_alpha_vs_n_features(
             alpha_min=alpha_min_feats,
             alpha_max=alpha_max_feats,
-            x_train=x_train_copy,
-            y_train=y_train,
+            config=config,
             plot_save=plot_save,
             model_dir=model_dir,
             model_name=model_name,
-            random_state=random_state,
         )
 
     return df
@@ -456,13 +429,11 @@ def lasso_feature_selection(
 def plot_alpha_vs_n_features(
     alpha_min: float,
     alpha_max: float,
-    x_train: array,
-    y_train: array,
-    n_logspace: int = 1000,
+    config: dict,
+    n_logspace: int = 100,
     plot_save: bool = False,
     model_dir: str = None,
     model_name: str = "model",
-    random_state: int = 99,
 ) -> None:
     """Create plot to demonstrate relationship between alpha and number of selected features for given model setting.
 
@@ -481,19 +452,12 @@ def plot_alpha_vs_n_features(
         msg = "Please set directory where plot should be saved using `model_dir`."
         assert model_dir is not None, msg
 
-    labels_x = [f"x{ind}" for ind in range(x_train.shape[1])]
+    labels_x = [f"x{ind}" for ind in range(config["X"].shape[1])]
+    config_copy = config.copy()
+    config_copy["labels_x"] = labels_x
 
     xline = logspace(log(alpha_max), log(alpha_min), num=n_logspace, base=np_e)
-    yline = [
-        get_n_feats_selected(
-            x_train=x_train,
-            y_train=y_train,
-            labels_x=labels_x,
-            alpha=val,
-            random_state=random_state,
-        )
-        for val in xline
-    ]
+    yline = [_get_n_feats_selected(config=config_copy, alpha=val) for val in xline]
     _, ax = plt.subplots(figsize=(6, 4))
     ax.set(
         title="Lasso alpha vs. number of features",
