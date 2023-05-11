@@ -53,20 +53,22 @@ FS_PARAMS = {
 @ignore_warnings(category=ConvergenceWarning)
 def _fit_model_fs(config: dict, alpha: float) -> Any:
     """Set parameters and fit feature selection model based on `config` and `alpha`."""
-    # get feature selection model type based on `response_type`
+    # get correct feature selection model type
     if config["response_type"] == "regression":
         model_fs = Lasso()
         par_name = "alpha"
+        par_value = alpha
     else:
         model_fs = LinearSVC()
         par_name = "C"
+        par_value = 1 / alpha
 
     model_fs_name = type(model_fs).__name__
 
     # get and set parameters
     model_fs_params = FS_PARAMS[model_fs_name]
     model_fs_params["random_state"] = config["random_state"]
-    model_fs_params[par_name] = 1 / alpha
+    model_fs_params[par_name] = par_value
 
     model_fs.set_params(**model_fs_params)
     model_fs.fit(config["X"], config["y"])
@@ -343,8 +345,7 @@ def lasso_feature_selection(
     random_state: float = 99,
     n_linspace: int = 100,
     plot_save: bool = False,
-    model_dir: str = None,
-    model_name: str = "model",
+    out_dir: str = None,
 ) -> DataFrame:
     """
     Adapted from GeoML's `FeatureSelection` class function "_lasso_fs_df()".
@@ -359,8 +360,7 @@ def lasso_feature_selection(
         random_state (float): Random state for given Lasso model for reproducibility
         n_linspace (int): Number of alpha values to consider between minimum and maximum values
         plot_save (bool): Indicates whether the alpha parameter space should be plotted against `n_feats` and saved
-        model_dir (str): Directory location to store alpha figure if `plot_save` = True
-        model_name (str): Model name to denote the lasso alpha figure in filename if `plot_save` = True
+        out_dir (str): Directory location to store alpha figure if `plot_save` = True
     """
     assert (
         len(labels_x) == x_train.shape[1]
@@ -423,8 +423,7 @@ def lasso_feature_selection(
             alpha_max=alpha_max_feats,
             config=config,
             plot_save=plot_save,
-            model_dir=model_dir,
-            model_name=model_name,
+            out_dir=out_dir,
         )
 
     return df
@@ -436,8 +435,7 @@ def plot_alpha_vs_n_features(
     config: dict,
     n_logspace: int = 100,
     plot_save: bool = False,
-    model_dir: str = None,
-    model_name: str = "model",
+    out_dir: str = None,
 ) -> None:
     """Create plot to demonstrate relationship between alpha and number of selected features for given model setting.
 
@@ -448,13 +446,12 @@ def plot_alpha_vs_n_features(
         y_train (numpy.array): Array of size n x 1 with response variable
         n_logspace (int): Number of alpha values to consider between minimum and maximum values; defaults to 1000.
         plot_save (bool): If True, plot is saved to `model_dir`; else, the plot is shown.
-        model_dir (str): Directory location to store alpha figure if `plot_save` = True
-        model_name (str): Model name to denote the lasso alpha figure in filename if `plot_save` = True; defaults to "model".
+        out_dir (str): Directory location to store alpha figure if `plot_save` = True
         random_state (float): Random state for given Lasso model for reproducibility
     """
     if plot_save:
-        msg = "Please set directory where plot should be saved using `model_dir`."
-        assert model_dir is not None, msg
+        msg = "Please set directory where plot should be saved using `out_dir`."
+        assert out_dir is not None, msg
 
     labels_x = [f"x{ind}" for ind in range(config["X"].shape[1])]
     config_copy = config.copy()
@@ -471,9 +468,9 @@ def plot_alpha_vs_n_features(
     sns.lineplot(x=xline, y=yline, color="k", ax=ax)
 
     if plot_save:
-        fname = join(model_dir, f"{model_name}_lasso_alpha.png")
-        Path(model_dir).mkdir(parents=True, exist_ok=True)
-        plt.savefig(fname)
+        fname = join(out_dir, "lasso_alpha_vs_n_features.png")
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        plt.savefig(fname, bbox_inches="tight")
     else:
         plt.show()
 
