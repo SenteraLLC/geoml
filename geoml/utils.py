@@ -260,7 +260,7 @@ def train_test_simple_random(df: DataFrame, cv_kwargs: dict) -> DataFrame:
 
 def train_test_leave_group_out(
     df: DataFrame, cv_kwargs: dict
-) -> Tuple[List[str], DataFrame]:
+) -> Tuple[List[str], List[DataFrame]]:
     """Split `df` into train and test datasets under all possible leave-one-group-out cross validations.
 
     `cv_kwargs` dictionary must contain the following keys:
