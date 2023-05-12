@@ -209,13 +209,27 @@ def make_1_to_1_plot(
 
 
 def _create_df_train_test(df_train: DataFrame, df_test: DataFrame) -> DataFrame:
+    """Take `df_test` and `df_train` dataframes, add `train_test` column, and concatenate."""
     df_train = df_train.assign(train_test="train")
     df_test = df_test.assign(train_test="test")
     return pd_concat([df_train, df_test], axis=0, ignore_index=True)
 
 
 def train_test_simple_random(df: DataFrame, cv_kwargs: dict) -> DataFrame:
-    """DOCSTRING."""
+    """Split `df` into train and test datasets under simple random cross validation.
+
+    `cv_kwargs` dictionary must contain the following keys:
+    - "method": "simple_random"
+    - "test_size": proportion of data to be used as test data
+    - "random_state": passed to `train_test_split()`
+
+    The optional "groupby" key in `cv_kwargs` can provide a list of grouping column names
+    for randomized splitting, such that rows are not split within a given group.
+
+    Args:
+        df (pandas.DataFrame): Dataset to be split into train/test datasets.
+        cv_kwargs (dict): Parameters to set up cross-validation scheme. Defaults to no CV.
+    """
     if "groupby" in cv_kwargs.keys():
         groupby = cv_kwargs["groupby"]
     else:
@@ -247,7 +261,23 @@ def train_test_simple_random(df: DataFrame, cv_kwargs: dict) -> DataFrame:
 def train_test_leave_group_out(
     df: DataFrame, cv_kwargs: dict
 ) -> Tuple[List[str], DataFrame]:
-    """DOCSTRING."""
+    """Split `df` into train and test datasets under all possible leave-one-group-out cross validations.
+
+    `cv_kwargs` dictionary must contain the following keys:
+    - "method": "leave_group_out"
+    - "group_col": column to consider for CV grouping
+
+    Args:
+        df (pandas.DataFrame): Dataset to be split into train/test datasets.
+        cv_kwargs (dict): Parameters to set up cross-validation scheme. Defaults to no CV.
+
+    Returns:
+        group_values (list of str): List of unique values of `group_col` in the order that they are
+            "tested" in `splits`.
+
+        splits (list of pandas.Dataframe): List of `df_train_test` dataframes necessary to train/test on
+            each value of `group_col`
+    """
     assert (
         cv_kwargs["group_col"] in df.columns.values
     ), "Grouping column is not in `df`."
@@ -277,14 +307,18 @@ def train_test_split_custom_func(
         and "random_state" must also be passed as keys in `cv_kwargs`. "groupby" is an optional parameter
         which provides a list of grouping column names for randomized splitting (where splits do
         occur within groups).
-    - If cv_kwargs["method"] is "leave_group_out", "group_col" (column to consider for CV grouping) and
-        "test_col_value" (value of "group_col" to be used as test group) must also be passed as keys in
-        `cv_kwargs`.
+    - If cv_kwargs["method"] is "leave_group_out" and "group_col" (column to consider for CV grouping).
     - If cv_kwargs["method"] is "no CV", all data is used for training.
 
     Args:
         df (pandas.DataFrame): Dataset to be split into train/test datasets.
         cv_kwargs (dict): Parameters to set up cross-validation scheme. Defaults to no CV.
+
+    Returns:
+        group_values (list of str): List of values indicating testing scenario within respective `splits`.
+
+        splits (list of pandas.Dataframe): List of `df_train_test` dataframes necessary to train/test on
+            each testing scenario.
     """
     if cv_kwargs["method"] == "simple_random":
         splits = [train_test_simple_random(df=df, cv_kwargs=cv_kwargs)]
