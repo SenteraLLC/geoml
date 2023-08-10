@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geoml"
-version = "1.0.2"
+version = "1.0.3"
 description = ""
 authors = ["Your Name <you@example.com>"]
 
@@ -11,7 +11,6 @@ GeoAlchemy2 = "^0.12.1"
 keyring = "^23.6.0"
 pandas = "^1.5.3"
 pip = "^22.1.2"
-pygeos = "^0.14"
 pyproj = "3.4.1"
 Rtree = "^1.0.0"
 scikit-learn = "^1.1.1"
