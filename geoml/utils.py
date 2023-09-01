@@ -1,7 +1,7 @@
 """Miscellaneous ML functions that were pulled from `mosaic-modeling` and will be re-integrated into GeoML."""
 from os.path import join
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -106,6 +106,7 @@ def make_1_to_1_plot(
     plot_title: str,
     response: str,
     plot_save: bool = False,
+    filepath: Union[str, Path] = None,
     model_dir: str = None,
     model_name: str = None,
     hue: List[Any] = None,
@@ -126,8 +127,10 @@ def make_1_to_1_plot(
         plot_save (bool): If True, plot will be saved to `model_dir` as "{model_name}_1_to_1.png"
             and nothing will be returned. Otherwise, the figure will be returned.
 
-        model_dir (str): If `plot_save`, file directory to save 1:1 plot.
-        model_name (str): If `plot_save`, model name to be used in 1:1 plot file name
+        filepath (Union[str, Path]): If `plot_save`, file path to save 1:1 plot.
+
+        model_dir (str): If `plot_save`, file directory to save 1:1 plot. Ignored if `filepath` is provided.
+        model_name (str): If `plot_save`, model name to be used in the filename. Ignored if `filepath` is provided.
 
         hue (list): If provided, this list of same length as `y_pred` should be used to determine
             color groupings for plotted points in the 1:1 plot.
@@ -199,9 +202,14 @@ def make_1_to_1_plot(
 
     # save if desired
     if plot_save:
-        fname = join(model_dir, f"{model_name}_1_to_1.png")
-        Path(model_dir).mkdir(parents=True, exist_ok=True)
-        plt.savefig(fname, bbox_inches="tight")
+        filepath = (
+            Path(join(model_dir, f"{model_name}_1_to_1.png"))
+            if filepath is None
+            else filepath
+        )
+        filepath = Path(filepath) if isinstance(filepath, str) else filepath
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(filepath.with_suffix(".png"), bbox_inches="tight")
         plt.close()
         return None
     else:
