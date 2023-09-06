@@ -207,7 +207,7 @@ def make_1_to_1_plot(
             if filepath is None
             else filepath
         )
-        filepath = Path(filepath) if isinstance(filepath, str) else filepath
+        filepath = Path(filepath) if not isinstance(filepath, Path) else filepath
         filepath.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(filepath.with_suffix(".png"), bbox_inches="tight")
         plt.close()
