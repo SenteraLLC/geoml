@@ -7,7 +7,7 @@ authors = ["Your Name <you@example.com>"]
 [tool.poetry.dependencies]
 python = "~3.10.4"
 GeoAlchemy2 = "^0.12.1"
-geopandas = "^0.14.2"
+geopandas = "^0.12.2"
 keyring = "^23.6.0"
 pip = "^22.1.2"
 pyproj = "3.4.1"
