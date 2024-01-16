@@ -345,11 +345,12 @@ def train_test_split_custom_func(
     return group_values, splits
 
 
-def split_x_y_arrays(response: str, df_train_test: DataFrame) -> List:
+def split_x_y_arrays(response: list[str], df_train_test: DataFrame) -> List:
     """Split `DataFrame` from `train_test_split_custom_func()` into the train/test X/y arrays based on `train_test` column.
 
     These arrays can then be used with sklearn model objects for ML workflow.
     """
+    response = [response] if isinstance(response, str) else response
     df_train = df_train_test.loc[df_train_test["train_test"] == "train"].drop(
         columns=["train_test"]
     )
@@ -357,9 +358,9 @@ def split_x_y_arrays(response: str, df_train_test: DataFrame) -> List:
         columns=["train_test"]
     )
 
-    x_train = df_train.drop([response], axis=1).to_numpy()
+    x_train = df_train.drop(response, axis=1).to_numpy()
     y_train = df_train[response].to_numpy()
-    x_test = df_test.drop([response], axis=1).to_numpy()
+    x_test = df_test.drop(response, axis=1).to_numpy()
     y_test = df_test[response].to_numpy()
 
     return x_train, y_train, x_test, y_test
