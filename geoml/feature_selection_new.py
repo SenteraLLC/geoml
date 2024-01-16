@@ -312,39 +312,35 @@ def _find_alpha_to_get_n_feats(
     # achieved along `xline`. Then, we expand one index outside of that range in both directions and pass to
     # optimization function.
     num_initial = 100
-    n_iter = 0
     x_inds = []
-    while len(x_inds) == 0:
+    for n_iter in range(1, 11):
         n_iter += 1
         xline = logspace(
             log(alpha_lower), log(alpha_upper), num=(n_iter * num_initial), base=np_e
         )
         yline = [maximize_alpha(a, n_feats) for a in xline]
         x_inds = [i for i in range(len(yline)) if yline[i] != 0]
-        # logging.info("DEBUGGING: x_inds = %s", x_inds)
-        first_ind = x_inds[0] if x_inds[0] == 0 else x_inds[0] - 1
-        last_ind = x_inds[-1] if x_inds[-1] == 99 else x_inds[-1] + 1
+        try:
+            first_ind = x_inds[0] if x_inds[0] == 0 else x_inds[0] - 1
+            last_ind = x_inds[-1] if x_inds[-1] == 99 else x_inds[-1] + 1
 
-        new_alpha_lower = xline[first_ind]
-        new_alpha_upper = xline[last_ind]
+            new_alpha_lower = xline[first_ind]
+            new_alpha_upper = xline[last_ind]
 
-        result = optimize.minimize_scalar(
-            lambda a: maximize_alpha(a, n_feats),
-            bounds=(new_alpha_lower, new_alpha_upper),
-            method="Bounded",
-            options={"maxiter": 100},
-        )
-        if n_iter > 10:
-            raise Exception(
-                "Optimization step was unsuccessful. This is a rare error that could result from a low sample size when narrowing alpha range in step (3)."
+            result = optimize.minimize_scalar(
+                lambda a: maximize_alpha(a, n_feats),
+                bounds=(new_alpha_lower, new_alpha_upper),
+                method="Bounded",
+                options={"maxiter": 100},
             )
+            if result["success"] is True:
+                return result["x"]
+        except IndexError:
+            continue
 
-    if result["success"] is True:
-        return result["x"]
-    else:
-        raise Exception(
-            "Optimization step was unsuccessful. This is a rare error that could result from a low sample size when narrowing alpha range in step (3)."
-        )
+    raise Exception(
+        "Optimization step was unsuccessful. This is a rare error that could result from a low sample size when narrowing alpha range in step (3)."
+    )
 
 
 def lasso_feature_selection(
