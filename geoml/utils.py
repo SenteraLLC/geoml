@@ -181,12 +181,15 @@ def make_1_to_1_plot(
         title=plot_title,
         xlabel=f"Predicted {response}",
         ylabel=f"Measured {response}",
-        xlim=xlim,
-        ylim=ylim,
+        xlim=linspace(min(xlim[0], ylim[0]), max(xlim[1], ylim[1]), 2),
+        ylim=linspace(min(xlim[0], ylim[0]), max(xlim[1], ylim[1]), 2),
     )
+
     ax.plot(
-        linspace(xlim[0], xlim[1], 2),
-        linspace(ylim[0], ylim[1], 2),
+        # linspace(xlim[0], xlim[1], 2),
+        # linspace(ylim[0], ylim[1], 2),
+        linspace(min(xlim[0], ylim[0]), max(xlim[1], ylim[1]), 2),
+        linspace(min(xlim[0], ylim[0]), max(xlim[1], ylim[1]), 2),
         color="k",
         linestyle="--",
         linewidth=1,
