@@ -308,31 +308,39 @@ def _find_alpha_to_get_n_feats(
         else:
             return -alpha
 
-    # To be sure we get the global minimum, we need to narrow in a bit more.
-    # Here, we figure out where `n_feats` is achieved along `xline`. Then, we expand
-    # one index outside of that range in both directions and pass to optimization function.
-    xline = logspace(log(alpha_lower), log(alpha_upper), num=100, base=np_e)
-    yline = [maximize_alpha(a, n_feats) for a in xline]
-    x_inds = [i for i in range(len(yline)) if yline[i] != 0]
-    first_ind = x_inds[0] if x_inds[0] == 0 else x_inds[0] - 1
-    last_ind = x_inds[-1] if x_inds[-1] == 99 else x_inds[-1] + 1
-
-    new_alpha_lower = xline[first_ind]
-    new_alpha_upper = xline[last_ind]
-
-    result = optimize.minimize_scalar(
-        lambda a: maximize_alpha(a, n_feats),
-        bounds=(new_alpha_lower, new_alpha_upper),
-        method="Bounded",
-        options={"maxiter": 100},
-    )
-
-    if result["success"] is True:
-        return result["x"]
-    else:
-        raise Exception(
-            "Optimization step was unsuccessful. This is a rare error that could result from a low sample size when narrowing alpha range in step (3)."
+    # To be sure we get the global minimum, we need to narrow in a bit more. Here we figure out where `n_feats` is
+    # achieved along `xline`. Then, we expand one index outside of that range in both directions and pass to
+    # optimization function.
+    num_initial = 100
+    x_inds = []
+    for n_iter in range(1, 11):
+        n_iter += 1
+        xline = logspace(
+            log(alpha_lower), log(alpha_upper), num=(n_iter * num_initial), base=np_e
         )
+        yline = [maximize_alpha(a, n_feats) for a in xline]
+        x_inds = [i for i in range(len(yline)) if yline[i] != 0]
+        try:
+            first_ind = x_inds[0] if x_inds[0] == 0 else x_inds[0] - 1
+            last_ind = x_inds[-1] if x_inds[-1] == 99 else x_inds[-1] + 1
+
+            new_alpha_lower = xline[first_ind]
+            new_alpha_upper = xline[last_ind]
+
+            result = optimize.minimize_scalar(
+                lambda a: maximize_alpha(a, n_feats),
+                bounds=(new_alpha_lower, new_alpha_upper),
+                method="Bounded",
+                options={"maxiter": 100},
+            )
+            if result["success"] is True:
+                return result["x"]
+        except IndexError:
+            continue
+
+    raise Exception(
+        "Optimization step was unsuccessful. This is a rare error that could result from a low sample size when narrowing alpha range in step (3)."
+    )
 
 
 def lasso_feature_selection(

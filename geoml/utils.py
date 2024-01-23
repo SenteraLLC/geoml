@@ -1,7 +1,7 @@
 """Miscellaneous ML functions that were pulled from `mosaic-modeling` and will be re-integrated into GeoML."""
 from os.path import join
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -106,6 +106,7 @@ def make_1_to_1_plot(
     plot_title: str,
     response: str,
     plot_save: bool = False,
+    filepath: Union[str, Path] = None,
     model_dir: str = None,
     model_name: str = None,
     hue: List[Any] = None,
@@ -126,8 +127,10 @@ def make_1_to_1_plot(
         plot_save (bool): If True, plot will be saved to `model_dir` as "{model_name}_1_to_1.png"
             and nothing will be returned. Otherwise, the figure will be returned.
 
-        model_dir (str): If `plot_save`, file directory to save 1:1 plot.
-        model_name (str): If `plot_save`, model name to be used in 1:1 plot file name
+        filepath (Union[str, Path]): If `plot_save`, file path to save 1:1 plot.
+
+        model_dir (str): If `plot_save`, file directory to save 1:1 plot. Ignored if `filepath` is provided.
+        model_name (str): If `plot_save`, model name to be used in the filename. Ignored if `filepath` is provided.
 
         hue (list): If provided, this list of same length as `y_pred` should be used to determine
             color groupings for plotted points in the 1:1 plot.
@@ -178,12 +181,15 @@ def make_1_to_1_plot(
         title=plot_title,
         xlabel=f"Predicted {response}",
         ylabel=f"Measured {response}",
-        xlim=xlim,
-        ylim=ylim,
+        xlim=linspace(min(xlim[0], ylim[0]), max(xlim[1], ylim[1]), 2),
+        ylim=linspace(min(xlim[0], ylim[0]), max(xlim[1], ylim[1]), 2),
     )
+
     ax.plot(
-        linspace(xlim[0], xlim[1], 2),
-        linspace(ylim[0], ylim[1], 2),
+        # linspace(xlim[0], xlim[1], 2),
+        # linspace(ylim[0], ylim[1], 2),
+        linspace(min(xlim[0], ylim[0]), max(xlim[1], ylim[1]), 2),
+        linspace(min(xlim[0], ylim[0]), max(xlim[1], ylim[1]), 2),
         color="k",
         linestyle="--",
         linewidth=1,
@@ -199,9 +205,14 @@ def make_1_to_1_plot(
 
     # save if desired
     if plot_save:
-        fname = join(model_dir, f"{model_name}_1_to_1.png")
-        Path(model_dir).mkdir(parents=True, exist_ok=True)
-        plt.savefig(fname, bbox_inches="tight")
+        filepath = (
+            Path(join(model_dir, f"{model_name}_1_to_1.png"))
+            if filepath is None
+            else filepath
+        )
+        filepath = Path(filepath) if not isinstance(filepath, Path) else filepath
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(filepath.with_suffix(".png"), bbox_inches="tight")
         plt.close()
         return None
     else:
@@ -337,11 +348,12 @@ def train_test_split_custom_func(
     return group_values, splits
 
 
-def split_x_y_arrays(response: str, df_train_test: DataFrame) -> List:
+def split_x_y_arrays(response: list[str], df_train_test: DataFrame) -> List:
     """Split `DataFrame` from `train_test_split_custom_func()` into the train/test X/y arrays based on `train_test` column.
 
     These arrays can then be used with sklearn model objects for ML workflow.
     """
+    response = [response] if isinstance(response, str) else response
     df_train = df_train_test.loc[df_train_test["train_test"] == "train"].drop(
         columns=["train_test"]
     )
@@ -349,9 +361,9 @@ def split_x_y_arrays(response: str, df_train_test: DataFrame) -> List:
         columns=["train_test"]
     )
 
-    x_train = df_train.drop([response], axis=1).to_numpy()
+    x_train = df_train.drop(response, axis=1).to_numpy()
     y_train = df_train[response].to_numpy()
-    x_test = df_test.drop([response], axis=1).to_numpy()
+    x_test = df_test.drop(response, axis=1).to_numpy()
     y_test = df_test[response].to_numpy()
 
     return x_train, y_train, x_test, y_test
